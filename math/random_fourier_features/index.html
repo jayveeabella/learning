@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Random Fourier Features — Interactive Explainer</title>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --true:#e63946;--rff:#457b9d;--spec:#2a9d8f;
+  --sw:230px;--sbg:#1a1a2e;--stext:#c8d0e7;
+  --bg:#f5f6fa;--card:#fff;--border:#dee2e6;
+  --r:6px;--text:#212529;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:15px;line-height:1.65}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);
+  background:var(--sbg);overflow-y:auto;z-index:100;padding:1.4rem 0}
+.sb-logo{padding:0 1.2rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem}
+.sb-logo h2{color:#fff;font-size:1rem;font-weight:700}
+.sb-logo p{color:var(--stext);font-size:.75rem;margin-top:.2rem}
+.nav-btn{display:block;padding:.45rem 1.2rem;color:var(--stext);font-size:.82rem;
+  cursor:pointer;border-left:3px solid transparent;transition:all .15s;
+  background:none;border-top:none;border-right:none;border-bottom:none;
+  text-align:left;width:100%}
+.nav-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-btn.active{border-left-color:var(--rff);color:#fff;background:rgba(69,123,157,.2)}
+
+/* ── Main ─────────────────────────────────────────────────── */
+#main{margin-left:var(--sw);padding:2rem 2.5rem 5rem;max-width:1150px;width:100%}
+.section{display:none}.section.active{display:block}
+
+h1{font-size:1.85rem;font-weight:700;color:#1a1a2e;margin-bottom:.3rem}
+h2{font-size:1.25rem;font-weight:600;color:#1a1a2e;margin:1.6rem 0 .5rem}
+h3{font-size:1rem;font-weight:600;color:#333;margin:1.1rem 0 .4rem}
+p{margin-bottom:.75rem}
+hr{border:none;border-top:1px solid var(--border);margin:1.4rem 0}
+a{color:var(--rff)}
+
+/* ── Boxes ────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.4rem;margin:1rem 0}
+.info{background:#e8f4fd;border-left:4px solid var(--rff);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.success{background:#d4edda;border-left:4px solid #28a745;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.warn{background:#fff8e1;border-left:4px solid #ffc107;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+
+/* ── Tables ───────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;margin:.9rem 0;font-size:.87rem}
+th{background:#f0f4f8;padding:.5rem .75rem;text-align:left;font-weight:600;border-bottom:2px solid var(--border)}
+td{padding:.45rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+.tab-bar{display:flex;border-bottom:2px solid var(--border);gap:0;margin-top:.5rem}
+.tab-btn{padding:.45rem .95rem;border:none;background:none;cursor:pointer;
+  color:#666;font-size:.87rem;font-weight:500;border-bottom:2px solid transparent;
+  margin-bottom:-2px;transition:all .15s}
+.tab-btn:hover{color:var(--rff)}
+.tab-btn.active{color:var(--rff);border-bottom-color:var(--rff)}
+.tab-pane{display:none;padding-top:.9rem}.tab-pane.active{display:block}
+
+/* ── Sliders ──────────────────────────────────────────────── */
+.ctrl{display:flex;align-items:center;gap:.7rem;margin:.5rem 0;flex-wrap:wrap}
+.ctrl label{font-size:.84rem;font-weight:500;min-width:130px}
+.ctrl input[type=range]{width:180px;accent-color:var(--rff)}
+.ctrl input[type=number]{width:70px;padding:.2rem .4rem;border:1px solid var(--border);border-radius:4px;font-size:.84rem}
+.val{font-size:.84rem;font-weight:600;color:var(--rff);min-width:45px}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.cols{display:grid;gap:1.4rem;margin:.8rem 0}
+.c12{grid-template-columns:1fr 2fr}
+.c21{grid-template-columns:2fr 1fr}
+.c11{grid-template-columns:1fr 1fr}
+.c23{grid-template-columns:2fr 3fr}
+.c13{grid-template-columns:1fr 3fr}
+
+/* ── Code ─────────────────────────────────────────────────── */
+pre{background:#1e2235;color:#abb2bf;padding:.9rem 1.1rem;border-radius:var(--r);
+  overflow-x:auto;font-size:.8rem;line-height:1.55;margin:.7rem 0;font-family:'Fira Code',Consolas,monospace}
+
+/* ── Details/Expander ─────────────────────────────────────── */
+details{border:1px solid var(--border);border-radius:var(--r);margin:.7rem 0}
+summary{padding:.55rem 1rem;cursor:pointer;font-weight:500;font-size:.88rem;
+  background:#f8f9fa;border-radius:var(--r);list-style:none;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▶ ';font-size:.68rem;color:#888}
+details[open] summary::before{content:'▼ '}
+details[open] summary{border-radius:var(--r) var(--r) 0 0}
+.det-body{padding:.9rem 1.1rem;border-top:1px solid var(--border)}
+
+/* ── Misc ─────────────────────────────────────────────────── */
+.caption{font-size:.81rem;color:#666;font-style:italic;margin-top:.35rem}
+.metric{display:inline-block;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:.7rem 1.1rem;min-width:150px;margin:.3rem .4rem .3rem 0}
+.metric-label{font-size:.76rem;color:#666}
+.metric-value{font-size:1.25rem;font-weight:700;color:#1a1a2e}
+.km-row{display:flex;gap:8px;overflow-x:auto;margin:.8rem 0}
+.km-cell{text-align:center;flex-shrink:0}
+.km-cell p{font-size:.78rem;font-weight:600;margin-top:.2rem}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <h2>🌊 RFF Explorer</h2>
+    <p>Random Fourier Features</p>
+  </div>
+  <button class="nav-btn active" onclick="nav('s0')">Executive Summary</button>
+  <button class="nav-btn" onclick="nav('s1')">Kernel Methods</button>
+  <button class="nav-btn" onclick="nav('s2')">Scalability Problem</button>
+  <button class="nav-btn" onclick="nav('s3')">Bochner's Theorem</button>
+  <button class="nav-btn" onclick="nav('s4')">The RFF Algorithm</button>
+  <button class="nav-btn" onclick="nav('s5')">Interactive Visualizations</button>
+  <button class="nav-btn" onclick="nav('s6')">RBF & Spectral Duality</button>
+  <button class="nav-btn" onclick="nav('s7')">Error Guarantees</button>
+  <button class="nav-btn" onclick="nav('s8')">Extensions & History</button>
+  <button class="nav-btn" onclick="nav('s9')">Sources</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════════════════════════════════ -->
+<main id="main">
+
+<!-- ── S0: Executive Summary ──────────────────────────────── -->
+<div id="s0" class="section active">
+  <h1>Random Fourier Features</h1>
+  <p style="color:#555;font-size:1rem">An interactive explainer &mdash; Rahimi &amp; Recht, NeurIPS 2007</p>
+  <hr>
+
+  <div class="cols c21">
+    <div>
+      <p><strong>The problem:</strong> Kernel methods &mdash; SVMs, Gaussian Processes, Kernel PCA &mdash; are powerful nonlinear models that implicitly compute inner products in infinite-dimensional feature spaces. But they require building an $n \times n$ kernel matrix, costing $O(n^3)$ to train. At $n = 10^5$ this is infeasible.</p>
+
+      <p><strong>The solution:</strong> For any <em>shift-invariant</em> kernel, construct a random $D$-dimensional feature map $z: \mathbb{R}^d \to \mathbb{R}^D$ such that the dot product approximates the kernel:</p>
+
+      $$k(\mathbf{x}, \mathbf{y}) \approx z(\mathbf{x})^\top z(\mathbf{y}), \qquad
+      z(\mathbf{x}) = \frac{1}{\sqrt{D}}
+      \begin{bmatrix} \sqrt{2}\cos(\boldsymbol{\omega}_1^\top \mathbf{x} + b_1)\\ \vdots\\ \sqrt{2}\cos(\boldsymbol{\omega}_D^\top \mathbf{x} + b_D) \end{bmatrix}$$
+
+      <p>Training a linear model on these features approximates the kernel machine, reducing cost to $O(nD)$ — linear in $n$ when $D \ll n$.</p>
+
+      <div class="info">The central identity driving everything:
+        $$k(\mathbf{x} - \mathbf{y}) = \underbrace{\mathbb{E}_{\boldsymbol{\omega} \sim p(\boldsymbol{\omega})}\!\left[\cos(\boldsymbol{\omega}^\top(\mathbf{x}-\mathbf{y}))\right]}_{\text{Bochner's theorem (1932)}} \approx \underbrace{z(\mathbf{x})^\top z(\mathbf{y})}_{\text{D-sample Monte Carlo}}$$
+      </div>
+      <div class="success">🏆 <strong>NeurIPS 2017 Test of Time Award</strong> — one of ML's most cited papers.</div>
+    </div>
+
+    <div>
+      <h3>Complexity at $n=10^5$, $D=10^3$</h3>
+      <table>
+        <tr><th>Method</th><th>Training</th><th>Memory</th><th></th></tr>
+        <tr><td>Exact Kernel</td><td>$O(n^3) \approx 10^{15}$</td><td>$O(n^2) \approx 10^{10}$</td><td>❌</td></tr>
+        <tr><td>Nyström ($m=10^3$)</td><td>$O(nm^2) \approx 10^{11}$</td><td>$O(nm) \approx 10^8$</td><td>⚠️</td></tr>
+        <tr><td>RFF ($D=10^3$)</td><td>$O(nD) \approx 10^8$</td><td>$O(nD) \approx 10^8$</td><td>✅</td></tr>
+      </table>
+      <div id="exec-chart" style="height:280px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S1: Kernel Methods ──────────────────────────────────── -->
+<div id="s1" class="section">
+  <h1>🔑 Kernel Methods</h1>
+  <hr>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('km','def')">Definition</button>
+    <button class="tab-btn" onclick="tab('km','trick')">Kernel Trick</button>
+    <button class="tab-btn" onclick="tab('km','list')">Common Kernels</button>
+    <button class="tab-btn" onclick="tab('km','viz')">Visualization</button>
+  </div>
+
+  <div id="km-def" class="tab-pane active">
+    <h2>What is a kernel?</h2>
+    <p>A <strong>kernel function</strong> $k : \mathcal{X} \times \mathcal{X} \to \mathbb{R}$ measures similarity between two data points. The fundamental property:</p>
+    $$k(\mathbf{x}, \mathbf{x}') = \langle \phi(\mathbf{x}), \phi(\mathbf{x}') \rangle_{\mathcal{H}}$$
+    <p>where $\phi: \mathcal{X} \to \mathcal{H}$ is a (possibly implicit) map into a Hilbert space $\mathcal{H}$. You compute the similarity without ever constructing $\phi$.</p>
+    <h3>Validity — Positive Semi-Definiteness (PSD)</h3>
+    <p>The Gram matrix $K \in \mathbb{R}^{n \times n}$ with $K_{ij} = k(x_i, x_j)$ must satisfy:</p>
+    $$\mathbf{c}^\top K \mathbf{c} \geq 0 \quad \forall \mathbf{c} \in \mathbb{R}^n$$
+    <h3>Mercer's Theorem (1909)</h3>
+    <p>A continuous symmetric function is a valid kernel iff its Gram matrix is PSD for every finite set of points. It admits a spectral expansion:</p>
+    $$k(\mathbf{x}, \mathbf{x}') = \sum_{i=1}^\infty \lambda_i \psi_i(\mathbf{x})\psi_i(\mathbf{x}'), \quad \lambda_i \geq 0$$
+    <p>This decomposition is the formal bridge to Random Fourier Features.</p>
+  </div>
+
+  <div id="km-trick" class="tab-pane">
+    <h2>The Kernel Trick</h2>
+    <p>Many ML algorithms depend only on <strong>inner products</strong> between data points. Replacing $\langle x_i, x_j \rangle$ with $k(x_i, x_j)$ lifts the algorithm into a high-dimensional feature space at cost $O(d)$ per evaluation.</p>
+    <h3>Concrete example — degree-2 polynomial kernel</h3>
+    <p>Let $\mathbf{x} = (x_1, x_2)$. Define the explicit feature map:</p>
+    $$\phi(\mathbf{x}) = (x_1^2,\; x_2^2,\; \sqrt{2}\,x_1 x_2)$$
+    <p>Then:</p>
+    $$\langle \phi(\mathbf{x}), \phi(\mathbf{x}') \rangle = x_1^2{x_1'}^2 + x_2^2{x_2'}^2 + 2x_1x_2x_1'x_2' = (\mathbf{x} \cdot \mathbf{x}')^2$$
+    <p>A 3D inner product via one 2D dot product. For degree $d$ in $p$ dimensions, the feature space has $O(p^d)$ dimensions but the kernel costs $O(p)$.</p>
+    <p>The <strong>RBF kernel</strong> takes this to the extreme: its implicit feature space is <strong>infinite-dimensional</strong>, yet $k(\mathbf{x},\mathbf{x}') = \exp(-\|\mathbf{x}-\mathbf{x}'\|^2/2\sigma^2)$ evaluates in $O(d)$.</p>
+  </div>
+
+  <div id="km-list" class="tab-pane">
+    <h2>Common Kernels</h2>
+    <table>
+      <tr><th>Kernel</th><th>$k(\mathbf{x},\mathbf{x}')$</th><th>Feature dim</th><th>Shift-invariant?</th><th>RFF?</th><th>Character</th></tr>
+      <tr><td>RBF / Gaussian</td><td>$\exp(-\|\mathbf{x}-\mathbf{x}'\|^2/2\sigma^2)$</td><td>$\infty$</td><td>✅</td><td>✅</td><td>Smooth, universal</td></tr>
+      <tr><td>Polynomial</td><td>$(\mathbf{x}\cdot\mathbf{x}'+c)^d$</td><td>$O(p^d)$</td><td>❌</td><td>❌</td><td>Interactions, NLP</td></tr>
+      <tr><td>Laplacian</td><td>$\exp(-\|\mathbf{x}-\mathbf{x}'\|_1/\sigma)$</td><td>$\infty$</td><td>✅</td><td>✅</td><td>Robust, heavy-tailed</td></tr>
+      <tr><td>Matérn</td><td>Bessel-based (params $\ell, \nu$)</td><td>$\infty$</td><td>✅</td><td>✅</td><td>Tunable smoothness</td></tr>
+    </table>
+    <div class="info"><strong>Shift-invariance</strong> — $k(\mathbf{x},\mathbf{y}) = k(\mathbf{x}-\mathbf{y})$ — is the key prerequisite for Bochner's theorem and RFF.</div>
+  </div>
+
+  <div id="km-viz" class="tab-pane">
+    <h2>RBF Kernel Similarity Heatmap</h2>
+    <p>$k(x,x') = \exp(-(x-x')^2/2\sigma^2)$ for $x,x' \in [-3,3]$. Warm = similar; cool = dissimilar.</p>
+    <div class="ctrl">
+      <label>$\sigma$ (bandwidth)</label>
+      <input type="range" id="km-sigma" min="0.3" max="3" step="0.1" value="1.0" oninput="updateKernelHeatmap()">
+      <span class="val" id="km-sigma-val">1.0</span>
+    </div>
+    <div id="km-heatmap" style="height:370px"></div>
+    <p class="caption">The diagonal is always 1 — a point is maximally similar to itself. Larger $\sigma$ → similarity decays more slowly with distance.</p>
+  </div>
+</div>
+
+<!-- ── S2: Scalability Problem ─────────────────────────────── -->
+<div id="s2" class="section">
+  <h1>⚡ The Scalability Problem</h1>
+  <hr>
+  <p>Every kernel method builds the Gram matrix $K_{ij} = k(\mathbf{x}_i, \mathbf{x}_j)$, which creates a cascading cost problem.</p>
+
+  <div class="cols c11">
+    <div>
+      <h3>Storage requirements (float64)</h3>
+      <table>
+        <tr><th>$n$</th><th>Matrix</th><th>Size</th><th>Feasible?</th></tr>
+        <tr><td>1,000</td><td>$10^3 \times 10^3$</td><td>8 MB</td><td>✅</td></tr>
+        <tr><td>10,000</td><td>$10^4 \times 10^4$</td><td>800 MB</td><td>⚠️</td></tr>
+        <tr><td>100,000</td><td>$10^5 \times 10^5$</td><td>80 GB</td><td>❌</td></tr>
+        <tr><td>1,000,000</td><td>$10^6 \times 10^6$</td><td>8 TB</td><td>❌</td></tr>
+      </table>
+      <h3>Method-specific training cost</h3>
+      <table>
+        <tr><th>Method</th><th>Training</th><th>Prediction</th></tr>
+        <tr><td>Kernel SVM</td><td>$O(n^2)$ to $O(n^3)$</td><td>$O(n_\text{sv} \cdot d)$</td></tr>
+        <tr><td>Gaussian Process</td><td>$O(n^3)$ Cholesky</td><td>$O(n)$</td></tr>
+        <tr><td>Kernel PCA</td><td>$O(n^2 k)$</td><td>$O(nk)$</td></tr>
+      </table>
+    </div>
+    <div>
+      <div id="scale-chart" style="height:350px"></div>
+    </div>
+  </div>
+
+  <div class="success">
+    <strong>Random Fourier Features</strong> attacks this at the root: approximate $k(\mathbf{x},\mathbf{y}) \approx z(\mathbf{x})^\top z(\mathbf{y})$ with an explicit $D$-dimensional map. Training a linear model on $z$ costs $O(nD)$ — <strong>linear in $n$</strong> for fixed $D$.
+  </div>
+</div>
+
+<!-- ── S3: Bochner's Theorem ───────────────────────────────── -->
+<div id="s3" class="section">
+  <h1>📐 Bochner's Theorem</h1>
+  <p style="color:#555"><em>The theoretical foundation of Random Fourier Features</em></p>
+  <hr>
+
+  <div class="cols c23">
+    <div>
+      <h2>Shift-Invariant Kernels</h2>
+      <p>A kernel is <strong>shift-invariant</strong> (stationary) if it depends only on the difference between its inputs:</p>
+      $$k(\mathbf{x}, \mathbf{y}) = k(\mathbf{x} - \mathbf{y})$$
+
+      <details>
+        <summary>⚠️ Notation clarification — why does $k$ appear with both one and two inputs?</summary>
+        <div class="det-body">
+          <p>This is a deliberate <strong>notation overload</strong> — the same symbol $k$ is used for two related but distinct functions:</p>
+          <ul style="margin:.4rem 0 .8rem 1.2rem">
+            <li><strong>Left side</strong> $k(\mathbf{x},\mathbf{y})$ &mdash; kernel as a function of <em>two</em> inputs</li>
+            <li><strong>Right side</strong> $k(\mathbf{x}-\mathbf{y})$ &mdash; kernel as a function of <em>one</em> input (the difference vector)</li>
+          </ul>
+          <p>The statement says the two-argument kernel's value <strong>depends only on the difference</strong> $\mathbf{x}-\mathbf{y}$, not on $\mathbf{x}$ and $\mathbf{y}$ individually. So you can define a single-argument function taking the difference as input.</p>
+          <p><strong>RBF kernel — both forms are the same thing:</strong></p>
+          $$k(\mathbf{x}, \mathbf{y}) = \exp\!\left(-\frac{\|\mathbf{x} - \mathbf{y}\|^2}{2\sigma^2}\right) = \exp\!\left(-\frac{\|\boldsymbol{\Delta}\|^2}{2\sigma^2}\right) = k(\boldsymbol{\Delta}), \quad \boldsymbol{\Delta} = \mathbf{x} - \mathbf{y}$$
+          <p>$\mathbf{x}$ and $\mathbf{y}$ only ever appear as $\mathbf{x}-\mathbf{y}$, so the single-argument form is equivalent.</p>
+          <p><strong>Polynomial kernel (not shift-invariant):</strong></p>
+          $$k(\mathbf{x}, \mathbf{y}) = (\mathbf{x} \cdot \mathbf{y})^2$$
+          <p>This depends on the <em>dot product</em>, not the difference, so it <strong>cannot</strong> be written as $k(\mathbf{x}-\mathbf{y})$.</p>
+          <p><strong>Intuition:</strong> shift-invariance means the kernel behaves like a <em>distance meter</em> — it only cares how far apart two points are, not where they sit in space.</p>
+        </div>
+      </details>
+
+      <h2>Bochner's Theorem (1932)</h2>
+      <div class="info">
+        A continuous, bounded, shift-invariant function $k(\boldsymbol{\Delta})$ on $\mathbb{R}^d$ is <strong>positive semi-definite iff</strong> it is the Fourier transform of a non-negative measure $p(\boldsymbol{\omega})$:
+        $$k(\mathbf{x} - \mathbf{y}) = \int_{\mathbb{R}^d} p(\boldsymbol{\omega})\, e^{i\boldsymbol{\omega}^\top(\mathbf{x}-\mathbf{y})}\, d\boldsymbol{\omega}$$
+      </div>
+      <p>When $k(\mathbf{0})=1$, the measure $p(\boldsymbol{\omega})$ is a proper <strong>probability distribution</strong> — the <strong>spectral density</strong> of the kernel.</p>
+      <p>For real, symmetric $p(\boldsymbol{\omega})$ the imaginary parts cancel, giving the cosine form:</p>
+      $$k(\mathbf{x} - \mathbf{y}) = \mathbb{E}_{\boldsymbol{\omega} \sim p}\!\left[\cos\!\left(\boldsymbol{\omega}^\top(\mathbf{x} - \mathbf{y})\right)\right]$$
+      <div class="success"><strong>Key implication:</strong> the kernel is an <em>expectation of cosines</em> under the spectral distribution. Sample from $p(\boldsymbol{\omega})$, average the cosines — you get the kernel. That is exactly RFF.</div>
+    </div>
+
+    <div>
+      <h3>Audio analogy</h3>
+      <p>Just as any audio signal decomposes into pure sinusoids via its Fourier spectrum, any stationary kernel decomposes into sinusoidal basis functions weighted by $p(\boldsymbol{\omega})$. The spectral density is the kernel's <em>frequency fingerprint</em>.</p>
+
+      <h3>Spectral densities</h3>
+      <table>
+        <tr><th>Kernel</th><th>$p(\boldsymbol{\omega})$</th></tr>
+        <tr><td>RBF / Gaussian</td><td>$\mathcal{N}(\mathbf{0}, \sigma^{-2}\mathbf{I})$</td></tr>
+        <tr><td>Laplacian</td><td>Product of Cauchy</td></tr>
+        <tr><td>Matérn</td><td>Student's $t$</td></tr>
+        <tr><td>Cauchy</td><td>Product of Laplace</td></tr>
+      </table>
+
+      <hr>
+      <h3>Interactive: kernel ↔ spectral density</h3>
+      <p>Adjust $\sigma$ to see <strong>wide kernel ↔ narrow spectrum</strong> and vice versa.</p>
+      <div class="ctrl">
+        <label>$\sigma$ (bandwidth)</label>
+        <input type="range" id="boch-sigma" min="0.3" max="3" step="0.1" value="1.0" oninput="updateBochner()">
+        <span class="val" id="boch-sigma-val">1.0</span>
+      </div>
+      <div id="boch-chart" style="height:320px"></div>
+      <p class="caption">Wide kernel ↔ narrow spectrum &nbsp;|&nbsp; Narrow kernel ↔ wide spectrum. This is the time-frequency uncertainty principle.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── S4: The RFF Algorithm ───────────────────────────────── -->
+<div id="s4" class="section">
+  <h1>🎲 The RFF Algorithm</h1>
+  <hr>
+  <div class="cols c23">
+    <div>
+      <h2>Step-by-step derivation</h2>
+
+      <h3>Step 1 — Bochner in complex form</h3>
+      $$k(\mathbf{x}-\mathbf{y}) = \mathbb{E}_{\boldsymbol{\omega}\sim p} \left[e^{i\boldsymbol{\omega}^\top \mathbf{x}}\, e^{-i\boldsymbol{\omega}^\top \mathbf{y}}\right]$$
+
+      <h3>Step 2 — Simplify to real cosines</h3>
+      <p>For symmetric $p(\boldsymbol{\omega})$, imaginary parts cancel:</p>
+      $$k(\mathbf{x}-\mathbf{y}) = \mathbb{E}_{\boldsymbol{\omega}\sim p} \left[\cos\!\left(\boldsymbol{\omega}^\top(\mathbf{x}-\mathbf{y})\right)\right]$$
+
+      <h3>Step 3 — Random phase trick &nbsp;($b \sim U[0,2\pi]$)</h3>
+      $$\mathbb{E}_{b}\!\left[2\cos(\boldsymbol{\omega}^\top\mathbf{x}+b)\cos(\boldsymbol{\omega}^\top\mathbf{y}+b)\right] = \cos(\boldsymbol{\omega}^\top(\mathbf{x}-\mathbf{y}))$$
+      <p><em>Proof:</em> expand via $\cos\alpha\cos\beta = \tfrac{1}{2}[\cos(\alpha-\beta)+\cos(\alpha+\beta)]$. The $\cos(\alpha+\beta)$ term integrates to zero over $U[0,2\pi]$. ∎</p>
+
+      <details>
+        <summary>⚠️ Why is this trick needed at all?</summary>
+        <div class="det-body">
+          <p><strong>The core problem: factorization.</strong> From Bochner we have
+          $k(x-y) = \mathbb{E}_\omega[\cos(\omega^\top(x-y))]$, but
+          $\cos(\omega^\top(x-y))$ is a function of <em>both</em> $x$ and $y$ entangled together.
+          An explicit feature map requires a dot product:</p>
+          $$k(x,y) \approx z(x)^\top z(y) = \sum_j \underbrace{z_j(x)}_{\text{only } x} \cdot \underbrace{z_j(y)}_{\text{only } y}$$
+          <p>So we need to <strong>split</strong> $\cos(\omega^\top(x-y))$ into a product of a function of $x$ alone and a function of $y$ alone. There are two ways to do this:</p>
+
+          <p><strong>Option A — sin/cos decomposition</strong> (no random phase needed):</p>
+          <p>Use the identity $\cos(a-b) = \cos a \cos b + \sin a \sin b$:</p>
+          $$\cos(\omega^\top(x-y)) = \underbrace{\cos(\omega^\top x)}_{\text{only }x}\underbrace{\cos(\omega^\top y)}_{\text{only }y} \;+\; \underbrace{\sin(\omega^\top x)}_{\text{only }x}\underbrace{\sin(\omega^\top y)}_{\text{only }y}$$
+          <p>Feature map: $z(x) = \tfrac{1}{\sqrt{D}}[\cos(\omega_1^\top x),\, \sin(\omega_1^\top x),\, \ldots] \in \mathbb{R}^{2D}$. This works — but produces a $2D$-dimensional map.</p>
+
+          <p><strong>Option B — random phase trick</strong> (what Rahimi &amp; Recht use):</p>
+          $$\mathbb{E}_{b \sim U[0,2\pi]}\!\left[2\cos(\omega^\top x + b)\cdot\cos(\omega^\top y + b)\right] = \cos(\omega^\top(x-y))$$
+          <p>Feature map: $z(x) = \tfrac{1}{\sqrt{D}}[\sqrt{2}\cos(\omega_1^\top x + b_1),\, \ldots] \in \mathbb{R}^{D}$. Also works — and is only $D$-dimensional (half the size).</p>
+
+          <div class="info" style="margin-top:.8rem">
+            <strong>The random phase trick is not strictly necessary</strong> — Option A (sin/cos) is equally valid and arguably more intuitive. Option B was chosen because it gives a more compact feature vector (D vs 2D dimensions) using only cosines. Both are unbiased estimators with the same $O(1/D)$ variance.
+          </div>
+        </div>
+      </details>
+
+      <h3>Step 4 — Central result</h3>
+      <div class="success">
+        <strong>Rahimi &amp; Recht 2007 — key identity:</strong>
+        $$k(\mathbf{x}, \mathbf{y}) = \mathbb{E}_{\substack{\boldsymbol{\omega}\sim p \\ b\sim U[0,2\pi]}} \!\left[ \underbrace{\sqrt{2}\cos(\boldsymbol{\omega}^\top\mathbf{x}+b)}_{z_\omega(\mathbf{x})} \cdot \underbrace{\sqrt{2}\cos(\boldsymbol{\omega}^\top\mathbf{y}+b)}_{z_\omega(\mathbf{y})} \right]$$
+      </div>
+
+      <h3>Step 5 — Monte Carlo with $D$ samples</h3>
+      $$z(\mathbf{x}) = \frac{1}{\sqrt{D}} \begin{bmatrix} \sqrt{2}\cos(\boldsymbol{\omega}_1^\top \mathbf{x} + b_1)\\ \vdots\\ \sqrt{2}\cos(\boldsymbol{\omega}_D^\top \mathbf{x} + b_D) \end{bmatrix}\!\!, \quad \boldsymbol{\omega}_j \sim p(\boldsymbol{\omega}),\; b_j \sim U[0,2\pi]$$
+      $$z(\mathbf{x})^\top z(\mathbf{y}) \approx k(\mathbf{x},\mathbf{y})$$
+    </div>
+
+    <div>
+      <h2>Pseudocode</h2>
+<pre>
+# Given: kernel k, dataset X (n×d), D features
+# Output: feature matrix Z (n×D)
+
+# 1. Identify spectral density p(ω):
+#    RBF     → p(ω) = N(0, σ⁻²I)
+#    Laplace → p(ω) = Cauchy
+#    Matérn  → p(ω) = Student-t
+
+# 2. Sample random frequencies and phases
+omega = sample(p_omega, shape=(d, D))  # (d, D)
+b     = uniform(0, 2π,  shape=(D,))   # (D,)
+
+# 3. Build feature map
+Z = sqrt(2/D) * cos(X @ omega + b)    # (n, D)
+
+# 4. Train any linear model on Z
+#    ↳ approximates the kernel machine
+model = LinearSVM().fit(Z, y)
+
+# Predict new point x*:
+z_star = sqrt(2/D) * cos(x_star @ omega + b)
+y_pred = model.predict(z_star)
+</pre>
+
+      <h2>scikit-learn</h2>
+<pre>
+from sklearn.kernel_approximation import RBFSampler
+from sklearn.linear_model import SGDClassifier
+from sklearn.pipeline import Pipeline
+
+pipe = Pipeline([
+    ("rff", RBFSampler(gamma=0.5, n_components=1000)),
+    ("clf", SGDClassifier()),
+])
+pipe.fit(X_train, y_train)
+</pre>
+    </div>
+  </div>
+</div>
+
+<!-- ── S5: Interactive Visualizations ─────────────────────── -->
+<div id="s5" class="section">
+  <h1>📊 Interactive Visualizations</h1>
+  <p style="color:#555"><em>Build intuition by interacting with the mathematics directly.</em></p>
+  <hr>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('viz','cosine')">① Cosine Averaging</button>
+    <button class="tab-btn" onclick="tab('viz','kmat')">② Kernel Matrix</button>
+    <button class="tab-btn" onclick="tab('viz','freq')">③ Frequency Sampling</button>
+    <button class="tab-btn" onclick="tab('viz','feat')">④ Feature Functions</button>
+  </div>
+
+  <!-- Viz 1 -->
+  <div id="viz-cosine" class="tab-pane active">
+    <h2>The Kernel as an Average of Cosines</h2>
+    <p>Bochner: $k(\Delta) = \mathbb{E}_{\omega \sim p}[\cos(\omega \cdot \Delta)]$.
+    Sample $\omega_j \sim \mathcal{N}(0, \sigma^{-2})$ and average the cosines. Watch convergence to the true kernel (red dashed).</p>
+    <div class="cols c13">
+      <div>
+        <div class="ctrl"><label>$D$ (samples)</label><input type="range" id="v1-D" min="1" max="500" value="20" oninput="updateV1()"><span class="val" id="v1-D-val">20</span></div>
+        <div class="ctrl"><label>$\sigma$</label><input type="range" id="v1-s" min="0.5" max="2" step="0.25" value="1" oninput="updateV1()"><span class="val" id="v1-s-val">1.0</span></div>
+        <div class="ctrl"><label>Seed</label><input type="number" id="v1-seed" min="0" max="999" value="42" oninput="updateV1()"></div>
+        <p id="v1-info" style="font-size:.84rem;color:#555;margin-top:.5rem"></p>
+      </div>
+      <div><div id="v1-chart" style="height:420px"></div></div>
+    </div>
+    <p class="caption">Faint blue = individual cosine samples. Bold blue = their average. Red dashed = target kernel. The average converges to the kernel as D grows.</p>
+  </div>
+
+  <!-- Viz 2 -->
+  <div id="viz-kmat" class="tab-pane">
+    <h2>True Kernel Matrix vs. RFF Approximation</h2>
+    <p>30 random 2D points. Left: exact RBF kernel matrix $K$. Right: RFF approximation $\mathbf{Z}\mathbf{Z}^\top$ for increasing $D$. MAE = mean absolute error entry-wise.</p>
+    <div class="ctrl">
+      <label>$\sigma$</label>
+      <input type="range" id="v2-s" min="0.3" max="2" step="0.1" value="1.0" oninput="updateV2()">
+      <span class="val" id="v2-s-val">1.0</span>
+      <label style="min-width:50px">Seed</label>
+      <input type="number" id="v2-seed" min="0" max="999" value="7" oninput="updateV2()" style="width:65px">
+    </div>
+    <div class="km-row" id="km-row">
+      <div class="km-cell"><div id="km-true" style="width:175px;height:175px"></div><p style="color:var(--true)">True K (exact)</p></div>
+      <div class="km-cell"><div id="km-d1"   style="width:175px;height:175px"></div><p style="color:var(--rff)" id="km-d1-lbl">RFF D=1</p></div>
+      <div class="km-cell"><div id="km-d10"  style="width:175px;height:175px"></div><p style="color:var(--rff)" id="km-d10-lbl">RFF D=10</p></div>
+      <div class="km-cell"><div id="km-d100" style="width:175px;height:175px"></div><p style="color:var(--rff)" id="km-d100-lbl">RFF D=100</p></div>
+      <div class="km-cell"><div id="km-d1k"  style="width:175px;height:175px"></div><p style="color:var(--rff)" id="km-d1k-lbl">RFF D=1000</p></div>
+    </div>
+    <p class="caption">As D increases, the RFF approximation becomes visually indistinguishable from the true kernel matrix.</p>
+  </div>
+
+  <!-- Viz 3 -->
+  <div id="viz-freq" class="tab-pane">
+    <h2>Frequency Sampling Geometry</h2>
+    <p>Each RFF draw samples $\boldsymbol{\omega} \sim \mathcal{N}(\mathbf{0}, \sigma^{-2}\mathbf{I})$. In 2D this is an isotropic Gaussian cloud — all directions equally likely, reflecting the <strong>rotational invariance</strong> of the RBF kernel.</p>
+    <div class="cols c13">
+      <div>
+        <div class="ctrl"><label>$\sigma$</label><input type="range" id="v3-s" min="0.3" max="3" step="0.1" value="1.0" oninput="updateV3()"><span class="val" id="v3-s-val">1.0</span></div>
+        <div class="ctrl"><label>$D$ (# freq.)</label><input type="range" id="v3-D" min="50" max="500" step="50" value="200" oninput="updateV3()"><span class="val" id="v3-D-val">200</span></div>
+        <p id="v3-info" style="font-size:.84rem;color:#555;margin-top:.5rem"></p>
+      </div>
+      <div><div id="v3-chart" style="height:400px"></div></div>
+    </div>
+    <p class="caption">Each dot = one sampled frequency. The isotropic cloud reflects RBF's rotational symmetry — no direction is preferred.</p>
+  </div>
+
+  <!-- Viz 4 -->
+  <div id="viz-feat" class="tab-pane">
+    <h2>Individual Random Feature Functions</h2>
+    <p>Each $(\omega_j, b_j)$ defines one feature: $z_j(x) = \sqrt{2}\cos(\omega_j x + b_j)$. High $|\omega|$ → rapid oscillations. Low $|\omega|$ → slow variation.</p>
+    <div class="cols c13">
+      <div>
+        <div class="ctrl"><label>$\sigma$</label><input type="range" id="v4-s" min="0.3" max="3" step="0.1" value="1.0" oninput="updateV4()"><span class="val" id="v4-s-val">1.0</span></div>
+        <div class="ctrl"><label># features</label><input type="range" id="v4-n" min="2" max="12" step="1" value="6" oninput="updateV4()"><span class="val" id="v4-n-val">6</span></div>
+        <div class="ctrl"><label>Seed</label><input type="number" id="v4-seed" min="0" max="999" value="0" oninput="updateV4()"></div>
+      </div>
+      <div><div id="v4-chart" style="height:420px"></div></div>
+    </div>
+    <p class="caption">Left portion: feature functions. Right portion: their sampled frequencies (histogram) vs. the true spectral density (red curve).</p>
+  </div>
+</div>
+
+<!-- ── S6: RBF & Spectral Duality ─────────────────────────── -->
+<div id="s6" class="section">
+  <h1>🔬 RBF &amp; Spectral Self-Duality</h1>
+  <hr>
+
+  <h2>Why is $p(\boldsymbol{\omega}) = \mathcal{N}(\mathbf{0}, \sigma^{-2}\mathbf{I})$ for the RBF kernel?</h2>
+  <p>We need $p$ such that:</p>
+  $$\exp\!\left(-\frac{\|\boldsymbol{\Delta}\|^2}{2\sigma^2}\right) = \int p(\boldsymbol{\omega})\, e^{i\boldsymbol{\omega}^\top\boldsymbol{\Delta}}\, d\boldsymbol{\omega}$$
+  <p>This is a Fourier inversion problem. The key fact: <strong>the Gaussian is self-dual under the Fourier transform</strong>:</p>
+  $$\mathcal{F}\left\{e^{-t^2/2\sigma^2}\right\}(\omega) = \sigma\sqrt{2\pi}\; e^{-\sigma^2\omega^2/2}$$
+  <p>Normalizing to a probability density:</p>
+  $$\boxed{p(\omega) = \mathcal{N}\!\left(0,\, \frac{1}{\sigma^2}\right)} \quad\Longrightarrow\quad \mathbb{E}_{\omega \sim \mathcal{N}(0,\sigma^{-2})}[\cos(\omega\Delta)] = e^{-\Delta^2/2\sigma^2}$$
+  <p>In $d$ dimensions with the isotropic RBF kernel: $p(\boldsymbol{\omega}) = \mathcal{N}(\mathbf{0},\, \sigma^{-2}\mathbf{I}_d)$, equivalently $\boldsymbol{\omega} = \mathbf{z}/\sigma$, $\mathbf{z}\sim\mathcal{N}(\mathbf{0},\mathbf{I})$.</p>
+
+  <hr>
+  <div class="cols c11">
+    <div class="info">
+      <strong>Large $\sigma$</strong> (wide, smooth kernel)<br>
+      → Long-range correlations<br>
+      → Low-frequency structure<br>
+      → Spectral density <strong>narrow</strong> (small variance $\sigma^{-2}$)
+    </div>
+    <div class="warn">
+      <strong>Small $\sigma$</strong> (narrow, sharp kernel)<br>
+      → Short-range correlations only<br>
+      → High-frequency structure<br>
+      → Spectral density <strong>wide</strong> (large variance $\sigma^{-2}$)
+    </div>
+  </div>
+  <p><em>This is the time-frequency uncertainty principle: wide in space ↔ narrow in frequency.</em></p>
+
+  <div id="duality-chart" style="height:400px;margin-top:1rem"></div>
+  <p class="caption">Kernel (top row) and spectral density (bottom row) for three bandwidths. Notice the inverse relationship.</p>
+
+  <hr>
+  <h2>Spectral distributions for all common kernels</h2>
+  <table>
+    <tr><th>Kernel</th><th>$k(\boldsymbol{\Delta})$</th><th>$p(\boldsymbol{\omega})$</th></tr>
+    <tr><td>Gaussian / RBF</td><td>$\exp(-\|\Delta\|^2/2\sigma^2)$</td><td>$\mathcal{N}(\mathbf{0}, \sigma^{-2}\mathbf{I})$</td></tr>
+    <tr><td>Laplacian</td><td>$\exp(-\|\Delta\|_1/\sigma)$</td><td>Product of Cauchy$(0, \sigma^{-1})$</td></tr>
+    <tr><td>Matérn $\nu=1/2$</td><td>$\exp(-\|\Delta\|/\ell)$</td><td>Product of Cauchy$(0, \ell^{-1})$</td></tr>
+    <tr><td>Matérn $\nu=3/2$</td><td>$(1+\frac{\sqrt{3}\|\Delta\|}{\ell})\exp(\cdots)$</td><td>Student-$t$(3) scaled by $\sqrt{3}/\ell$</td></tr>
+    <tr><td>Cauchy</td><td>$\prod_i(1+\Delta_i^2/\sigma^2)^{-1}$</td><td>Product of Laplace$(0, \sigma^{-1})$</td></tr>
+  </table>
+</div>
+
+<!-- ── S7: Error Guarantees ────────────────────────────────── -->
+<div id="s7" class="section">
+  <h1>📏 Error Guarantees</h1>
+  <hr>
+  <div class="cols c11">
+    <div>
+      <h2>Unbiasedness</h2>
+      $$\mathbb{E}\!\left[z(\mathbf{x})^\top z(\mathbf{y})\right] = k(\mathbf{x},\mathbf{y})$$
+      <p>No systematic error — only random noise that vanishes as $D \to \infty$.</p>
+
+      <h2>Variance decay</h2>
+      $$\text{Var}\!\left[z(\mathbf{x})^\top z(\mathbf{y})\right] = O\!\left(\tfrac{1}{D}\right)$$
+      <p>Variance halves every time you double $D$.</p>
+
+      <h2>Pointwise concentration (Hoeffding)</h2>
+      <p>Since $z_\omega(\mathbf{x}) \in [-\sqrt{2},\sqrt{2}]$, the product is bounded in $[-2,2]$:</p>
+      $$\Pr\!\left[\,\left|z(\mathbf{x})^\top z(\mathbf{y}) - k(\mathbf{x},\mathbf{y})\right| \geq \varepsilon\,\right] \leq 2\exp\!\left(-\frac{D\varepsilon^2}{4}\right)$$
+      <p>To achieve $|\text{error}| \leq \varepsilon$ with probability $\geq 1-\delta$:</p>
+      $$D \geq \frac{4}{\varepsilon^2}\ln\frac{2}{\delta}$$
+      <div class="success">$D$ is <strong>independent of input dimension $d$ and dataset size $n$</strong>. This is the key practical advantage.</div>
+
+      <h2>Uniform bound (Rahimi &amp; Recht)</h2>
+      <p>For all pairs on a compact domain $\mathcal{M}$:</p>
+      $$D = O\!\left(\frac{d}{\varepsilon^2}\ln\frac{\sigma_p\,\text{diam}(\mathcal{M})}{\varepsilon\delta}\right)$$
+      <p>For uniform accuracy, $D$ scales linearly with $d$.</p>
+    </div>
+
+    <div>
+      <h3>Required $D$ vs. desired error $\varepsilon$</h3>
+      <div class="ctrl">
+        <label>Failure prob. $\delta$</label>
+        <select id="err-delta" onchange="updateErr()" style="padding:.2rem .4rem;border:1px solid var(--border);border-radius:4px;font-size:.84rem">
+          <option value="0.01">0.01</option>
+          <option value="0.05" selected>0.05</option>
+          <option value="0.10">0.10</option>
+          <option value="0.20">0.20</option>
+        </select>
+      </div>
+      <div id="err-chart" style="height:280px"></div>
+      <h3 style="margin-top:1rem">Std deviation vs. $D$</h3>
+      <div id="conv-chart" style="height:250px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S8: Extensions & History ───────────────────────────── -->
+<div id="s8" class="section">
+  <h1>🏛 Extensions &amp; History</h1>
+  <hr>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('hist','h')">History</button>
+    <button class="tab-btn" onclick="tab('hist','ext')">Extensions</button>
+  </div>
+
+  <div id="hist-h" class="tab-pane active">
+    <h2>The Original Paper</h2>
+    <p><strong>"Random Features for Large-Scale Kernel Machines"</strong><br>
+    Ali Rahimi and Benjamin Recht, NeurIPS 2007</p>
+    <p>By 2007 kernel SVMs were the gold standard for classification. But training at $n > 10^5$ was computationally out of reach. Rahimi &amp; Recht provided the first theoretically grounded, practically efficient solution: approximate the <em>kernel function itself</em> rather than trying to speed up the linear algebra. The paper won the <strong>NeurIPS 2017 Test of Time Award</strong> and has since accumulated thousands of citations spanning kernel approximation, GP regression, deep kernel learning, and attention in Transformers.</p>
+
+    <hr>
+    <h2>The "Alchemy" Talk (NeurIPS 2017)</h2>
+    <p>Rahimi used his Test of Time acceptance speech to argue that ML had become <strong>"alchemy"</strong> — practitioners producing results through trial-and-error without understanding <em>why</em> things work.</p>
+    <blockquote style="border-left:3px solid var(--border);padding:.5rem 1rem;margin:1rem 0;color:#555;font-style:italic">
+      "We are building systems that govern healthcare and mediate our civic dialogue... I would like to live in a society where systems are built on top of verifiable, rigorous, thorough knowledge and not alchemy."
+    </blockquote>
+    <p>He called for ablation studies, simple toy problems, and theorems that can be transmitted to the next generation. The talk provoked a public rebuttal from Yann LeCun, who argued that engineering advances without complete theoretical understanding is normal across all fields.</p>
+    <p>Full text: <a href="https://archives.argmin.net/2017/12/05/kitchen-sinks/" target="_blank">archives.argmin.net</a></p>
+  </div>
+
+  <div id="hist-ext" class="tab-pane">
+    <h2>Extensions to Vanilla RFF</h2>
+    <table>
+      <tr><th>Method</th><th>Key Idea</th><th>Benefit</th><th>Reference</th></tr>
+      <tr><td>Orthogonal RFF</td><td>Make $\boldsymbol{\omega}_j$ mutually orthogonal via Gram-Schmidt</td><td>Strictly lower variance → fewer features needed</td><td>Yu et al. 2016</td></tr>
+      <tr><td>Quasi-Random RFF</td><td>Sobol / Halton sequences instead of i.i.d. samples</td><td>Faster convergence $O(D^{-1})$ vs $O(D^{-1/2})$</td><td>Avron et al. 2016</td></tr>
+      <tr><td>Structured RFF (FastFood)</td><td>Hadamard transforms for feature computation</td><td>$O(D\log D)$ instead of $O(Dd)$</td><td>Le et al. 2013</td></tr>
+      <tr><td>Deep Kernel Learning</td><td>Learn spectral density $p(\boldsymbol{\omega})$ from data</td><td>Kernel adapts to data distribution</td><td>Wilson et al. 2016</td></tr>
+      <tr><td>Performers (Attention)</td><td>RFF to approximate softmax attention</td><td>Linear-time Transformers</td><td>Choromanski et al. 2021</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ── S9: Sources ─────────────────────────────────────────── -->
+<div id="s9" class="section">
+  <h1>📚 Sources</h1>
+  <hr>
+  <h2>Primary</h2>
+  <ol style="line-height:2;padding-left:1.3rem;font-size:.92rem">
+    <li><strong>Rahimi, A. &amp; Recht, B. (2007).</strong> Random Features for Large-Scale Kernel Machines. <em>NeurIPS 2007.</em> <a href="https://people.eecs.berkeley.edu/~brecht/papers/07.rah.rec.nips.pdf" target="_blank">PDF</a></li>
+    <li><strong>Recht, B. (2017).</strong> Reflections on Random Kitchen Sinks. <a href="https://archives.argmin.net/2017/12/05/kitchen-sinks/" target="_blank">archives.argmin.net</a></li>
+  </ol>
+  <h2>Tutorials &amp; Blogs</h2>
+  <ol start="3" style="line-height:2;padding-left:1.3rem;font-size:.92rem">
+    <li><strong>Gundersen, G. (2019).</strong> Random Fourier Features. <a href="https://gregorygundersen.com/blog/2019/12/23/random-fourier-features/" target="_blank">gregorygundersen.com</a></li>
+    <li><strong>Jones, A.</strong> Approximating Kernels with Random Projections (with convergence animation). <a href="https://andrewcharlesjones.github.io/journal/bochners-theorem.html" target="_blank">andrewcharlesjones.github.io</a></li>
+    <li><strong>Random Walks Book.</strong> RFF chapter with GP variance analysis. <a href="https://random-walks.org/book/papers/rff/rff.html" target="_blank">random-walks.org</a></li>
+  </ol>
+  <h2>Papers</h2>
+  <ol start="6" style="line-height:2;padding-left:1.3rem;font-size:.92rem">
+    <li><strong>Li, Z. et al. (2019).</strong> Towards a Unified Analysis of Random Fourier Features. <em>ICML 2019.</em> <a href="http://proceedings.mlr.press/v97/li19k/li19k.pdf" target="_blank">PDF</a></li>
+    <li><strong>Sutherland, D. &amp; Schneider, J. (2015).</strong> On the Error of Random Fourier Features. <em>UAI 2015.</em> <a href="https://auai.org/uai2015/proceedings/papers/168.pdf" target="_blank">PDF</a></li>
+    <li><strong>Choromanski, K. et al. (2021).</strong> Rethinking Attention with Performers. <em>ICLR 2021.</em></li>
+  </ol>
+  <h2>Reference</h2>
+  <ul style="line-height:2;padding-left:1.3rem;font-size:.92rem">
+    <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Random_feature" target="_blank">Random Feature</a></li>
+    <li>Wikipedia — <a href="https://en.wikipedia.org/wiki/Bochner%27s_theorem" target="_blank">Bochner's Theorem</a></li>
+    <li>scikit-learn — <a href="https://scikit-learn.org/stable/modules/generated/sklearn.kernel_approximation.RBFSampler.html" target="_blank">RBFSampler</a></li>
+  </ul>
+</div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════════ -->
+<script>
+// ── Seeded PRNG (mulberry32) ───────────────────────────────────────────────
+function mkRng(seed) {
+  let s = seed | 0;
+  function rand() {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  return {
+    rand,
+    randn() {
+      const u1 = rand() + 1e-10, u2 = rand();
+      return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    },
+    arr(n, fn) { return Array.from({length: n}, fn); },
+  };
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────
+function linspace(a, b, n) {
+  return Array.from({length: n}, (_, i) => a + (b - a) * i / (n - 1));
+}
+
+function rbf(d, sigma) { return Math.exp(-d * d / (2 * sigma * sigma)); }
+
+const PLT = {
+  rff: '#457b9d', true: '#e63946', spec: '#2a9d8f',
+  layout(extra) {
+    return Object.assign({
+      margin: {l:50, r:20, t:40, b:50},
+      paper_bgcolor: 'white', plot_bgcolor: '#fafafa',
+      font: {family: '-apple-system, sans-serif', size: 12},
+    }, extra);
+  },
+  config: {responsive: true, displayModeBar: false},
+};
+
+// ── Navigation ────────────────────────────────────────────────────────────
+const initialized = new Set();
+
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  if (!initialized.has(id)) {
+    initialized.add(id);
+    initSection(id);
+  }
+  if (window.MathJax) MathJax.typesetPromise([document.getElementById(id)]);
+}
+
+function tab(group, id) {
+  const bar = event.currentTarget.closest('.tab-bar');
+  bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  // find sibling tab panes — look for panes with id starting with group-
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(p => p.classList.remove('active'));
+  document.getElementById(`${group}-${id}`).classList.add('active');
+}
+
+function initSection(id) {
+  const fns = {
+    s0: initExec, s1: initKernelViz, s2: initScale,
+    s3: initBochner, s5: initVizAll, s6: initDuality,
+    s7: initErr,
+  };
+  if (fns[id]) fns[id]();
+}
+
+// ── S0: Executive Summary chart ───────────────────────────────────────────
+function initExec() {
+  const ns = linspace(2, 6, 80).map(x => Math.pow(10, x));
+  Plotly.newPlot('exec-chart', [
+    {x: ns, y: ns.map(n => Math.pow(n, 3)),   name: 'Exact O(n³)',    line: {color: PLT.true, width: 2.5}},
+    {x: ns, y: ns.map(n => n * 1000),         name: 'RFF O(nD), D=1k', line: {color: PLT.rff,  width: 2.5}},
+    {x: ns, y: ns.map(n => n * Math.pow(1000,2)/n), name: 'Nyström O(nm²)', line: {color: PLT.spec, width: 2, dash:'dash'}},
+  ], PLT.layout({
+    xaxis: {type:'log', title:'n', gridcolor:'#eee'},
+    yaxis: {type:'log', title:'Operations', gridcolor:'#eee'},
+    title: {text:'Compute scaling comparison', font:{size:13}},
+    legend: {x:.02, y:.98},
+    shapes: [{type:'line', x0:1e5, x1:1e5, y0:0, y1:1, xref:'x', yref:'paper',
+              line:{color:'#aaa', dash:'dot', width:1}}],
+    annotations: [{x:Math.log10(1.3e5), y:0.5, xref:'x', yref:'paper',
+                   text:'n=100k', showarrow:false, font:{size:10, color:'#888'}}],
+  }), PLT.config);
+}
+
+// ── S1: Kernel Heatmap ────────────────────────────────────────────────────
+function initKernelViz() { updateKernelHeatmap(); }
+
+function updateKernelHeatmap() {
+  const sigma = +document.getElementById('km-sigma').value;
+  document.getElementById('km-sigma-val').textContent = sigma.toFixed(1);
+  const n = 60, g = linspace(-3, 3, n);
+  const z = g.map(x => g.map(y => rbf(x - y, sigma)));
+  Plotly.react('km-heatmap', [{
+    z, x: g, y: g, type: 'heatmap',
+    colorscale: [[0,'#2166ac'],[0.5,'#f7f7f7'],[1,'#d6604d']],
+    reversescale: true, zmin: 0, zmax: 1,
+    colorbar: {len: 0.8, thickness: 12},
+  }], PLT.layout({
+    title: {text:`RBF kernel k(x,x'), σ=${sigma.toFixed(1)}`, font:{size:13}},
+    xaxis: {title:"x'", gridcolor:'#eee'},
+    yaxis: {title:'x', gridcolor:'#eee'},
+    height: 370,
+  }), PLT.config);
+}
+
+// ── S2: Scaling chart ─────────────────────────────────────────────────────
+function initScale() {
+  const ns = linspace(2, 6, 100).map(x => Math.pow(10, x));
+  Plotly.newPlot('scale-chart', [
+    {x: ns, y: ns.map(n => n**3),      name:'Exact: O(n³)',       line:{color:PLT.true, width:2.5}},
+    {x: ns, y: ns.map(n => n*1000),    name:'RFF: O(nD), D=1k',   line:{color:PLT.rff,  width:2.5}},
+    {x: ns, y: ns.map(n => n*1e6),     name:'Nyström: O(nm²), m=1k', line:{color:PLT.spec, width:2, dash:'dash'}},
+  ], PLT.layout({
+    xaxis: {type:'log', title:'Training points n', gridcolor:'#eee'},
+    yaxis: {type:'log', title:'Operations', gridcolor:'#eee'},
+    title: {text:'Compute cost scaling', font:{size:13}},
+    legend: {x:.02, y:.98},
+    height: 350,
+  }), PLT.config);
+}
+
+// ── S3: Bochner viz ───────────────────────────────────────────────────────
+function initBochner() { updateBochner(); }
+
+function updateBochner() {
+  const sigma = +document.getElementById('boch-sigma').value;
+  document.getElementById('boch-sigma-val').textContent = sigma.toFixed(1);
+  const d = linspace(-5, 5, 200), om = linspace(-6, 6, 200);
+  const kv = d.map(x => rbf(x, sigma));
+  const pv = om.map(w => (sigma / Math.sqrt(2*Math.PI)) * Math.exp(-sigma*sigma*w*w/2));
+  Plotly.react('boch-chart', [
+    {x: d,  y: kv, name:`k(Δ) σ=${sigma.toFixed(1)}`, line:{color:PLT.true, width:2.5},
+     fill:'tozeroy', fillcolor:'rgba(230,57,70,0.12)', xaxis:'x1', yaxis:'y1'},
+    {x: om, y: pv, name:`p(ω) std=${(1/sigma).toFixed(2)}`, line:{color:PLT.spec, width:2.5},
+     fill:'tozeroy', fillcolor:'rgba(42,157,143,0.12)', xaxis:'x2', yaxis:'y2'},
+  ], PLT.layout({
+    grid: {rows:1, columns:2, pattern:'independent'},
+    xaxis:  {title:'Δ = x−y', domain:[0, 0.46], gridcolor:'#eee'},
+    yaxis:  {title:'k(Δ)', range:[-0.05,1.1], gridcolor:'#eee'},
+    xaxis2: {title:'frequency ω', domain:[0.54, 1], gridcolor:'#eee'},
+    yaxis2: {title:'p(ω)', gridcolor:'#eee'},
+    title: {text:`Wide kernel ↔ narrow spectrum  |  σ=${sigma.toFixed(1)}`, font:{size:12}},
+    legend: {x:.35, y:1.08, orientation:'h'},
+    height: 320,
+  }), PLT.config);
+}
+
+// ── S5: Viz 1 — Cosine averaging ──────────────────────────────────────────
+function initVizAll() { updateV1(); updateV2(); updateV3(); updateV4(); }
+
+function updateV1() {
+  const D     = +document.getElementById('v1-D').value;
+  const sigma = +document.getElementById('v1-s').value;
+  const seed  = +document.getElementById('v1-seed').value || 42;
+  document.getElementById('v1-D-val').textContent = D;
+  document.getElementById('v1-s-val').textContent = sigma.toFixed(2);
+  document.getElementById('v1-info').textContent =
+    `Std error ≈ 1/√D = ${(1/Math.sqrt(D)).toFixed(3)}`;
+
+  const rng = mkRng(seed | 0);
+  const omegas = rng.arr(D, () => rng.randn() / sigma);
+  const delta  = linspace(-4, 4, 300);
+  const cosines = omegas.map(w => delta.map(d => Math.cos(w * d)));
+  const avg    = delta.map((_, i) => cosines.reduce((s,c) => s + c[i], 0) / D);
+  const truth  = delta.map(d => rbf(d, sigma));
+  const err    = delta.map((_, i) => Math.abs(avg[i] - truth[i]));
+
+  const traces = [];
+  const nShow = Math.min(D, 25);
+  for (let j = 0; j < nShow; j++) {
+    traces.push({x: delta, y: cosines[j], mode:'lines',
+      line:{color:PLT.rff, width:0.7}, opacity: 0.25,
+      showlegend: false, xaxis:'x1', yaxis:'y1'});
+  }
+  traces.push({x:delta, y:avg,   mode:'lines', name:`RFF avg (D=${D})`,
+    line:{color:PLT.rff, width:2.5}, xaxis:'x1', yaxis:'y1'});
+  traces.push({x:delta, y:truth, mode:'lines', name:'True RBF kernel',
+    line:{color:PLT.true, width:2.5, dash:'dash'}, xaxis:'x1', yaxis:'y1'});
+  traces.push({x:delta, y:err, mode:'lines', name:'|error|',
+    fill:'tozeroy', fillcolor:'rgba(255,152,0,0.4)',
+    line:{color:'rgba(255,152,0,0.8)', width:1.5}, xaxis:'x2', yaxis:'y2'});
+
+  Plotly.react('v1-chart', traces, PLT.layout({
+    grid: {rows:2, columns:1, pattern:'independent', roworder:'top to bottom'},
+    xaxis:  {gridcolor:'#eee', domain:[0,1]},
+    yaxis:  {title:'value', range:[-0.7,1.5], gridcolor:'#eee'},
+    xaxis2: {title:'Δ = x − y', gridcolor:'#eee'},
+    yaxis2: {title:'|error|', gridcolor:'#eee'},
+    legend: {x:0.6, y:0.98},
+    height: 420,
+    title: {text:`Monte Carlo approx — ${D} cosines averaged`, font:{size:12}},
+  }), PLT.config);
+}
+
+// ── S5: Viz 2 — Kernel matrix heatmaps ───────────────────────────────────
+function updateV2() {
+  const sigma = +document.getElementById('v2-s').value;
+  const seed  = +document.getElementById('v2-seed').value || 7;
+  document.getElementById('v2-s-val').textContent = sigma.toFixed(1);
+
+  const rng = mkRng(seed | 0), n = 30;
+  const X = rng.arr(n, () => [rng.randn(), rng.randn()]);
+
+  // True kernel matrix
+  const K_true = X.map((xi, i) => X.map((xj, j) => {
+    const dx = xi[0]-xj[0], dy = xi[1]-xj[1];
+    return Math.exp(-(dx*dx+dy*dy)/(2*sigma*sigma));
+  }));
+
+  const plotHM = (divId, K, title, color) => {
+    Plotly.react(divId, [{
+      z: K, type:'heatmap',
+      colorscale:[[0,'#2166ac'],[0.5,'#f7f7f7'],[1,'#d6604d']],
+      reversescale:true, zmin:0, zmax:1, showscale:false,
+    }], {
+      margin:{l:5,r:5,t:30,b:5},
+      title:{text:title, font:{size:11, color}},
+      xaxis:{visible:false}, yaxis:{visible:false},
+      paper_bgcolor:'white', plot_bgcolor:'white',
+      width:175, height:175,
+    }, PLT.config);
+  };
+
+  plotHM('km-true', K_true, 'True K', PLT.true);
+
+  const Ds = [1, 10, 100, 1000];
+  const ids = ['km-d1','km-d10','km-d100','km-d1k'];
+  const lblIds = ['km-d1-lbl','km-d10-lbl','km-d100-lbl','km-d1k-lbl'];
+
+  Ds.forEach((D, di) => {
+    const omegas = rng.arr(D, () => [rng.randn()/sigma, rng.randn()/sigma]);
+    const biases = rng.arr(D, () => rng.rand() * 2 * Math.PI);
+    const Z = X.map(x => omegas.map((w, j) =>
+      Math.sqrt(2/D) * Math.cos(w[0]*x[0] + w[1]*x[1] + biases[j])
+    ));
+    const K_hat = Z.map((zi, i) => Z.map((zj) => zi.reduce((s,v,k) => s+v*zj[k], 0)));
+    const mae = K_true.flat().reduce((s,v,i) => s+Math.abs(v-K_hat.flat()[i]), 0) / (n*n);
+    const title = `D=${D}`;
+    plotHM(ids[di], K_hat, title, PLT.rff);
+    document.getElementById(lblIds[di]).textContent = `RFF D=${D}  MAE=${mae.toFixed(3)}`;
+  });
+}
+
+// ── S5: Viz 3 — Frequency sampling ───────────────────────────────────────
+function updateV3() {
+  const sigma = +document.getElementById('v3-s').value;
+  const D     = +document.getElementById('v3-D').value;
+  document.getElementById('v3-s-val').textContent = sigma.toFixed(1);
+  document.getElementById('v3-D-val').textContent = D;
+  document.getElementById('v3-info').textContent =
+    `Spectral std = 1/σ = ${(1/sigma).toFixed(2)}  |  Large σ → tight cloud (low-freq)`;
+
+  const rng = mkRng(42);
+  const omegas = rng.arr(D, () => [rng.randn()/sigma, rng.randn()/sigma]);
+  const theta  = linspace(0, 2*Math.PI, 200);
+  const cir = (r) => ({
+    x: theta.map(t => r*Math.cos(t)),
+    y: theta.map(t => r*Math.sin(t)),
+    mode:'lines', showlegend:true, line:{color:'#aaa', dash:'dash', width:1.5},
+  });
+
+  Plotly.react('v3-chart', [
+    {x: omegas.map(w=>w[0]), y: omegas.map(w=>w[1]),
+     mode:'markers', marker:{color:PLT.spec, size:5, opacity:0.6},
+     name:`D=${D} samples`},
+    Object.assign(cir(1/sigma), {name:'1σ'}),
+    Object.assign(cir(2/sigma), {name:'2σ'}),
+  ], PLT.layout({
+    xaxis: {title:'ω₁', scaleanchor:'y', gridcolor:'#eee'},
+    yaxis: {title:'ω₂', gridcolor:'#eee'},
+    title: {text:`Sampled frequencies ω ~ N(0, ${(1/sigma).toFixed(2)}²·I)`, font:{size:12}},
+    legend: {x:0.7, y:0.98},
+    height: 400,
+  }), PLT.config);
+}
+
+// ── S5: Viz 4 — Feature functions ────────────────────────────────────────
+const TAB10 = ['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd',
+               '#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf','#aec7e8','#ffbb78'];
+
+function updateV4() {
+  const sigma = +document.getElementById('v4-s').value;
+  const nf    = +document.getElementById('v4-n').value;
+  const seed  = +document.getElementById('v4-seed').value || 0;
+  document.getElementById('v4-s-val').textContent = sigma.toFixed(1);
+  document.getElementById('v4-n-val').textContent = nf;
+
+  const rng    = mkRng(seed | 0);
+  const omegas = rng.arr(nf, () => rng.randn()/sigma);
+  const biases = rng.arr(nf, () => rng.rand() * 2 * Math.PI);
+  const x      = linspace(-3, 3, 300);
+
+  const traces = omegas.map((w, j) => ({
+    x, y: x.map(xi => Math.sqrt(2) * Math.cos(w*xi + biases[j])),
+    mode:'lines', name:`ω=${w.toFixed(2)}`,
+    line:{color: TAB10[j % TAB10.length], width:1.8},
+    xaxis:'x1', yaxis:'y1',
+  }));
+
+  // Histogram of sampled omegas vs true spectral density
+  const histX = Array.from({length: nf}, (_, i) => omegas[i]);
+  const omRange = linspace(-8/sigma, 8/sigma, 200);
+  const specY   = omRange.map(w => (sigma/Math.sqrt(2*Math.PI)) * Math.exp(-sigma*sigma*w*w/2));
+
+  traces.push({
+    x: histX, type:'histogram', histnorm:'probability density',
+    marker:{color:PLT.spec, opacity:0.55}, name:'Sampled ω',
+    xaxis:'x2', yaxis:'y2', showlegend:true,
+  });
+  traces.push({
+    x: omRange, y: specY, mode:'lines', name:'True p(ω)',
+    line:{color:PLT.true, width:2.5},
+    xaxis:'x2', yaxis:'y2',
+  });
+
+  Plotly.react('v4-chart', traces, PLT.layout({
+    grid: {rows:1, columns:2, pattern:'independent'},
+    xaxis:  {title:'x', domain:[0,0.55], gridcolor:'#eee'},
+    yaxis:  {title:'√2 cos(ωx+b)', range:[-2.2,2.2], gridcolor:'#eee'},
+    xaxis2: {title:'frequency ω', domain:[0.63,1], gridcolor:'#eee'},
+    yaxis2: {title:'density', gridcolor:'#eee'},
+    title: {text:`${nf} random features  |  σ=${sigma.toFixed(1)}`, font:{size:12}},
+    legend: {x:0.56, y:1, font:{size:9}},
+    height: 420,
+  }), PLT.config);
+}
+
+// ── S6: Duality multi-sigma chart ─────────────────────────────────────────
+function initDuality() {
+  const sigmas = [0.5, 1.0, 2.0];
+  const d      = linspace(-5, 5, 200);
+  const om     = linspace(-8, 8, 300);
+  const colors = [PLT.true, PLT.rff, PLT.spec];
+  const traces = [];
+
+  sigmas.forEach((sg, i) => {
+    const kv = d.map(x => rbf(x, sg));
+    const pv = om.map(w => (sg/Math.sqrt(2*Math.PI)) * Math.exp(-sg*sg*w*w/2));
+    traces.push({x:d,  y:kv, name:`σ=${sg}`, mode:'lines',
+      line:{color:colors[i], width:2.5}, fill:'tozeroy',
+      fillcolor:`${colors[i]}22`, xaxis:'x1', yaxis:'y1', legendgroup:`g${i}`});
+    traces.push({x:om, y:pv, name:`σ=${sg}`, mode:'lines', showlegend:false,
+      line:{color:colors[i], width:2.5}, fill:'tozeroy',
+      fillcolor:`${colors[i]}22`, xaxis:'x2', yaxis:'y2', legendgroup:`g${i}`});
+  });
+
+  Plotly.newPlot('duality-chart', traces, PLT.layout({
+    grid:{rows:1, columns:2, pattern:'independent'},
+    xaxis:  {title:'Δ = x−y', domain:[0,0.46], gridcolor:'#eee'},
+    yaxis:  {title:'k(Δ)', gridcolor:'#eee'},
+    xaxis2: {title:'frequency ω', domain:[0.54,1], gridcolor:'#eee'},
+    yaxis2: {title:'p(ω)', gridcolor:'#eee'},
+    title: {text:'Kernel (left) and spectral density (right) for σ = 0.5, 1.0, 2.0', font:{size:12}},
+    legend: {x:0.35, y:1.08, orientation:'h'},
+    height: 400,
+  }), PLT.config);
+}
+
+// ── S7: Error Guarantees charts ───────────────────────────────────────────
+function initErr() { updateErr(); }
+
+function updateErr() {
+  const delta  = +document.getElementById('err-delta').value;
+  const eps    = linspace(0.02, 0.5, 200);
+  const Dreq   = eps.map(e => (4/(e*e)) * Math.log(2/delta));
+
+  Plotly.react('err-chart', [
+    {x: eps, y: Dreq, mode:'lines', line:{color:PLT.rff, width:2.5}, showlegend:false},
+    {x:[0.02,0.5], y:[100,100],   mode:'lines', name:'D=100',  line:{color:'#aaa',dash:'dot'}},
+    {x:[0.02,0.5], y:[1000,1000], mode:'lines', name:'D=1000', line:{color:'#aaa',dash:'dash'}},
+  ], PLT.layout({
+    xaxis: {title:'Error tolerance ε', gridcolor:'#eee'},
+    yaxis: {type:'log', title:'Required D', gridcolor:'#eee'},
+    title: {text:`D ≥ (4/ε²) ln(2/δ),  δ=${delta}`, font:{size:12}},
+    legend: {x:0.7, y:0.98},
+    height: 280,
+  }), PLT.config);
+
+  const Drange = Array.from({length:200}, (_,i) => i+1);
+  Plotly.react('conv-chart', [
+    {x: Drange, y: Drange.map(D => 1/Math.sqrt(D)),
+     mode:'lines', line:{color:PLT.rff, width:2.5}, showlegend:false},
+  ], PLT.layout({
+    xaxis: {type:'log', title:'D (# features)', gridcolor:'#eee'},
+    yaxis: {type:'log', title:'Std dev ∝ 1/√D', gridcolor:'#eee'},
+    title: {text:'Estimator standard deviation vs D', font:{size:12}},
+    height: 250,
+  }), PLT.config);
+}
+
+// ── Boot: init first section on load ─────────────────────────────────────
+window.addEventListener('load', () => {
+  initialized.add('s0');
+  initExec();
+  if (window.MathJax) MathJax.typesetPromise();
+});
+</script>
+</body>
+</html>
