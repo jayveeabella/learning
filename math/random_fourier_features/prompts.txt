@@ -1,0 +1,14 @@
+/deep-research Please research for me information that would help me understand what random fourier features are.
+  Include brief history and visualizations that help me gain intuition on them. Include a refresher on kernels  
+
+  /multi-plan Can you please plan how you can take this information and display it in a single html file? If more  
+  infrastructure is needed, feel free to use python and opt to create a streamlit page instead. Plan to place all    
+  necssary files inside a folder  
+
+  add the plan in the local @.claude dir
+
+  implement it, please use uv for any python package management
+
+  is it really not possible to convert this to html that makes it easier to share without install dependencies
+
+  i dont mind needing the internet, please create the CDN version
