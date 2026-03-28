@@ -108,9 +108,25 @@ details[open] summary{border-radius:var(--r) var(--r) 0 0}
 .km-row{display:flex;gap:8px;overflow-x:auto;margin:.8rem 0}
 .km-cell{text-align:center;flex-shrink:0}
 .km-cell p{font-size:.78rem;font-weight:600;margin-top:.2rem}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+#menu-toggle{display:none;position:fixed;top:.7rem;right:.7rem;z-index:200;
+  background:var(--sbg);color:#fff;border:none;border-radius:6px;
+  padding:.5rem .7rem;cursor:pointer;font-size:1.15rem;line-height:1}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
+@media(max-width:767px){
+  #menu-toggle{display:block}
+  #sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.open{transform:translateX(0)}
+  #sidebar-overlay.open{display:block}
+  #main{margin-left:0;padding:3.5rem 1rem 4rem}
+  .cols.c12,.cols.c21,.cols.c11,.cols.c23,.cols.c13{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
+<button id="menu-toggle" aria-label="Toggle menu" onclick="toggleSidebar()">☰</button>
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
 <!-- ═══════════════════════════════════════════════════════════
      SIDEBAR
@@ -735,6 +751,12 @@ function nav(id) {
     initSection(id);
   }
   if (window.MathJax) MathJax.typesetPromise([document.getElementById(id)]);
+  if (window.innerWidth < 768) { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('open'); }
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
 }
 
 function tab(group, id) {
