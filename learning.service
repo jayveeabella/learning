@@ -4,9 +4,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=pi
-WorkingDirectory=/home/pi/repos/learning
-ExecStart=/home/pi/.local/bin/uv run python server.py
+User=jayab867
+WorkingDirectory=/home/jayab867/repos/learning
+ExecStart=/home/jayab867/.local/bin/uv run python server.py
 Restart=on-failure
 RestartSec=5
 
