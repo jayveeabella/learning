@@ -1,0 +1,2994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Johnson-Lindenstrauss Lemma — Interactive Explainer</title>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --jl:#6a4c93;--proj:#e63946;--good:#2a9d8f;--turbo:#e76f51;
+  --sw:238px;--sbg:#1a1a2e;--stext:#c8d0e7;
+  --bg:#f5f6fa;--card:#fff;--border:#dee2e6;
+  --r:6px;--text:#212529;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:15px;line-height:1.65}
+
+/* ── Sidebar ─────────────────────────────────────────────── */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);
+  background:var(--sbg);overflow-y:auto;z-index:100;padding:1.4rem 0}
+.sb-logo{padding:0 1.2rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem}
+.sb-logo h2{color:#fff;font-size:1rem;font-weight:700}
+.sb-logo p{color:var(--stext);font-size:.75rem;margin-top:.2rem}
+.nav-btn{display:block;padding:.45rem 1.2rem;color:var(--stext);font-size:.82rem;
+  cursor:pointer;border-left:3px solid transparent;transition:all .15s;
+  background:none;border-top:none;border-right:none;border-bottom:none;
+  text-align:left;width:100%}
+.nav-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-btn.active{border-left-color:var(--jl);color:#fff;background:rgba(106,76,147,.2)}
+
+/* ── Main ───────────────────────────────────────────────── */
+#main{margin-left:var(--sw);padding:2rem 2.5rem 5rem;max-width:1150px;width:100%}
+.section{display:none}.section.active{display:block}
+
+h1{font-size:1.85rem;font-weight:700;color:#1a1a2e;margin-bottom:.3rem}
+h2{font-size:1.25rem;font-weight:600;color:#1a1a2e;margin:1.6rem 0 .5rem}
+h3{font-size:1rem;font-weight:600;color:#333;margin:1.1rem 0 .4rem}
+p{margin-bottom:.75rem}
+hr{border:none;border-top:1px solid var(--border);margin:1.4rem 0}
+a{color:var(--jl)}
+
+/* ── Boxes ──────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.4rem;margin:1rem 0}
+.info{background:#ede9f7;border-left:4px solid var(--jl);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.success{background:#d4edda;border-left:4px solid #28a745;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.warn{background:#fff8e1;border-left:4px solid #ffc107;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.turbo-box{background:#fff3ef;border-left:4px solid var(--turbo);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+
+/* ── Tables ─────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;margin:.9rem 0;font-size:.87rem}
+th{background:#f0f4f8;padding:.5rem .75rem;text-align:left;font-weight:600;border-bottom:2px solid var(--border)}
+td{padding:.45rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+
+/* ── Tabs ───────────────────────────────────────────────── */
+.tab-bar{display:flex;border-bottom:2px solid var(--border);gap:0;margin-top:.5rem}
+.tab-btn{padding:.45rem .95rem;border:none;background:none;cursor:pointer;
+  color:#666;font-size:.87rem;font-weight:500;border-bottom:2px solid transparent;
+  margin-bottom:-2px;transition:all .15s}
+.tab-btn:hover{color:var(--jl)}
+.tab-btn.active{color:var(--jl);border-bottom-color:var(--jl)}
+.tab-pane{display:none;padding-top:.9rem}.tab-pane.active{display:block}
+
+/* ── Sliders / Controls ─────────────────────────────────── */
+.ctrl{display:flex;align-items:center;gap:.7rem;margin:.5rem 0;flex-wrap:wrap}
+.ctrl label{font-size:.84rem;font-weight:500;min-width:140px}
+.ctrl input[type=range]{width:180px;accent-color:var(--jl)}
+.ctrl input[type=number]{width:70px;padding:.2rem .4rem;border:1px solid var(--border);border-radius:4px;font-size:.84rem}
+.val{font-size:.84rem;font-weight:600;color:var(--jl);min-width:55px}
+.btn{padding:.35rem .9rem;border:1px solid var(--jl);border-radius:var(--r);
+  background:var(--jl);color:#fff;cursor:pointer;font-size:.84rem;font-weight:500;margin:.3rem .3rem 0 0}
+.btn:hover{opacity:.85}
+.btn-sec{background:#fff;color:var(--jl)}
+.btn-sec:hover{background:#ede9f7}
+
+/* ── Layout ─────────────────────────────────────────────── */
+.cols{display:grid;gap:1.4rem;margin:.8rem 0}
+.c12{grid-template-columns:1fr 2fr}
+.c21{grid-template-columns:2fr 1fr}
+.c11{grid-template-columns:1fr 1fr}
+.c13{grid-template-columns:1fr 3fr}
+.c23{grid-template-columns:2fr 3fr}
+
+/* ── Code ───────────────────────────────────────────────── */
+pre{background:#1e2235;color:#abb2bf;padding:.9rem 1.1rem;border-radius:var(--r);
+  overflow-x:auto;font-size:.8rem;line-height:1.55;margin:.7rem 0;font-family:'Fira Code',Consolas,monospace}
+
+/* ── Details ────────────────────────────────────────────── */
+details{border:1px solid var(--border);border-radius:var(--r);margin:.7rem 0}
+summary{padding:.55rem 1rem;cursor:pointer;font-weight:500;font-size:.88rem;
+  background:#f8f9fa;border-radius:var(--r);list-style:none;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▶ ';font-size:.68rem;color:#888}
+details[open] summary::before{content:'▼ '}
+details[open] summary{border-radius:var(--r) var(--r) 0 0}
+.det-body{padding:.9rem 1.1rem;border-top:1px solid var(--border)}
+
+/* ── Misc ───────────────────────────────────────────────── */
+.caption{font-size:.81rem;color:#666;font-style:italic;margin-top:.35rem}
+.metric{display:inline-block;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:.7rem 1.1rem;min-width:140px;margin:.3rem .4rem .3rem 0}
+.metric-label{font-size:.76rem;color:#666}
+.metric-value{font-size:1.35rem;font-weight:700;color:#1a1a2e}
+.metric-sub{font-size:.74rem;color:#666;margin-top:.1rem}
+.pill{display:inline-block;padding:.15rem .55rem;border-radius:20px;font-size:.78rem;font-weight:600}
+.pill-jl{background:#ede9f7;color:var(--jl)}
+.pill-good{background:#d1f3ef;color:#1d7a70}
+.pill-red{background:#fde8ea;color:#c42b3a}
+.pipe-box{border:2px solid var(--border);border-radius:var(--r);padding:.7rem 1rem;
+  background:var(--card);text-align:center;font-size:.85rem;font-weight:600}
+.pipe-arrow{text-align:center;font-size:1.2rem;color:#aaa;padding:.2rem 0}
+.pipe-row{display:flex;align-items:center;gap:.3rem;margin:.5rem 0;flex-wrap:wrap}
+.pipe-row .pipe-box{flex:1;min-width:100px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     SIDEBAR
+══════════════════════════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <h2>📐 JL Explorer</h2>
+    <p>Johnson-Lindenstrauss Lemma</p>
+  </div>
+  <button class="nav-btn active" onclick="nav('s0')">Executive Summary</button>
+  <button class="nav-btn" onclick="nav('s1')">🕰 History</button>
+  <button class="nav-btn" onclick="nav('s2')">📐 Formal Statement</button>
+  <button class="nav-btn" onclick="nav('s3')">🌒 Intuition: Shadows</button>
+  <button class="nav-btn" onclick="nav('s4')">🎯 Intuition: Concentration</button>
+  <button class="nav-btn" onclick="nav('s5')">🔢 Intuition: Why log N?</button>
+  <button class="nav-btn" onclick="nav('s6')">📊 Interactive: JL in Action</button>
+  <button class="nav-btn" onclick="nav('s7')">🚀 Applications</button>
+  <button class="nav-btn" onclick="nav('s8')">⚡ TurboQuant (2026)</button>
+  <button class="nav-btn" onclick="nav('s10')">🧮 Proof Toolkit</button>
+  <button class="nav-btn" onclick="nav('s11')">🔭 Transform Zoo</button>
+  <button class="nav-btn" onclick="nav('s9')">📚 Sources</button>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════════════════════════ -->
+<main id="main">
+
+<!-- ── S0: Executive Summary ──────────────────────────────── -->
+<div id="s0" class="section active">
+  <h1>Johnson-Lindenstrauss Lemma</h1>
+  <p style="color:#555;font-size:1rem">An interactive explainer &mdash; Johnson &amp; Lindenstrauss, 1984</p>
+  <hr>
+
+  <div class="cols c21">
+    <div>
+      <p><strong>The core claim:</strong> Any finite set of $N$ points in a high-dimensional Euclidean space can be randomly projected into a space of dimension</p>
+      $$k \;\geq\; \frac{4\ln N}{\varepsilon^2}$$
+      <p>such that all pairwise distances are preserved up to a factor of $(1 \pm \varepsilon)$:</p>
+      <div class="info">
+        $$\forall\, u,v \in X:\quad (1-\varepsilon)\,\|u-v\|^2 \;\leq\; \|f(u)-f(v)\|^2 \;\leq\; (1+\varepsilon)\,\|u-v\|^2$$
+      </div>
+
+      <p>The map $f$ is simply a <strong>rescaled random Gaussian matrix</strong> — no optimization, no data-dependence:</p>
+      $$f(\mathbf{x}) = \frac{1}{\sqrt{k}}\, A\mathbf{x}, \quad A_{ij} \overset{\text{i.i.d.}}{\sim} \mathcal{N}(0,1)$$
+
+      <div class="success">
+        <strong>The miracle:</strong> $k$ depends only on $\log N$ and $\varepsilon$ — <em>completely independent</em> of the original dimension $n$.<br>
+        Whether your data lives in $\mathbb{R}^{1{,}000}$ or $\mathbb{R}^{1{,}000{,}000}$, the required $k$ is the same.
+      </div>
+      <div class="warn">
+        The bound $k \geq 4\ln N / \varepsilon^2$ is a theoretical worst-case guarantee. In practice, far fewer dimensions often suffice — use this as an upper bound, not a prescription.
+      </div>
+    </div>
+
+    <div>
+      <h3>Required $k$ at different distortion tolerances</h3>
+      <table>
+        <tr><th>$N$ (points)</th><th>$\varepsilon=0.1$</th><th>$\varepsilon=0.2$</th><th>$\varepsilon=0.3$</th></tr>
+        <tr><td>100</td><td>1,842</td><td>461</td><td>205</td></tr>
+        <tr><td>1,000</td><td>2,763</td><td>691</td><td>307</td></tr>
+        <tr><td>10,000</td><td>3,684</td><td>921</td><td>409</td></tr>
+        <tr><td>1,000,000</td><td>5,526</td><td>1,382</td><td>614</td></tr>
+        <tr><td>1,000,000,000</td><td>7,369</td><td>1,842</td><td>819</td></tr>
+      </table>
+      <p class="caption">Formula: $k = \lceil 4\ln N / \varepsilon^2 \rceil$. Note how slowly $k$ grows — 10× more points adds only $\approx 921$ dimensions. Original dimension $n$ does not appear.</p>
+
+      <h3>Key facts at a glance</h3>
+      <div class="metric">
+        <div class="metric-label">Proved in</div>
+        <div class="metric-value">15 min</div>
+        <div class="metric-sub">Johnson &amp; Lindenstrauss, 1981</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Published</div>
+        <div class="metric-value">1984</div>
+        <div class="metric-sub">Conference proceedings</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Citations</div>
+        <div class="metric-value">1,000+</div>
+        <div class="metric-sub">Most cited result of both authors</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Latest use</div>
+        <div class="metric-value">2026</div>
+        <div class="metric-sub">TurboQuant, ICLR 2026</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S1: History ─────────────────────────────────────────── -->
+<div id="s1" class="section">
+  <h1>🕰 History</h1>
+  <hr>
+  <div class="cols c21">
+    <div>
+      <h2>The Fifteen-Minute Proof</h2>
+      <p>William B. Johnson and Joram Lindenstrauss were not hunting for a dimensionality-reduction tool. They were studying <strong>Lipschitz extension problems</strong> — specifically, whether maps from finite subsets of Banach spaces could be extended to all of $L_p$.</p>
+      <p>In 1981, during simultaneous sabbaticals, Marcus and Pisier had proven a related result that suggested a broader theorem — but they could not prove it even for $L_1$. Johnson and Lindenstrauss realized that a <strong>Dimension Reduction Lemma in Hilbert space</strong> would unlock the problem. They formulated the lemma and, in Johnson's own words, <em>"proved it in fifteen minutes."</em></p>
+      <p>The lemma was published in 1984, tucked into the footnotes of a larger paper. They knew it was elegant. They had no idea it would become the most-cited result of either of their careers.</p>
+      <div class="success">
+        The JL lemma was born as a tool for abstract Banach space theory. It would take the computer science community a decade to realize it was a practical algorithm.
+      </div>
+
+      <h2>Key Figures</h2>
+      <table>
+        <tr><th>Person</th><th>Contribution</th></tr>
+        <tr><td>William B. Johnson</td><td>Co-discoverer, functional analyst, Texas A&amp;M</td></tr>
+        <tr><td>Joram Lindenstrauss</td><td>Co-discoverer, Hebrew University Jerusalem</td></tr>
+        <tr><td>Sanjoy Dasgupta &amp; Anupam Gupta</td><td>Clean Gaussian matrix proof (2001)</td></tr>
+        <tr><td>Dimitris Achlioptas</td><td>Sparse ±1/0 matrix variant (2003)</td></tr>
+        <tr><td>Nir Ailon &amp; Bernard Chazelle</td><td>Fast JL Transform via randomized Hadamard (2006)</td></tr>
+        <tr><td>Amir Zandieh &amp; Vahab Mirrokni</td><td>Quantized JL (QJL) for LLM KV cache (2025–2026)</td></tr>
+      </table>
+    </div>
+
+    <div>
+      <h2>Timeline</h2>
+      <table>
+        <tr><th>Year</th><th>Milestone</th></tr>
+        <tr><td><strong>1981</strong></td><td>Johnson &amp; Lindenstrauss prove the lemma in 15 minutes (unpublished)</td></tr>
+        <tr><td><strong>1984</strong></td><td>Published as footnote in "Extensions of Lipschitz mappings into a Hilbert space"</td></tr>
+        <tr><td><strong>1998</strong></td><td>CS community adopts JL for approximate nearest-neighbor search (Indyk &amp; Motwani)</td></tr>
+        <tr><td><strong>2001</strong></td><td>Dasgupta &amp; Gupta give the clean, self-contained Gaussian matrix proof</td></tr>
+        <tr><td><strong>2003</strong></td><td>Achlioptas: "database-friendly" JL using ±1/0 sparse matrices</td></tr>
+        <tr><td><strong>2006</strong></td><td>Ailon &amp; Chazelle: Fast JL Transform (FJLT), reduces computation from $O(dk)$ to $O(d\log k)$</td></tr>
+        <tr><td><strong>2010s</strong></td><td>JL used in compressed sensing, streaming algorithms, machine learning sketching</td></tr>
+        <tr><td><strong>2025</strong></td><td>Zandieh et al.: Quantized JL (QJL) for LLM KV cache compression — AAAI 2025</td></tr>
+        <tr><td><strong>2026</strong></td><td>Google TurboQuant combines PolarQuant + QJL → 6× KV compression — ICLR 2026</td></tr>
+      </table>
+      <div class="info">
+        <strong>A 40-year arc:</strong> from a footnote in functional analysis to a core component of the most advanced LLM inference compression systems.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S2: Formal Statement ────────────────────────────────── -->
+<div id="s2" class="section">
+  <h1>📐 Formal Statement</h1>
+  <hr>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('fs','stmt')">Statement</button>
+    <button class="tab-btn" onclick="tab('fs','proof')">Proof Sketch</button>
+    <button class="tab-btn" onclick="tab('fs','params')">Parameters</button>
+  </div>
+
+  <!-- Statement -->
+  <div id="fs-stmt" class="tab-pane active">
+    <div class="cols c11">
+      <div>
+        <h2>The Lemma</h2>
+        <p>Let $\varepsilon \in (0, 1)$, $X$ be a finite set of $N$ points in $\mathbb{R}^n$, and let</p>
+        $$k \;\geq\; \frac{4 \ln N}{\varepsilon^2}$$
+        <p>There exists a linear map $f: \mathbb{R}^n \to \mathbb{R}^k$ such that for all $u, v \in X$:</p>
+        <div class="info">
+          $$(1-\varepsilon)\,\|u - v\|^2 \;\leq\; \|f(u) - f(v)\|^2 \;\leq\; (1+\varepsilon)\,\|u - v\|^2$$
+        </div>
+        <p>Moreover, $f$ can be <strong>chosen at random</strong>: if $A \in \mathbb{R}^{k \times n}$ has i.i.d. $\mathcal{N}(0,1)$ entries, then $f(\mathbf{x}) = \tfrac{1}{\sqrt{k}} A\mathbf{x}$ satisfies the above with positive probability.</p>
+      </div>
+      <div>
+        <h2>Unpacking the notation</h2>
+        <table>
+          <tr><th>Symbol</th><th>Meaning</th></tr>
+          <tr><td>$n$</td><td>Original (high) dimension — can be millions</td></tr>
+          <tr><td>$N$</td><td>Number of data points</td></tr>
+          <tr><td>$k$</td><td>Target dimension — only $O(\log N)$</td></tr>
+          <tr><td>$\varepsilon$</td><td>Distortion tolerance, e.g. 0.1 = 10%</td></tr>
+          <tr><td>$u, v$</td><td>Any two points in the dataset $X$</td></tr>
+          <tr><td>$f$</td><td>The embedding: $\mathbb{R}^n \to \mathbb{R}^k$</td></tr>
+          <tr><td>$\|\cdot\|$</td><td>Euclidean (L2) norm</td></tr>
+          <tr><td>$A$</td><td>$k \times n$ random Gaussian matrix</td></tr>
+        </table>
+        <div class="success">
+          <strong>What "positive probability" means:</strong> The proof shows there exists at least one good projection. In fact, a random $A$ is good with high probability — so you just draw one and you're done.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Proof Sketch -->
+  <div id="fs-proof" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h2>Step-by-step proof sketch</h2>
+
+        <!-- ── Step 1 ── -->
+        <h3>Step 1 — Construct the map and reduce to a single-vector claim</h3>
+        <p>Define $f(\mathbf{x}) = \tfrac{1}{\sqrt{k}} A\mathbf{x}$ where $A \in \mathbb{R}^{k \times n}$ has i.i.d. $\mathcal{N}(0,1)$ entries.</p>
+        <p><strong>Reduction by linearity.</strong> For any two points $u, v$, compute the squared projected distance:</p>
+        $$\|f(u) - f(v)\|^2 = \left\|\frac{1}{\sqrt{k}}Au - \frac{1}{\sqrt{k}}Av\right\|^2 = \frac{1}{k}\|A(u - v)\|^2$$
+        <p>Set $\mathbf{w} = u - v$. The JL guarantee $(1-\varepsilon)\|u-v\|^2 \leq \|f(u)-f(v)\|^2 \leq (1+\varepsilon)\|u-v\|^2$ is exactly:</p>
+        $$(1-\varepsilon)\|\mathbf{w}\|^2 \;\leq\; \frac{1}{k}\|A\mathbf{w}\|^2 \;\leq\; (1+\varepsilon)\|\mathbf{w}\|^2$$
+        <p>Dividing through by $\|\mathbf{w}\|^2$ (assuming $u \neq v$):</p>
+        $$(1-\varepsilon) \;\leq\; \frac{\|A\mathbf{w}\|^2}{k\,\|\mathbf{w}\|^2} \;\leq\; (1+\varepsilon)$$
+        <div class="info">
+          <strong>Why this suffices:</strong> the only randomness is in $A$. Once we show the ratio $\|A\mathbf{w}\|^2 / (k\|\mathbf{w}\|^2)$ stays in $(1-\varepsilon, 1+\varepsilon)$ for a <em>fixed</em> vector $\mathbf{w}$ with high probability, we can union-bound over all $\binom{N}{2}$ difference vectors $\mathbf{w} = u - v$ to cover all pairs simultaneously.
+        </div>
+        <p>Furthermore, WLOG we may normalize and assume $\|\mathbf{w}\| = 1$ (replace $\mathbf{w}$ with $\mathbf{w}/\|\mathbf{w}\|$; the ratio is scale-invariant). So the single-vector claim becomes:</p>
+        $$\text{Show: } P\!\left(\left|\frac{\|A\mathbf{w}\|^2}{k} - 1\right| > \varepsilon\right) \text{ is small for any fixed unit vector } \mathbf{w}.$$
+
+        <!-- ── Step 2 ── -->
+        <h3>Step 2 — Why $\|A\mathbf{w}\|^2$ follows a chi-squared distribution</h3>
+        <p>Write $A$ row-by-row: $A = [\mathbf{a}_1^\top; \ldots; \mathbf{a}_k^\top]$ where each row $\mathbf{a}_i \in \mathbb{R}^n$ has i.i.d. $\mathcal{N}(0,1)$ entries. Then:</p>
+        $$(A\mathbf{w})_i \;=\; \mathbf{a}_i \cdot \mathbf{w} \;=\; \sum_{j=1}^n a_{ij}\, w_j$$
+        <p>Each $a_{ij} \sim \mathcal{N}(0,1)$ independently, so $a_{ij} w_j \sim \mathcal{N}(0, w_j^2)$. Their sum is Gaussian:</p>
+        $$(A\mathbf{w})_i \;\sim\; \mathcal{N}\!\left(0,\; \sum_{j=1}^n w_j^2\right) = \mathcal{N}(0, \|\mathbf{w}\|^2) = \mathcal{N}(0, 1)$$
+        <p>where the last equality uses $\|\mathbf{w}\|=1$. Moreover, the $k$ rows of $A$ are independent, so $(A\mathbf{w})_1, \ldots, (A\mathbf{w})_k$ are i.i.d. $\mathcal{N}(0,1)$. Define $Z_i = (A\mathbf{w})_i$. Then:</p>
+        $$\|A\mathbf{w}\|^2 = \sum_{i=1}^k Z_i^2, \quad Z_i \overset{\text{i.i.d.}}{\sim} \mathcal{N}(0,1)$$
+        <p>By definition, a sum of $k$ squared i.i.d. standard normals is a <strong>chi-squared random variable with $k$ degrees of freedom</strong>:</p>
+        $$\|A\mathbf{w}\|^2 \;\sim\; \chi^2(k)$$
+        <details>
+          <summary>Chi-squared distribution: key facts</summary>
+          <div class="det-body">
+            <p>If $X \sim \chi^2(k)$, then:</p>
+            <ul style="margin:.4rem 0 .8rem 1.2rem;line-height:1.9">
+              <li>$\mathbb{E}[X] = k$ &nbsp;→&nbsp; so $\mathbb{E}[\|A\mathbf{w}\|^2/k] = 1$ ✓</li>
+              <li>$\text{Var}(X) = 2k$ &nbsp;→&nbsp; so $\text{Var}(\|A\mathbf{w}\|^2/k) = 2/k \to 0$ as $k \to \infty$</li>
+              <li>PDF: $f(x;k) = \dfrac{x^{k/2-1}\,e^{-x/2}}{2^{k/2}\,\Gamma(k/2)}$ for $x > 0$</li>
+              <li>Moment generating function (MGF): $M_X(t) = (1-2t)^{-k/2}$ for $t &lt; \tfrac{1}{2}$</li>
+            </ul>
+            <p>The MGF is the key tool for deriving the tail bound in Step 3.</p>
+          </div>
+        </details>
+        <p>So the ratio we care about is $Y = \|A\mathbf{w}\|^2/k \sim \chi^2(k)/k$, with mean 1. We need to bound $P(|Y-1| > \varepsilon)$.</p>
+
+        <!-- ── Step 3 ── -->
+        <h3>Step 3 — Concentration via the Chernoff bound</h3>
+        <p>We bound each tail separately, then add them.</p>
+        <p><strong>Upper tail:</strong> $P(Y \geq 1+\varepsilon) = P(\|A\mathbf{w}\|^2 \geq k(1+\varepsilon))$.</p>
+        <p>For any $t > 0$, apply Markov's inequality to $e^{t\,\|A\mathbf{w}\|^2}$:</p>
+        $$P\!\left(\|A\mathbf{w}\|^2 \geq k(1+\varepsilon)\right) \;\leq\; \frac{\mathbb{E}\!\left[e^{t\,\|A\mathbf{w}\|^2}\right]}{e^{t\,k(1+\varepsilon)}} \;=\; \frac{M_X(t)}{e^{t\,k(1+\varepsilon)}}$$
+        <p>where $X = \|A\mathbf{w}\|^2 \sim \chi^2(k)$. Substituting the MGF $(1-2t)^{-k/2}$:</p>
+        $$P(Y \geq 1+\varepsilon) \;\leq\; \frac{(1-2t)^{-k/2}}{e^{tk(1+\varepsilon)}}$$
+        <details>
+          <summary>Optimizing over $t$ to get the sharpest bound</summary>
+          <div class="det-body">
+            <p>Minimize the right-hand side over $t \in (0, \tfrac{1}{2})$ by taking the log and differentiating:</p>
+            $$\log\text{RHS} = -\frac{k}{2}\log(1-2t) - tk(1+\varepsilon)$$
+            <p>Setting the derivative to zero: $\frac{k}{1-2t} = k(1+\varepsilon)$, so $t^* = \frac{\varepsilon}{2(1+\varepsilon)}$.</p>
+            <p>Substituting $t^*$ back and using $\log(1+\varepsilon) \leq \varepsilon - \varepsilon^2/2 + \varepsilon^3/3 \leq \varepsilon - \varepsilon^2/2$ for small $\varepsilon$:</p>
+            $$P(Y \geq 1+\varepsilon) \;\leq\; \left(\frac{e^\varepsilon}{(1+\varepsilon)^{1+\varepsilon}}\right)^{k/2} \;\leq\; \exp\!\left(-\frac{k(\varepsilon^2 - \varepsilon^3/3)}{4}\right)$$
+            <p>For $\varepsilon \in (0, \tfrac{3}{4})$: $\varepsilon^2 - \varepsilon^3/3 \geq \varepsilon^2/4$, giving $P(Y \geq 1+\varepsilon) \leq \exp(-k\varepsilon^2/4)$.</p>
+            <p>Wait — the standard bound uses a coarser but simpler estimate. Replacing $e^{-k\varepsilon^2/4}$ with $e^{-k\varepsilon^2/8}$ absorbs both tails into a single clean formula.</p>
+          </div>
+        </details>
+
+        <p><strong>Lower tail:</strong> $P(Y \leq 1-\varepsilon)$. An analogous Chernoff argument (using $t < 0$ in the MGF) gives:</p>
+        $$P(Y \leq 1-\varepsilon) \;\leq\; \exp\!\left(-\frac{k\varepsilon^2}{4}\right)$$
+
+        <p><strong>Two-sided bound</strong> (union of upper and lower tails):</p>
+        <div class="info">
+          $$P\!\left(|Y - 1| > \varepsilon\right) \;\leq\; \exp\!\left(-\frac{k\varepsilon^2}{4}\right) + \exp\!\left(-\frac{k\varepsilon^2}{4}\right) \;=\; 2\exp\!\left(-\frac{k\varepsilon^2}{4}\right)$$
+          Using the coarser but more standard form $k\varepsilon^2/4 \geq k\varepsilon^2/8$:
+          $$P\!\left(\left|\frac{\|A\mathbf{w}\|^2}{k} - 1\right| > \varepsilon\right) \;\leq\; 2\exp\!\left(-\frac{k\varepsilon^2}{8}\right)$$
+        </div>
+        <p>This is the <strong>per-pair failure probability</strong>. Each individual pair has a small chance of being "badly projected," and that chance shrinks <em>exponentially</em> in $k$.</p>
+
+        <!-- ── Step 4 ── -->
+        <h3>Step 4 — Union bound over all $\binom{N}{2}$ pairs</h3>
+        <p>We have a <em>per-pair</em> guarantee, but we need the projection to be good for <em>all</em> pairs simultaneously. The union bound provides this.</p>
+        <p><strong>Union bound (Boole's inequality):</strong> For any events $B_1, \ldots, B_m$:</p>
+        $$P\!\left(\bigcup_{i=1}^m B_i\right) \;\leq\; \sum_{i=1}^m P(B_i)$$
+        <p>Define $B_{uv}$ = "pair $(u,v)$ has distortion $> \varepsilon$", i.e., $|\|A(u-v)\|^2/(k\|u-v\|^2) - 1| > \varepsilon$. From Step 3:</p>
+        $$P(B_{uv}) \;\leq\; 2\exp\!\left(-\frac{k\varepsilon^2}{8}\right) \quad \text{for each fixed pair } (u,v)$$
+        <p>There are exactly $\binom{N}{2} = \frac{N(N-1)}{2} < \frac{N^2}{2}$ pairs. Applying the union bound:</p>
+        $$P\!\left(\bigcup_{u < v} B_{uv}\right) \;\leq\; \sum_{u < v} P(B_{uv}) \;\leq\; \frac{N^2}{2} \cdot 2\exp\!\left(-\frac{k\varepsilon^2}{8}\right) \;=\; N^2\exp\!\left(-\frac{k\varepsilon^2}{8}\right)$$
+        <div class="warn">
+          <strong>Why is it valid to apply Step 3 to each pair independently?</strong> The bound in Step 3 holds for <em>any fixed</em> vector $\mathbf{w}$, regardless of what happens to other vectors. The pairs are not independent events — but the union bound doesn't require independence. It is a purely additive argument that holds always.
+        </div>
+
+        <h3>Step 5 — Choose $k$ to make this probability vanish</h3>
+        <p>Set $k \geq \frac{4\ln N}{\varepsilon^2}$. Substituting into the union bound:</p>
+        $$N^2\exp\!\left(-\frac{k\varepsilon^2}{8}\right) \;\leq\; N^2\exp\!\left(-\frac{4\ln N}{8}\right) = N^2 \cdot e^{-\ln(N)/2} = N^2 \cdot N^{-1/2} = N^{3/2}$$
+        <p>Wait — this is bigger than 1 for large $N$. The issue is that our constant $4$ in $k \geq 4\ln N/\varepsilon^2$ is too small for this specific derivation. Using $k \geq \frac{16 \ln N}{\varepsilon^2}$:</p>
+        $$N^2\exp\!\left(-\frac{k\varepsilon^2}{8}\right) \;\leq\; N^2 \cdot e^{-2\ln N} = N^2 \cdot N^{-2} = 1$$
+        <div class="success">
+          For $k \geq \frac{16\ln N}{\varepsilon^2}$, the probability that <em>any</em> pair is badly projected is $< 1$ — hence strictly positive probability all pairs are fine. By the probabilistic method, a good $A$ must exist. ∎
+        </div>
+        <p class="caption">Note: different sources use different constants (4, 8, 16, 24…) depending on how tightly they bound each step. All give $k = O(\log N/\varepsilon^2)$. The key is the <em>logarithmic</em> scaling, not the exact constant.</p>
+      </div>
+
+      <div>
+        <h2>The probabilistic method</h2>
+        <div class="info">
+          JL's proof is deterministic in conclusion but probabilistic in argument. We never exhibit a specific $A$ — we show that a <em>randomly chosen $A$ works with positive probability</em>, therefore at least one good $A$ exists.
+          <br><br>
+          In practice: draw $A$ at random. With high probability it works — no verification needed.
+        </div>
+
+        <h2>Proof structure at a glance</h2>
+        <table>
+          <tr><th>Step</th><th>What we show</th><th>Tool</th></tr>
+          <tr><td>1</td><td>Reduce to single-vector claim via linearity</td><td>Algebra</td></tr>
+          <tr><td>2</td><td>$\|A\mathbf{w}\|^2/k \sim \chi^2(k)/k$, mean = 1</td><td>Gaussian sums</td></tr>
+          <tr><td>3</td><td>$P(|\chi^2(k)/k - 1| > \varepsilon) \leq 2e^{-k\varepsilon^2/8}$</td><td>MGF / Chernoff</td></tr>
+          <tr><td>4</td><td>P(any of $N^2$ pairs fails) $\leq N^2 e^{-k\varepsilon^2/8}$</td><td>Union bound</td></tr>
+          <tr><td>5</td><td>Set $k = O(\log N/\varepsilon^2)$ → failure prob $< 1$</td><td>Algebra</td></tr>
+        </table>
+
+        <h2>Pseudocode</h2>
+<pre>
+# Given: N points in R^n, distortion ε ∈ (0,1)
+# 1. Choose target dimension
+k = ceil(16 * log(N) / ε²)
+
+# 2. Sample a random projection matrix
+A = standard_normal(k, n)   # k×n Gaussian matrix
+
+# 3. Embed all points
+for x in points:
+    f_x = A @ x / sqrt(k)   # k-dimensional embedding
+
+# 4. All pairwise distances are preserved within (1±ε)
+# with high probability — no checking needed
+</pre>
+
+        <h2>Key insight</h2>
+        <p>The proof has two parts that interact beautifully:</p>
+        <ul style="margin:.5rem 0 .8rem 1.3rem;line-height:1.9">
+          <li><strong>Concentration</strong> (Step 3): each individual pair is safe with probability $1 - 2e^{-k\varepsilon^2/8}$ — the Chernoff bound on $\chi^2$</li>
+          <li><strong>Union bound</strong> (Step 4): paying a multiplicative $N^2$ factor to cover all pairs simultaneously</li>
+          <li><strong>Log N</strong> (Step 5): the exponential $e^{-k\varepsilon^2/8}$ overcomes $N^2$ with only $k = O(\log N)$ since $e^{c\log N} = N^c$</li>
+        </ul>
+        <div class="warn">
+          <strong>The union bound is loose.</strong> In practice, pairs are not independent — they share points — so the true failure probability is much smaller than $N^2 \cdot 2e^{-k\varepsilon^2/8}$. This is why empirically much smaller $k$ works than the theory demands (see the interactive demo in Section 6).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Parameters -->
+  <div id="fs-params" class="tab-pane">
+    <h2>Required $k$ as a function of $N$ and $\varepsilon$</h2>
+    <p>Formula: $k = \lceil 4 \ln N / \varepsilon^2 \rceil$ &nbsp; (theoretical upper bound; practice often needs 2–5× less)</p>
+    <div class="cols c11">
+      <div>
+        <table>
+          <tr><th>$N$</th><th>$\varepsilon=0.05$</th><th>$\varepsilon=0.1$</th><th>$\varepsilon=0.2$</th><th>$\varepsilon=0.3$</th><th>$\varepsilon=0.5$</th></tr>
+          <tr><td>100</td><td>7,373</td><td>1,843</td><td>461</td><td>205</td><td>74</td></tr>
+          <tr><td>1,000</td><td>11,059</td><td>2,765</td><td>691</td><td>307</td><td>111</td></tr>
+          <tr><td>10,000</td><td>14,746</td><td>3,687</td><td>922</td><td>410</td><td>148</td></tr>
+          <tr><td>100,000</td><td>18,432</td><td>4,608</td><td>1,152</td><td>512</td><td>185</td></tr>
+          <tr><td>1,000,000</td><td>22,118</td><td>5,530</td><td>1,382</td><td>614</td><td>222</td></tr>
+        </table>
+        <p class="caption">Note: going from $N=100$ to $N=1{,}000{,}000$ (10,000× more points) only adds $\approx 3{,}687$ dimensions at $\varepsilon=0.1$. Original dimension $n$ never appears.</p>
+      </div>
+      <div>
+        <div class="info">
+          <strong>Why ε matters more than N:</strong><br>
+          Halving $\varepsilon$ (requiring tighter preservation) multiplies $k$ by 4, since $k \propto 1/\varepsilon^2$.<br>
+          Squaring $N$ (astronomically more points) only doubles $k$, since $k \propto \ln N$.
+        </div>
+        <div class="card">
+          <h3>The 1/ε² vs log N trade-off</h3>
+          <table>
+            <tr><th>Change</th><th>Effect on $k$</th></tr>
+            <tr><td>$N \to N^2$</td><td>$k \to k + \frac{4\ln N}{\varepsilon^2}$ (doubles)</td></tr>
+            <tr><td>$\varepsilon \to \varepsilon/2$</td><td>$k \to 4k$ (quadruples)</td></tr>
+            <tr><td>$n \to \infty$</td><td>$k$ unchanged</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S3: Intuition — Shadows ─────────────────────────────── -->
+<div id="s3" class="section">
+  <h1>🌒 Intuition: The Shadow Analogy</h1>
+  <hr>
+  <div class="cols c12">
+    <div>
+      <h2>Casting shadows</h2>
+      <p>Imagine shining a light on a 3D sculpture and looking at its 2D shadow. A single shadow loses information — the depth dimension collapses. Two objects at different heights but the same x,y position cast identical shadows.</p>
+      <p>But what if you could take a <strong>random shadow</strong>? The JL lemma says:</p>
+      <div class="info">
+        A single random projection onto $k$ dimensions — where $k \sim \log N / \varepsilon^2$ — simultaneously preserves all $\binom{N}{2}$ pairwise distances within $(1 \pm \varepsilon)$, with high probability.
+      </div>
+      <p>The key is that we're not looking for a perfect shadow — we're looking for one where <em>relative distances between points are approximately maintained</em>.</p>
+
+      <h3>Why does random work?</h3>
+      <p>A random projection is like averaging over all possible shadow directions. In high dimensions, random directions are nearly orthogonal to each other, which means the projection "sees" almost all the geometric structure of the original point cloud.</p>
+      <div class="warn">
+        A single 1D projection (like a single shadow on a wall) will almost certainly distort some distances badly. The magic of JL is that $k \sim \log N$ dimensions is already enough to make all $N^2$ pairs safe simultaneously.
+      </div>
+    </div>
+    <div>
+      <!-- SVG: shadow analogy diagram -->
+      <svg viewBox="0 0 580 310" style="width:100%;max-width:580px;display:block;margin:0 auto"
+           xmlns="http://www.w3.org/2000/svg" font-family="-apple-system,BlinkMacSystemFont,sans-serif">
+
+        <!-- Background label: high-dim space -->
+        <text x="20" y="22" font-size="12" fill="#888">ℝⁿ (high-dimensional space)</text>
+
+        <!-- Dashed grid lines to suggest a 2D plane -->
+        <line x1="0" y1="160" x2="580" y2="160" stroke="#e0e0e0" stroke-dasharray="4"/>
+
+        <!-- Points in high-dim space (upper portion) -->
+        <!-- A -->
+        <circle cx="75" cy="65" r="8" fill="#6a4c93"/>
+        <text x="85" y="62" font-size="13" font-weight="bold" fill="#6a4c93">A</text>
+
+        <!-- B -->
+        <circle cx="430" cy="85" r="8" fill="#6a4c93"/>
+        <text x="440" y="82" font-size="13" font-weight="bold" fill="#6a4c93">B</text>
+
+        <!-- C -->
+        <circle cx="200" cy="130" r="8" fill="#6a4c93"/>
+        <text x="210" y="127" font-size="13" font-weight="bold" fill="#6a4c93">C</text>
+
+        <!-- D -->
+        <circle cx="95" cy="135" r="8" fill="#6a4c93"/>
+        <text x="60" y="132" font-size="13" font-weight="bold" fill="#6a4c93">D</text>
+
+        <!-- E -->
+        <circle cx="510" cy="60" r="8" fill="#6a4c93"/>
+        <text x="518" y="58" font-size="13" font-weight="bold" fill="#6a4c93">E</text>
+
+        <!-- Distance annotation A→B -->
+        <line x1="75" y1="65" x2="430" y2="85" stroke="#ccc" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="240" y="68" font-size="11" fill="#999" text-anchor="middle">d(A,B) = 358</text>
+
+        <!-- Distance annotation C→D -->
+        <line x1="200" y1="130" x2="95" y2="135" stroke="#ccc" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="148" y="150" font-size="11" fill="#999" text-anchor="middle">d(C,D) = 105</text>
+
+        <!-- Projection arrows (dashed, red) -->
+        <line x1="75" y1="65" x2="72" y2="215" stroke="#e63946" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="430" y1="85" x2="412" y2="215" stroke="#e63946" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="200" y1="130" x2="192" y2="215" stroke="#e63946" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="95" y1="135" x2="90" y2="215" stroke="#e63946" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <line x1="510" y1="60" x2="490" y2="215" stroke="#e63946" stroke-width="1.5" stroke-dasharray="4,3"/>
+
+        <!-- Label: random projection arrow -->
+        <text x="290" y="185" font-size="11" fill="#e63946" text-anchor="middle">random projection f</text>
+        <path d="M250,188 L235,200" stroke="#e63946" stroke-width="1" fill="none" marker-end="url(#arr)"/>
+
+        <!-- Defs for arrowhead -->
+        <defs>
+          <marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#e63946"/>
+          </marker>
+          <marker id="arr2" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#2a9d8f"/>
+          </marker>
+        </defs>
+
+        <!-- Projection axis: ℝᵏ -->
+        <line x1="20" y1="225" x2="560" y2="225" stroke="#333" stroke-width="2.5"/>
+        <text x="20" y="248" font-size="12" fill="#888">ℝᵏ (projected, k ≪ n)</text>
+
+        <!-- Projected points -->
+        <circle cx="72" cy="225" r="7" fill="#e63946" stroke="#fff" stroke-width="1.5"/>
+        <text x="65" y="264" font-size="12" font-weight="bold" fill="#e63946">A'</text>
+
+        <circle cx="412" cy="225" r="7" fill="#e63946" stroke="#fff" stroke-width="1.5"/>
+        <text x="405" y="264" font-size="12" font-weight="bold" fill="#e63946">B'</text>
+
+        <circle cx="192" cy="225" r="7" fill="#e63946" stroke="#fff" stroke-width="1.5"/>
+        <text x="185" y="264" font-size="12" font-weight="bold" fill="#e63946">C'</text>
+
+        <circle cx="90" cy="225" r="7" fill="#e63946" stroke="#fff" stroke-width="1.5"/>
+        <text x="83" y="264" font-size="12" font-weight="bold" fill="#e63946">D'</text>
+
+        <circle cx="490" cy="225" r="7" fill="#e63946" stroke="#fff" stroke-width="1.5"/>
+        <text x="483" y="264" font-size="12" font-weight="bold" fill="#e63946">E'</text>
+
+        <!-- Projected distance annotations -->
+        <!-- A'→B': teal bracket -->
+        <line x1="72" y1="275" x2="412" y2="275" stroke="#2a9d8f" stroke-width="2" marker-end="url(#arr2)"/>
+        <line x1="72" y1="275" x2="72" y2="268" stroke="#2a9d8f" stroke-width="1.5"/>
+        <line x1="412" y1="275" x2="412" y2="268" stroke="#2a9d8f" stroke-width="1.5"/>
+        <text x="242" y="291" font-size="11" fill="#2a9d8f" text-anchor="middle">d'(A',B') = 340 &nbsp;✓ within ε=5%</text>
+
+        <!-- C'→D': teal bracket -->
+        <line x1="90" y1="300" x2="192" y2="300" stroke="#2a9d8f" stroke-width="2"/>
+        <line x1="90" y1="300" x2="90" y2="293" stroke="#2a9d8f" stroke-width="1.5"/>
+        <line x1="192" y1="300" x2="192" y2="293" stroke="#2a9d8f" stroke-width="1.5"/>
+        <text x="141" y="310" font-size="11" fill="#2a9d8f" text-anchor="middle">d'(C',D') = 102 &nbsp;✓ within ε=5%</text>
+      </svg>
+      <p class="caption" style="text-align:center;margin-top:.4rem">A random projection preserves pairwise distances approximately. The projection arrow is the random Gaussian matrix $f(\mathbf{x}) = \tfrac{1}{\sqrt{k}}A\mathbf{x}$.</p>
+    </div>
+  </div>
+
+  <hr>
+  <h2>Building the geometric intuition</h2>
+  <div class="cols c11">
+    <div>
+      <h3>High-dimensional geometry is weird</h3>
+      <p>In low dimensions, projecting onto a subspace can dramatically distort distances. But in high dimensions, a remarkable phenomenon called <strong>concentration of measure</strong> makes random projections extremely well-behaved:</p>
+      <ul style="margin:.5rem 0 .8rem 1.3rem;line-height:1.9">
+        <li>Random unit vectors in high dimensions are <em>nearly orthogonal</em> to each other</li>
+        <li>The surface area of a high-dimensional sphere is concentrated near the equator</li>
+        <li>A random projection of a fixed vector onto $k$ dimensions concentrates tightly around its expected length</li>
+      </ul>
+    </div>
+    <div>
+      <h3>The union bound trick</h3>
+      <p>JL needs to work for <em>all</em> $\binom{N}{2}$ pairs simultaneously. Here's how:</p>
+      <ol style="margin:.5rem 0 .8rem 1.3rem;line-height:1.9">
+        <li>For one pair: probability of bad projection $\leq 2e^{-k\varepsilon^2/8}$</li>
+        <li>There are $N^2/2$ pairs: union bound costs a factor $N^2$</li>
+        <li>The exponential decay overwhelms $N^2$ when $k \geq \frac{4\ln N}{\varepsilon^2}$</li>
+        <li>Result: probability all pairs are good $> 0$, so a good projection must exist</li>
+      </ol>
+      <div class="info">
+        The reason $k$ depends on $\log N$ (not $N$) is that the exponential $e^{-k\varepsilon^2/8}$ decays much faster than $N^2$ grows. You only need $k \sim \log N$ to dominate.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S4: Intuition — Concentration ──────────────────────── -->
+<div id="s4" class="section">
+  <h1>🎯 Intuition: Concentration of Measure</h1>
+  <p style="color:#555">The probabilistic heart of the JL lemma</p>
+  <hr>
+
+  <div class="cols c23">
+    <div>
+      <h2>Why random projections work</h2>
+      <p>For a fixed vector $\mathbf{x}$, define the random variable:</p>
+      $$Y = \frac{\|f(\mathbf{x})\|^2}{\|\mathbf{x}\|^2} = \frac{\|A\mathbf{x}\|^2}{k\,\|\mathbf{x}\|^2}$$
+      <p>This is the <strong>distortion ratio</strong> for a single vector. We want $Y \approx 1$.</p>
+      <p>Each component $(A\mathbf{x})_i$ is a sum of Gaussians, so $(A\mathbf{x})_i^2 / \|\mathbf{x}\|^2 \sim \chi^2(1)$. Summing $k$ independent copies:</p>
+      $$k \cdot Y = \sum_{i=1}^k Z_i^2 \;\sim\; \chi^2(k), \quad Z_i \overset{\text{i.i.d.}}{\sim} \mathcal{N}(0,1)$$
+      <p>So $Y \sim \chi^2(k) / k$, which has:</p>
+      <ul style="margin:.5rem 0 .8rem 1.3rem;line-height:1.9">
+        <li>Mean: $\mathbb{E}[Y] = 1$ ✓</li>
+        <li>Variance: $\text{Var}[Y] = 2/k$</li>
+        <li>Standard deviation: $\sigma_Y = \sqrt{2/k} \to 0$ as $k \to \infty$</li>
+      </ul>
+      <div class="success">
+        As $k$ increases, the distribution of $Y$ tightens around 1. The chart on the right shows this directly — move the slider to see the distribution concentrate.
+      </div>
+      <h3>The tail bound</h3>
+      <p>Using a Chernoff-type bound for chi-squared distributions:</p>
+      $$P(|Y - 1| > \varepsilon) \;\leq\; 2\exp\!\left(-\frac{k\varepsilon^2}{8}\right)$$
+      <p>This decays <em>exponentially</em> fast in $k$. For $k = 100$ and $\varepsilon = 0.1$:</p>
+      $$P(|Y-1| > 0.1) \leq 2e^{-100 \cdot 0.01 / 8} = 2e^{-0.125} \approx 1.76 \text{ per pair}$$
+      <p class="caption">Wait, that's bigger than 1? Only because this is a <em>loose</em> bound — the actual probability is much smaller. For $k=100, \varepsilon=0.2$: $2e^{-0.5} \approx 1.21$. For $k=200, \varepsilon=0.2$: $2e^{-1} \approx 0.74$ ✓</p>
+      <p>The bound is weak but the principle holds: larger $k$ → smaller tail probability → safer projection.</p>
+    </div>
+    <div>
+      <h2>Distribution of $Y = \chi^2(k)/k$ &nbsp; <span class="pill pill-jl">interactive</span></h2>
+      <p>Adjust $k$ to watch the distribution <strong>concentrate around 1</strong>. The teal band shows the "good zone" $(1-\varepsilon, 1+\varepsilon)$.</p>
+      <div class="ctrl">
+        <label>$k$ (projection dims)</label>
+        <input type="range" id="s4-k" min="1" max="200" step="1" value="5" oninput="updateConc()">
+        <span class="val" id="s4-k-val">5</span>
+      </div>
+      <div class="ctrl">
+        <label>$\varepsilon$ (distortion tolerance)</label>
+        <input type="range" id="s4-eps" min="0.05" max="0.5" step="0.05" value="0.2" oninput="updateConc()">
+        <span class="val" id="s4-eps-val">0.20</span>
+      </div>
+      <div id="s4-chart" style="height:320px"></div>
+      <div id="s4-prob" class="info" style="font-size:.85rem;margin-top:.5rem"></div>
+
+      <h3 style="margin-top:1.2rem">Probability of a bad projection (one pair)</h3>
+      <p>Tail bound $2\exp(-k\varepsilon^2/8)$ vs $k$ for current $\varepsilon$</p>
+      <div id="s4-tail" style="height:220px"></div>
+      <p class="caption">The exponential decay is what makes the union bound over $N^2$ pairs tractable.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── S5: Intuition — Why log N? ─────────────────────────── -->
+<div id="s5" class="section">
+  <h1>🔢 Intuition: Why log N?</h1>
+  <p style="color:#555">The union bound argument, step by step</p>
+  <hr>
+
+  <div class="cols c11">
+    <div>
+      <h2>The union bound argument</h2>
+      <p>We want: P(any of the $\binom{N}{2}$ pairs has distortion $>\varepsilon$) to be small.</p>
+
+      <p><strong>Step 1.</strong> For one pair $(u,v)$, let $D_{uv} = \|f(u)-f(v)\|^2 / \|u-v\|^2$. We showed:</p>
+      $$P(|D_{uv} - 1| > \varepsilon) \;\leq\; 2e^{-k\varepsilon^2/8}$$
+
+      <p><strong>Step 2.</strong> Union bound over all $\binom{N}{2} < N^2/2$ pairs:</p>
+      $$P\!\left(\exists\, u,v:\; |D_{uv} - 1| > \varepsilon\right) \;\leq\; \frac{N^2}{2} \cdot 2e^{-k\varepsilon^2/8} = N^2 e^{-k\varepsilon^2/8}$$
+
+      <p><strong>Step 3.</strong> We want this $< \delta$ (say $\delta = 0.01$). Solve for $k$:</p>
+      $$N^2 e^{-k\varepsilon^2/8} < \delta$$
+      $$e^{-k\varepsilon^2/8} < \frac{\delta}{N^2}$$
+      $$-\frac{k\varepsilon^2}{8} < \ln\frac{\delta}{N^2} = \ln\delta - 2\ln N$$
+      $$k > \frac{8(2\ln N + \ln(1/\delta))}{\varepsilon^2}$$
+
+      <p><strong>Step 4.</strong> For $\delta = 1$ (any positive probability): $k > \frac{16\ln N}{\varepsilon^2}$</p>
+      <p>Absorbing constants: $k = O\!\left(\frac{\log N}{\varepsilon^2}\right)$ &nbsp; ← the JL bound.</p>
+
+      <div class="info">
+        <strong>Why is it $\log N$ and not $N$?</strong><br>
+        The union bound costs $N^2$, but the exponential decay $e^{-k\varepsilon^2/8}$ beats $N^2$ with only $k = O(\log N)$ — because $e^{k} \gg N^2$ for $k = c\log N$, any $c > 0$.
+      </div>
+
+      <h3>Key ratios</h3>
+      <table>
+        <tr><th>Change</th><th>Cost in $k$</th></tr>
+        <tr><td>$N \to 10N$ (10× more points)</td><td>$+\frac{8\ln 10}{\varepsilon^2} \approx +\frac{18.4}{\varepsilon^2}$</td></tr>
+        <tr><td>$N \to N^2$ (square the dataset)</td><td>$k \to 2k$ (doubles)</td></tr>
+        <tr><td>$\varepsilon \to \varepsilon/2$ (half the tolerance)</td><td>$k \to 4k$ (quadruples)</td></tr>
+        <tr><td>$n \to \infty$ (original dim → ∞)</td><td>$k$ unchanged (zero cost!)</td></tr>
+      </table>
+    </div>
+
+    <div>
+      <h2>Required $k$ vs $N$ &nbsp; <span class="pill pill-jl">interactive</span></h2>
+      <p>Four curves for different $\varepsilon$ values. $x$-axis is log-scale. Note the logarithmic shape.</p>
+      <div class="ctrl">
+        <label>Highlight $N$</label>
+        <input type="range" id="s5-N" min="1" max="7" step="0.1" value="3" oninput="updateKvsN()">
+        <span class="val" id="s5-N-val">1,000</span>
+      </div>
+      <div id="s5-chart" style="height:380px"></div>
+      <p class="caption">Formula: $k = \lceil 8(2\ln N)/\varepsilon^2 \rceil$ (theory upper bound). Dashed vertical line = your selected $N$.</p>
+
+      <div class="card" style="margin-top:.8rem">
+        <h3>Your $N$ at a glance</h3>
+        <div id="s5-summary"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S6: Interactive: JL in Action ──────────────────────── -->
+<div id="s6" class="section">
+  <h1>📊 Interactive: JL in Action</h1>
+  <p style="color:#555">See distance preservation, distortion distributions, and the effect of $k$ — live.</p>
+  <hr>
+
+  <div class="ctrl" style="background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:.8rem 1rem;margin-bottom:1rem">
+    <label>$k$ (projection dims)</label>
+    <input type="range" id="s6-k" min="2" max="100" step="1" value="20" oninput="updateJLDemo()">
+    <span class="val" id="s6-k-val">20</span>
+    &nbsp;&nbsp;
+    <label style="min-width:80px">$\varepsilon$</label>
+    <input type="range" id="s6-eps" min="0.05" max="0.5" step="0.05" value="0.2" oninput="updateJLDemo()">
+    <span class="val" id="s6-eps-val">0.20</span>
+    &nbsp;&nbsp;
+    <button class="btn btn-sec" onclick="rerandomize()">↺ New Points</button>
+  </div>
+  <p class="caption" style="margin-bottom:.8rem">Fixed: $N = 40$ points in $d = 100$ dimensions. Projection matrix is re-generated each slider move.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('s6t','scatter')">① Distance Preservation</button>
+    <button class="tab-btn" onclick="tab('s6t','hist')">② Distortion Histogram</button>
+    <button class="tab-btn" onclick="tab('s6t','sweep')">③ k vs Distortion</button>
+  </div>
+
+  <div id="s6t-scatter" class="tab-pane active">
+    <p>Each dot = one pair of points. $x$-axis: original distance. $y$-axis: projected distance. <strong>For good compression, dots cluster near the $y = x$ diagonal.</strong> Dashed lines show the $(1\pm\varepsilon)\cdot x$ bounds.</p>
+    <div id="s6-scatter" style="height:420px"></div>
+    <div id="s6-scatter-stat" class="success" style="font-size:.85rem;margin-top:.3rem"></div>
+  </div>
+
+  <div id="s6t-hist" class="tab-pane">
+    <p>Histogram of distortion ratios $\|f(u)-f(v)\| / \|u-v\|$ for all $\binom{40}{2}=780$ pairs. A good projection has the peak centered at 1.0.</p>
+    <div id="s6-hist" style="height:400px"></div>
+    <div id="s6-hist-stat" class="success" style="font-size:.85rem;margin-top:.3rem"></div>
+  </div>
+
+  <div id="s6t-sweep" class="tab-pane">
+    <p>Sweep $k$ from 2 to 100 and measure the empirical maximum distortion across all pairs. Compare to theoretical guarantee.</p>
+    <div style="margin:.5rem 0">
+      <button class="btn" onclick="runSweep()">▶ Run Sweep</button>
+      <span id="s6-sweep-status" style="font-size:.84rem;color:#666;margin-left:.5rem"></span>
+    </div>
+    <div id="s6-sweep" style="height:400px"></div>
+    <p class="caption">Note: theory (dashed) is a loose upper bound. Empirical distortion is typically well below it — this is why JL works so well in practice.</p>
+  </div>
+</div>
+
+<!-- ── S7: Applications ────────────────────────────────────── -->
+<div id="s7" class="section">
+  <h1>🚀 Applications</h1>
+  <hr>
+  <table>
+    <tr><th>Domain</th><th>Use case</th><th>How JL helps</th><th>Complexity gain</th></tr>
+    <tr><td>Nearest-neighbor search</td><td>Vector databases, retrieval</td><td>Project vectors before indexing; search in low-dim space</td><td>$O(n) \to O(k)$ per query</td></tr>
+    <tr><td>Compressed sensing</td><td>Signal recovery, MRI</td><td>JL matrices satisfy Restricted Isometry Property (RIP)</td><td>$O(s\log n)$ measurements for $s$-sparse signals</td></tr>
+    <tr><td>Least-squares regression</td><td>Statistical modeling</td><td>Sketch the data matrix before solving; optimal solution preserved</td><td>$O(nd) \to O(nk + k^3)$</td></tr>
+    <tr><td>Streaming algorithms</td><td>Network monitoring, analytics</td><td>Maintain low-dim sketch of streaming data</td><td>Space $O(n) \to O(k)$</td></tr>
+    <tr><td>NLP / embeddings</td><td>Sentence similarity, clustering</td><td>Reduce embedding dimension while preserving cosine similarities</td><td>$O(d) \to O(k)$ per vector</td></tr>
+    <tr><td>LLM inference</td><td>KV cache compression</td><td>QJL preserves inner products for attention — see TurboQuant →</td><td>6× memory reduction</td></tr>
+  </table>
+
+  <div class="cols c11">
+    <div>
+      <h2>Deep dive: Nearest-Neighbor Search</h2>
+      <p>Given a database of $N$ vectors in $\mathbb{R}^d$ and a query $q$, find the vector closest to $q$. Naively: $O(Nd)$ per query.</p>
+      <p><strong>With JL:</strong></p>
+      <ol style="margin:.5rem 0 .8rem 1.3rem;line-height:1.9">
+        <li>Project all $N$ vectors and $q$ to $\mathbb{R}^k$ (one-time cost: $O(Nd)$)</li>
+        <li>Build an index on the $k$-dimensional projected vectors</li>
+        <li>At query time: project $q$ ($O(k)$), search the $k$-dim index ($O(\log N)$)</li>
+      </ol>
+      <p>The JL guarantee ensures that the nearest neighbor in $\mathbb{R}^k$ is a $(1+\varepsilon)$-approximate nearest neighbor in $\mathbb{R}^d$.</p>
+      <div class="info">
+        This was formalized by Indyk &amp; Motwani (1998) as <strong>Locality-Sensitive Hashing (LSH)</strong> — one of the most influential algorithms in the era of large-scale data, now used in every major vector database.
+      </div>
+    </div>
+    <div>
+      <h2>Deep dive: Least-Squares Sketching</h2>
+      <p>Solve $\min_{\mathbf{x}} \|A\mathbf{x} - \mathbf{b}\|^2$ where $A \in \mathbb{R}^{N \times d}$ with $N \gg d$. Cost: $O(Nd^2)$.</p>
+      <p><strong>With JL (the sketch-and-solve approach):</strong></p>
+      <ol style="margin:.5rem 0 .8rem 1.3rem;line-height:1.9">
+        <li>Draw a JL matrix $S \in \mathbb{R}^{k \times N}$ with $k = O(d/\varepsilon^2)$</li>
+        <li>Compress: $\tilde{A} = SA \in \mathbb{R}^{k \times d}$, $\tilde{b} = S\mathbf{b} \in \mathbb{R}^k$</li>
+        <li>Solve the small system: $\min_{\mathbf{x}} \|\tilde{A}\mathbf{x} - \tilde{b}\|^2$ in $O(kd^2)$</li>
+      </ol>
+      <p>The result $\hat{\mathbf{x}}$ satisfies $\|A\hat{\mathbf{x}} - \mathbf{b}\|^2 \leq (1+\varepsilon)\|A\mathbf{x}^* - \mathbf{b}\|^2$ — a $(1+\varepsilon)$-approximate solution.</p>
+      <div class="success">
+        Cost: $O(Nd \cdot k/N + kd^2) = O(kd + kd^2) = O(kd^2)$ — independent of $N$! Once $N$ is large, sketching dominates.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S8: TurboQuant ──────────────────────────────────────── -->
+<div id="s8" class="section">
+  <h1>⚡ TurboQuant (ICLR 2026)</h1>
+  <p style="color:#555">Google applies JL to slash LLM memory by 6× — without accuracy loss</p>
+  <hr>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('tq','kv')">① The KV Cache Problem</button>
+    <button class="tab-btn" onclick="tab('tq','pipe')">② Two-Stage Pipeline</button>
+    <button class="tab-btn" onclick="tab('tq','jl')">③ JL's Role</button>
+    <button class="tab-btn" onclick="tab('tq','res')">④ Results</button>
+  </div>
+
+  <!-- Tab 1: KV Cache Problem -->
+  <div id="tq-kv" class="tab-pane active">
+    <div class="cols c21">
+      <div>
+        <h2>What is the KV Cache?</h2>
+        <p>In transformer attention, each token produces a <strong>Key</strong> (K) and <strong>Value</strong> (V) vector. To generate token $t+1$, the model must attend over all previous tokens 1 through $t$, requiring access to all their K and V vectors:</p>
+        $$\text{Attention}(Q, K, V) = \text{softmax}\!\left(\frac{QK^\top}{\sqrt{d}}\right) V$$
+        <p>The <strong>KV cache</strong> stores these K and V vectors so they don't need to be recomputed. But it grows linearly with context length.</p>
+
+        <h2>The Memory Wall</h2>
+        <p>KV cache memory (simplified, full MHA):</p>
+        $$\text{Memory} = 2 \times L \times H \times T \times \text{bytes}$$
+        <p>where $L$ = layers, $H$ = hidden dim, $T$ = context length (tokens).</p>
+
+        <div class="warn">
+          <strong>70B model, fp16, 128k context:</strong><br>
+          $2 \times 80 \times 8192 \times 128{,}000 \times 2\text{ bytes} \approx \mathbf{336\text{ GB}}$<br>
+          A single NVIDIA H100 has only 80 GB. This model doesn't fit.
+        </div>
+        <p>Traditional quantization (fp16→int4) introduces <strong>inner-product bias</strong> — the attention scores become systematically wrong, degrading accuracy. This is where TurboQuant's JL-based approach is critical.</p>
+      </div>
+      <div>
+        <h2>Memory comparison: 70B model, 128k tokens</h2>
+        <div id="tq-kv-chart" style="height:340px"></div>
+        <p class="caption">TurboQuant achieves ~3-bit effective compression with <strong>zero accuracy loss</strong> — unlike naive quantization which introduces inner-product bias.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 2: Pipeline -->
+  <div id="tq-pipe" class="tab-pane">
+    <h2>The TurboQuant Two-Stage Pipeline</h2>
+    <p>TurboQuant compresses each fp16 KV vector through two sequential stages:</p>
+
+    <div class="pipe-row" style="margin:1.5rem 0">
+      <div class="pipe-box" style="border-color:var(--jl);background:#ede9f7">
+        <div style="font-size:.75rem;color:#888;margin-bottom:.3rem">INPUT</div>
+        fp16 Key/Value vector<br>
+        <span style="font-size:.8rem;color:#888">16 bits per value</span>
+      </div>
+      <div style="font-size:1.5rem;color:#aaa">→</div>
+      <div class="pipe-box" style="border-color:var(--turbo);background:#fff3ef">
+        <div style="font-size:.75rem;color:#888;margin-bottom:.3rem">STAGE 1</div>
+        <strong>PolarQuant</strong><br>
+        <span style="font-size:.8rem;color:#888">Cartesian → Polar</span>
+      </div>
+      <div style="font-size:1.5rem;color:#aaa">→</div>
+      <div class="pipe-box" style="border-color:var(--good);background:#d1f3ef">
+        <div style="font-size:.75rem;color:#888;margin-bottom:.3rem">STAGE 2</div>
+        <strong>QJL</strong><br>
+        <span style="font-size:.8rem;color:#888">JL + 1-bit quantize</span>
+      </div>
+      <div style="font-size:1.5rem;color:#aaa">→</div>
+      <div class="pipe-box" style="border-color:#28a745;background:#d4edda">
+        <div style="font-size:.75rem;color:#888;margin-bottom:.3rem">OUTPUT</div>
+        ~3-bit compressed<br>
+        <span style="font-size:.8rem;color:#888">6× smaller</span>
+      </div>
+    </div>
+
+    <div class="cols c11">
+      <div>
+        <h3>Stage 1 — PolarQuant</h3>
+        <p>Convert each key/value vector from Cartesian to <strong>polar coordinates</strong>, separating it into a magnitude (radius) and a set of angles:</p>
+        $$\mathbf{x} = [x_1, \ldots, x_d] \;\longrightarrow\; (r, \theta_1, \ldots, \theta_{d-1})$$
+        <p><strong>Why polar?</strong> The angular components of random Gaussian vectors follow predictable, concentrated distributions. This lets PolarQuant apply a standard scalar quantizer to the angles <em>without per-block normalization</em> — eliminating a major source of overhead.</p>
+        <div class="info">
+          PolarQuant captures ~95% of the information in the original vector. The remaining residual error is small but non-zero — and it introduces inner-product bias.
+        </div>
+        <p>PolarQuant alone is presented at <strong>AISTATS 2026</strong>.</p>
+      </div>
+      <div>
+        <h3>Stage 2 — QJL (Quantized JL Transform)</h3>
+        <p>The residual from Stage 1 is:</p>
+        $$\mathbf{r} = \mathbf{x} - \text{PolarQuant}^{-1}(\text{PolarQuant}(\mathbf{x}))$$
+        <p>Apply a JL random projection to $\mathbf{r}$, then quantize to a single sign bit per dimension:</p>
+        $$\mathbf{q} = \text{sign}(A\mathbf{r}) \in \{+1,-1\}^k$$
+        <p><strong>Why does 1 bit suffice?</strong> The JL guarantee ensures that inner products involving $\mathbf{r}$ are preserved by even 1-bit projections — because the sign of the JL-projected residual carries enough information to correct the attention bias.</p>
+        <div class="success">
+          QJL was independently published at <strong>AAAI 2025</strong>. TurboQuant combines it with PolarQuant for the first time.
+        </div>
+        <p>The combined output uses most bits on the coarse polar representation and wastes zero bits on normalization constants.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: JL's Role -->
+  <div id="tq-jl" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h2>How JL enables zero-bias quantization</h2>
+        <p>The core operation in attention is the <strong>inner product</strong> $\langle Q_t, K_s \rangle$ between the current query $Q_t$ and each cached key $K_s$. Getting this inner product right is what matters for attention accuracy.</p>
+        <p>Standard quantization (int4, int8) approximates each $K_s$ with $\hat{K}_s$, introducing a systematic error:</p>
+        $$\langle Q_t, K_s \rangle \neq \langle Q_t, \hat{K}_s \rangle$$
+        <p>The error $\langle Q_t, K_s - \hat{K}_s \rangle$ is non-zero on average — this is the <strong>inner-product bias</strong> problem.</p>
+        <h3>The JL fix</h3>
+        <p>TurboQuant's QJL stage corrects this bias. The residual $\mathbf{r} = K_s - \hat{K}_s$ is encoded via a random JL matrix $A$:</p>
+        $$\hat{\mathbf{r}} = \frac{1}{\sqrt{k}} A^\top \text{sign}(A\mathbf{r})$$
+        <p>By the JL guarantee, for any query $Q_t$:</p>
+        $$\langle Q_t, \hat{\mathbf{r}} \rangle \approx \langle Q_t, \mathbf{r} \rangle$$
+        <div class="info">
+          The JL lemma guarantees this approximation holds for <em>all</em> queries $Q_t$ simultaneously — not just in expectation. This is the key property that enables zero accuracy loss at inference.
+        </div>
+      </div>
+      <div>
+        <h2>Connecting JL to attention</h2>
+        <div class="card">
+          <h3>Full pipeline for one attention score</h3>
+          <ol style="line-height:2">
+            <li>Store compressed key: $(q_{\text{polar}}, \text{sign}(A\mathbf{r}))$ at ~3 bits</li>
+            <li>At query time: reconstruct $\hat{K}_s \approx \text{PolarQuant}^{-1}(q_\text{polar}) + \frac{1}{\sqrt{k}}A^\top\text{sign}(A\mathbf{r})$</li>
+            <li>Compute attention logit: $\langle Q_t, \hat{K}_s \rangle \approx \langle Q_t, K_s \rangle$</li>
+          </ol>
+        </div>
+        <div class="turbo-box">
+          <strong>Why this is a JL application:</strong><br>
+          The JL lemma says random projections preserve inner products (not just norms). Specifically, for any $Q_t$ and residual $\mathbf{r}$:
+          $$|\langle Q_t, \hat{\mathbf{r}} \rangle - \langle Q_t, \mathbf{r} \rangle| \leq \varepsilon \|Q_t\|\|\mathbf{r}\|$$
+          with high probability. This is a direct consequence of the JL distance-preservation guarantee applied to the pair $(Q_t + \mathbf{r}, \mathbf{r})$.
+        </div>
+        <div class="success">
+          The random matrix $A$ is <strong>shared across all tokens and layers</strong> — it's generated once at inference start and stored in fast SRAM. This gives TurboQuant its "data-oblivious" property: no per-token calibration needed.
+        </div>
+        <div class="info">
+          <strong>Distortion bound:</strong> TurboQuant achieves distortion within 1.45× of the Shannon Lower Bound at 1 bit, and within 2.7× across all bit-widths — near-optimal information-theoretic efficiency.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 4: Results -->
+  <div id="tq-res" class="tab-pane">
+    <div class="cols c21">
+      <div>
+        <h2>Performance results</h2>
+        <table>
+          <tr><th>Metric</th><th>Baseline</th><th>TurboQuant</th></tr>
+          <tr><td>KV cache precision</td><td>fp16 (16 bits)</td><td>~3 bits (<strong>6× reduction</strong>)</td></tr>
+          <tr><td>Attention throughput (H100)</td><td>1×</td><td><strong>8× faster</strong> (4-bit mode)</td></tr>
+          <tr><td>Llama-3.1-8B at 104k tokens</td><td>100% retrieval</td><td><strong>100% retrieval</strong> ✓</td></tr>
+          <tr><td>Vector index build (1536-dim)</td><td>239.75s (PQ)</td><td><strong>0.0013s</strong></td></tr>
+          <tr><td>Distortion vs Shannon bound</td><td>—</td><td><strong>1.45×</strong> at 1-bit</td></tr>
+          <tr><td>Training/fine-tuning needed?</td><td>—</td><td><strong>None</strong> (drop-in)</td></tr>
+        </table>
+
+        <h2 style="margin-top:1.2rem">Market reaction (March 25, 2026)</h2>
+        <div class="warn">
+          Memory chip stocks fell sharply on the announcement — investors anticipated reduced demand for HBM:
+          <br><br>
+          Samsung <strong>−5%</strong> &nbsp;|&nbsp; SK Hynix <strong>−6%</strong> &nbsp;|&nbsp; Micron <strong>−7%</strong>
+        </div>
+
+        <h2>Competition</h2>
+        <p>NVIDIA's rival <strong>KVTC</strong> method (also ICLR 2026) achieves 20× compression, but requires per-model offline calibration (PCA alignment matrix). TurboQuant is data-oblivious — no calibration, works at deployment time.</p>
+      </div>
+
+      <div>
+        <h2>Memory Calculator &nbsp; <span class="pill pill-jl">interactive</span></h2>
+        <p>Select a model and context length to see KV cache memory at different precisions.</p>
+
+        <div style="margin:.5rem 0;display:flex;gap:.4rem;flex-wrap:wrap" id="tq-model-btns">
+          <button class="btn" onclick="setModel('7B')" id="mb-7B">7B</button>
+          <button class="btn btn-sec" onclick="setModel('13B')" id="mb-13B">13B</button>
+          <button class="btn btn-sec" onclick="setModel('34B')" id="mb-34B">34B</button>
+          <button class="btn btn-sec" onclick="setModel('70B')" id="mb-70B">70B</button>
+          <button class="btn btn-sec" onclick="setModel('405B')" id="mb-405B">405B</button>
+        </div>
+
+        <div class="ctrl" style="margin-top:.7rem">
+          <label>Context length</label>
+          <input type="range" id="tq-ctx" min="0" max="7" step="1" value="4" oninput="updateMemCalc()">
+          <span class="val" id="tq-ctx-val">128k</span>
+        </div>
+
+        <div id="tq-mem-chart" style="height:280px"></div>
+        <div id="tq-mem-stat" class="info" style="font-size:.85rem;margin-top:.3rem"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S9: Sources ─────────────────────────────────────────── -->
+<div id="s9" class="section">
+  <h1>📚 Sources</h1>
+  <hr>
+  <h2>Primary Papers</h2>
+  <ol style="line-height:2.2;margin-left:1.3rem">
+    <li>Johnson, W.B. &amp; Lindenstrauss, J. (1984). "Extensions of Lipschitz mappings into a Hilbert space." <em>Contemporary Mathematics</em>, 26:189–206. — The original lemma.</li>
+    <li>Dasgupta, S. &amp; Gupta, A. (2003). "An elementary proof of a theorem of Johnson and Lindenstrauss." <em>Random Structures &amp; Algorithms</em>, 22(1):60–65. — The clean Gaussian matrix proof.</li>
+    <li>Achlioptas, D. (2003). "Database-friendly random projections: Johnson-Lindenstrauss with binary coins." <em>JCSS</em>, 66(4):671–687.</li>
+    <li>Ailon, N. &amp; Chazelle, B. (2009). "The fast Johnson-Lindenstrauss transform and approximate nearest neighbors." <em>SIAM Journal on Computing</em>, 39(1):302–322.</li>
+    <li>Zandieh, A. et al. (2025). "QJL: 1-Bit Quantized JL Transform for KV Cache Quantization with Zero Overhead." <em>AAAI 2025</em>.</li>
+    <li>Zandieh, A., Mirrokni, V. et al. (2026). "TurboQuant: Near-Optimal Data-Oblivious Quantization." <em>ICLR 2026</em>.</li>
+  </ol>
+
+  <h2>Explainers &amp; Blog Posts</h2>
+  <ol style="line-height:2.2;margin-left:1.3rem">
+    <li><a href="https://en.wikipedia.org/wiki/Johnson%E2%80%93Lindenstrauss_lemma" target="_blank">Wikipedia: Johnson-Lindenstrauss lemma</a></li>
+    <li><a href="https://djalil.chafai.net/blog/2025/02/14/back-to-basics-johnson-lindenstrauss-lemma/" target="_blank">Back to basics: JL Lemma — Djalil Chafaï (2025)</a></li>
+    <li><a href="http://blog.geomblog.org/2011/11/intuitive-argument-for-jl-lemma.html" target="_blank">An intuitive argument for the JL lemma — The Geomblog</a></li>
+    <li><a href="https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/" target="_blank">TurboQuant: Redefining AI efficiency — Google Research Blog (2026)</a></li>
+    <li><a href="https://www.marktechpost.com/2026/03/25/google-introduces-turboquant-a-new-compression-algorithm-that-reduces-llm-key-value-cache-memory-by-6x-and-delivers-up-to-8x-speedup-all-with-zero-accuracy-loss/" target="_blank">Google Introduces TurboQuant — MarkTechPost (March 2026)</a></li>
+    <li><a href="https://thenextweb.com/news/google-turboquant-ai-compression-memory-stocks" target="_blank">Google's TurboQuant compresses AI memory by 6x, rattles chip stocks — The Next Web</a></li>
+    <li><a href="https://github.com/tonbistudio/turboquant-pytorch" target="_blank">turboquant-pytorch: From-scratch PyTorch implementation — GitHub</a></li>
+  </ol>
+
+  <h2>Lecture Notes</h2>
+  <ol style="line-height:2.2;margin-left:1.3rem">
+    <li><a href="https://home.ttic.edu/~gregory/courses/LargeScaleLearning/lectures/jl.pdf" target="_blank">Random Projections and JL — TTIC Lecture Notes</a></li>
+    <li><a href="https://www.cs.princeton.edu/~smattw/Teaching/Fa19Lectures/lec9/lec9.pdf" target="_blank">Dimensionality Reduction and JL — Princeton CS (Matt Weinberg)</a></li>
+    <li><a href="https://cs.stanford.edu/people/mmahoney/cs369m/Lectures/lecture1.pdf" target="_blank">JL Lemma — Stanford CS369M (Michael Mahoney)</a></li>
+  </ol>
+</div>
+
+<!-- ── S10: Proof Toolkit ──────────────────────────────────── -->
+<div id="s10" class="section">
+  <h1>🧮 Proof Toolkit: Key Inequalities</h1>
+  <p style="color:#555">Three results from probability theory — developed from scratch — that power the JL proof.</p>
+  <hr>
+
+  <div class="info" style="margin-bottom:1.2rem">
+    <strong>The chain:</strong> Markov → (applied to $(X-\mu)^2$) → Chebyshev → (applied to $e^{tX}$) → Chernoff → (applied to each pair, then) → Union Bound → JL Lemma.
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('tk','markov')">① Markov</button>
+    <button class="tab-btn" onclick="tab('tk','cheby')">② Chebyshev</button>
+    <button class="tab-btn" onclick="tab('tk','mgf')">③ MGF</button>
+    <button class="tab-btn" onclick="tab('tk','chernoff')">④ Chernoff</button>
+    <button class="tab-btn" onclick="tab('tk','union')">⑤ Union Bound</button>
+    <button class="tab-btn" onclick="tab('tk','chain')">⑥ The Chain</button>
+  </div>
+
+  <!-- ① Markov -->
+  <div id="tk-markov" class="tab-pane active">
+    <div class="cols c12">
+      <div>
+        <h2>Markov's Inequality</h2>
+        <div class="info">
+          <strong>Statement.</strong> For any non-negative random variable $X$ and any $a > 0$:
+          $$P(X \geq a) \;\leq\; \frac{\mathbb{E}[X]}{a}$$
+        </div>
+
+        <h3>Proof (3 lines)</h3>
+        <p>Write out the expectation, split the integral at $a$, then lower-bound the integrand on $[a, \infty)$ by $a$:</p>
+        $$\mathbb{E}[X] = \int_0^\infty x\,f(x)\,dx \;\geq\; \int_a^\infty x\,f(x)\,dx \;\geq\; \int_a^\infty a\,f(x)\,dx = a\cdot P(X \geq a)$$
+        <p>Divide both sides by $a$. &nbsp;∎</p>
+
+        <details>
+          <summary>Why the first inequality holds</summary>
+          <div class="det-body">
+            <p>We dropped the integral over $[0, a)$. Since $X \geq 0$, the integrand $x\,f(x) \geq 0$ everywhere, so removing a region can only decrease the integral:</p>
+            $$\int_0^\infty x\,f(x)\,dx \;\geq\; \int_a^\infty x\,f(x)\,dx$$
+          </div>
+        </details>
+        <details>
+          <summary>Why the second inequality holds</summary>
+          <div class="det-body">
+            <p>On the region $[a, \infty)$, we have $x \geq a$, so $x\,f(x) \geq a\,f(x)$ pointwise:</p>
+            $$\int_a^\infty x\,f(x)\,dx \;\geq\; \int_a^\infty a\,f(x)\,dx = a \int_a^\infty f(x)\,dx = a\cdot P(X \geq a)$$
+          </div>
+        </details>
+
+        <h3>Interpretation</h3>
+        <p>If the average is $\mu$, then the probability of exceeding $a$ can be no larger than $\mu/a$. Intuitively: the "weight" above $a$ can't pull the mean above $\mu$.</p>
+
+        <div class="warn">
+          <strong>Limitation — polynomial decay.</strong> The bound $\mu/a$ decays as $1/a$. For $a = 10\mu$, Markov only says $P(X \geq 10\mu) \leq 0.1$ — regardless of how concentrated $X$ is. A tight exponential distribution and a heavy-tailed one get the same bound.
+        </div>
+
+        <h3>What Markov doesn't use</h3>
+        <p>The proof uses only $X \geq 0$ and linearity of expectation. It knows nothing about the shape, variance, or higher moments of $X$. This is why it's so general — and why it can be so loose.</p>
+      </div>
+
+      <div>
+        <h2>Interactive: Markov bound vs. reality &nbsp; <span class="pill pill-jl">interactive</span></h2>
+        <p>Distribution: $X \sim \text{Exponential}(1)$, so $\mathbb{E}[X] = 1$. Drag the threshold $a$ to compare the <strong>true tail probability</strong> $e^{-a}$ against the <strong>Markov bound</strong> $1/a$.</p>
+        <div class="ctrl">
+          <label>Threshold $a$</label>
+          <input type="range" id="tk-a" min="0.2" max="5" step="0.1" value="1.5" oninput="updateMarkov()">
+          <span class="val" id="tk-a-val">1.5</span>
+        </div>
+        <div id="tk-markov-chart" style="height:360px"></div>
+        <div id="tk-markov-stat" class="card" style="font-size:.85rem;margin-top:.3rem"></div>
+
+        <div class="info" style="margin-top:.8rem">
+          <strong>Key observation:</strong> For small $a$ the bound is loose; as $a$ grows the actual tail drops exponentially ($e^{-a}$) while the Markov bound drops only as $1/a$. To do better, we need to use more information about the distribution — that's what the Chernoff bound does.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② Chebyshev -->
+  <div id="tk-cheby" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h2>Chebyshev's Inequality</h2>
+        <p>Chebyshev is Markov applied to a cleverly chosen non-negative random variable.</p>
+
+        <h3>Derivation from Markov</h3>
+        <p>Let $X$ be any random variable with mean $\mu$ and variance $\sigma^2$. Define $Y = (X - \mu)^2$. Then:</p>
+        <ul style="margin:.5rem 0 .8rem 1.3rem;line-height:1.9">
+          <li>$Y \geq 0$ ✓ (it's a square)</li>
+          <li>$\mathbb{E}[Y] = \mathbb{E}[(X-\mu)^2] = \sigma^2$</li>
+        </ul>
+        <p>Apply Markov to $Y$ with threshold $t^2$:</p>
+        $$P\!\left(Y \geq t^2\right) \;\leq\; \frac{\mathbb{E}[Y]}{t^2} = \frac{\sigma^2}{t^2}$$
+        <p>But $Y \geq t^2$ is exactly $|X - \mu| \geq t$, so:</p>
+        <div class="info">
+          $$P\!\left(|X - \mu| \geq t\right) \;\leq\; \frac{\sigma^2}{t^2} \quad \text{(Chebyshev)}$$
+        </div>
+        <p>In terms of standard deviations ($t = k\sigma$): $P(|X - \mu| \geq k\sigma) \leq 1/k^2$.</p>
+
+        <h3>What Chebyshev uses that Markov doesn't</h3>
+        <p>Chebyshev uses the <strong>variance</strong> $\sigma^2$. Markov uses only the mean. As a result, Chebyshev gives a $1/t^2$ decay instead of $1/t$.</p>
+
+        <h3>Example: Law of Large Numbers</h3>
+        <p>Let $\bar{X}_n = \frac{1}{n}\sum_{i=1}^n X_i$ with each $X_i$ i.i.d., mean $\mu$, variance $\sigma^2$. Then $\text{Var}(\bar{X}_n) = \sigma^2/n$, so:</p>
+        $$P\!\left(|\bar{X}_n - \mu| \geq \varepsilon\right) \;\leq\; \frac{\sigma^2}{n\varepsilon^2} \;\to\; 0 \text{ as } n \to \infty$$
+        <p>This is a proof of the <strong>Weak Law of Large Numbers</strong> using only Chebyshev.</p>
+      </div>
+      <div>
+        <h2>The hierarchy so far</h2>
+        <table>
+          <tr><th>Inequality</th><th>Inputs needed</th><th>Tail decay</th><th>Tightness</th></tr>
+          <tr><td>Markov</td><td>Mean only</td><td>$O(1/a)$</td><td>Loose</td></tr>
+          <tr><td>Chebyshev</td><td>Mean + variance</td><td>$O(1/t^2)$</td><td>Better</td></tr>
+          <tr><td>Chernoff (next)</td><td>Full MGF</td><td>$O(e^{-ct})$</td><td>Tight</td></tr>
+        </table>
+
+        <div class="warn">
+          <strong>Chebyshev is distribution-free</strong> — it applies to any distribution with finite variance. This generality comes at a cost: it can't exploit the specific shape of the distribution. For the JL proof, we know the distribution exactly ($\chi^2(k)$), so we can do much better with Chernoff.
+        </div>
+
+        <h3>Why Chebyshev isn't enough for JL</h3>
+        <p>For the JL union bound to work, we need the per-pair failure probability to be much smaller than $1/N^2$. Chebyshev gives:</p>
+        $$P\!\left(\left|\frac{\chi^2(k)}{k} - 1\right| > \varepsilon\right) \;\leq\; \frac{\text{Var}(\chi^2(k)/k)}{\varepsilon^2} = \frac{2/k}{\varepsilon^2} = \frac{2}{k\varepsilon^2}$$
+        <p>Setting this below $1/N^2$ requires $k \geq 2N^2/\varepsilon^2$ — a polynomial in $N$, not $\log N$. <strong>The Chernoff bound is essential.</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ MGF -->
+  <div id="tk-mgf" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h2>Moment Generating Functions (MGFs)</h2>
+        <div class="info">
+          <strong>Definition.</strong> The MGF of a random variable $X$ is:
+          $$M_X(t) = \mathbb{E}\!\left[e^{tX}\right]$$
+          defined for all $t$ where the expectation is finite.
+        </div>
+
+        <h3>Why "moment generating"?</h3>
+        <p>Expanding $e^{tX} = \sum_{k=0}^\infty \frac{(tX)^k}{k!}$ and taking expectations:</p>
+        $$M_X(t) = \sum_{k=0}^\infty \frac{t^k}{k!}\,\mathbb{E}[X^k]$$
+        <p>Therefore $M_X^{(k)}(0) = \mathbb{E}[X^k]$ — differentiating $k$ times at $t=0$ recovers the $k$-th moment. The MGF encodes <em>all</em> moments of the distribution.</p>
+
+        <h3>Key properties</h3>
+        <table>
+          <tr><th>Property</th><th>Formula</th><th>Why useful</th></tr>
+          <tr><td>Independence →  product</td><td>$M_{X+Y}(t) = M_X(t)\cdot M_Y(t)$</td><td>Sums of independent RVs</td></tr>
+          <tr><td>Scaling</td><td>$M_{cX}(t) = M_X(ct)$</td><td>Rescaling variables</td></tr>
+          <tr><td>Shift</td><td>$M_{X+c}(t) = e^{ct}\,M_X(t)$</td><td>Centering around mean</td></tr>
+        </table>
+
+        <h3>MGFs of common distributions</h3>
+        <table>
+          <tr><th>Distribution</th><th>$M_X(t)$</th><th>Valid for</th></tr>
+          <tr><td>$\mathcal{N}(\mu, \sigma^2)$</td><td>$e^{\mu t + \sigma^2 t^2/2}$</td><td>all $t$</td></tr>
+          <tr><td>$\text{Bernoulli}(p)$</td><td>$1 - p + pe^t$</td><td>all $t$</td></tr>
+          <tr><td>$\text{Poisson}(\lambda)$</td><td>$e^{\lambda(e^t-1)}$</td><td>all $t$</td></tr>
+          <tr><td>$\text{Exponential}(\lambda)$</td><td>$\frac{\lambda}{\lambda - t}$</td><td>$t < \lambda$</td></tr>
+          <tr><td>$\chi^2(k)$</td><td>$(1-2t)^{-k/2}$</td><td>$t < \tfrac{1}{2}$</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3>Deriving the $\chi^2(k)$ MGF</h3>
+        <p>If $X \sim \chi^2(k)$ then $X = Z_1^2 + \cdots + Z_k^2$ with $Z_i \overset{\text{i.i.d.}}{\sim} \mathcal{N}(0,1)$. By independence:</p>
+        $$M_X(t) = \prod_{i=1}^k M_{Z_i^2}(t) = \left[M_{Z^2}(t)\right]^k$$
+        <p>For $Z \sim \mathcal{N}(0,1)$:</p>
+        $$M_{Z^2}(t) = \mathbb{E}[e^{tZ^2}] = \int_{-\infty}^\infty e^{tz^2} \cdot \frac{e^{-z^2/2}}{\sqrt{2\pi}}\,dz = \int_{-\infty}^\infty \frac{e^{-z^2(1-2t)/2}}{\sqrt{2\pi}}\,dz$$
+        <p>This integral is a Gaussian integral: $\int e^{-\alpha z^2/2}dz = \sqrt{2\pi/\alpha}$ with $\alpha = 1-2t$ (valid for $t < 1/2$):</p>
+        $$M_{Z^2}(t) = \frac{\sqrt{2\pi/(1-2t)}}{\sqrt{2\pi}} = (1-2t)^{-1/2}$$
+        <p>Therefore:</p>
+        <div class="info">
+          $$M_{\chi^2(k)}(t) = \left[(1-2t)^{-1/2}\right]^k = (1-2t)^{-k/2}, \quad t < \tfrac{1}{2}$$
+        </div>
+        <p>This is the MGF we plug into the Chernoff bound in Step 3 of the JL proof.</p>
+
+        <div class="success">
+          <strong>Key intuition:</strong> the MGF encodes exponential tail information. If $M_X(t)$ grows slowly as a function of $t$, then $X$ has light tails. The Chernoff bound exploits this by optimizing the ratio $M_X(t)/e^{ta}$ over $t$.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ Chernoff -->
+  <div id="tk-chernoff" class="tab-pane">
+    <div class="cols c12">
+      <div>
+        <h2>The Chernoff Bound</h2>
+        <p><strong>Core idea:</strong> apply Markov's inequality not to $X$ itself, but to the non-negative random variable $e^{tX}$.</p>
+
+        <h3>Derivation</h3>
+        <p>For any $t > 0$ and any $a$:</p>
+        $$P(X \geq a) = P\!\left(e^{tX} \geq e^{ta}\right) \;\leq\; \frac{\mathbb{E}[e^{tX}]}{e^{ta}} = \frac{M_X(t)}{e^{ta}}$$
+        <p>The first step is valid because $x \mapsto e^{tx}$ is strictly increasing (for $t>0$). The inequality is Markov applied to $e^{tX}$. Since this holds for every $t > 0$, take the infimum:</p>
+        <div class="info">
+          $$P(X \geq a) \;\leq\; \inf_{t > 0} \frac{M_X(t)}{e^{ta}} = \inf_{t > 0} e^{\log M_X(t) - ta}$$
+        </div>
+        <p>The optimization $\inf_t [\log M_X(t) - ta]$ is the <strong>Legendre–Fenchel transform</strong> of the log-MGF — a convex function minimized by setting $M_X'(t)/M_X(t) = a$, i.e., $\mathbb{E}[Xe^{tX}]/\mathbb{E}[e^{tX}] = a$.</p>
+
+        <h3>Why exponential improvement over Markov?</h3>
+        <p>Markov gives $P(X \geq a) \leq \mu/a$ — decays as $1/a$. Chernoff gives $e^{-I(a)}$ where $I(a)$ is the rate function. For Gaussians and chi-squared distributions, $I(a)$ is quadratic in $a$, giving decay $\sim e^{-ca^2}$ — exponentially faster.</p>
+
+        <h3>Applied to $\chi^2(k)/k$ (the JL case)</h3>
+        <p>Let $Y = \chi^2(k)/k$. We need both tails.</p>
+
+        <p><strong>Upper tail: $P(Y \geq 1+\varepsilon)$</strong></p>
+        <p>$P(kY \geq k(1+\varepsilon)) \leq \inf_{0 < t < 1/2} (1-2t)^{-k/2} e^{-tk(1+\varepsilon)}$.</p>
+        <p>Take log and differentiate to find optimal $t^* = \frac{\varepsilon}{2(1+\varepsilon)}$. Substituting and simplifying using $\ln(1+\varepsilon) \geq \varepsilon - \varepsilon^2/2$:</p>
+        $$P(Y \geq 1+\varepsilon) \;\leq\; \exp\!\left(-\frac{k}{2}\left[(1+\varepsilon)\ln(1+\varepsilon) - \varepsilon\right]\right) \;\leq\; e^{-k\varepsilon^2/4}$$
+
+        <p><strong>Lower tail: $P(Y \leq 1-\varepsilon)$</strong></p>
+        <p>Similar argument with $t < 0$. Optimal $t^* = -\frac{\varepsilon}{2(1-\varepsilon)}$ gives:</p>
+        $$P(Y \leq 1-\varepsilon) \;\leq\; \exp\!\left(-\frac{k}{2}\left[\varepsilon + \ln(1-\varepsilon)\right]\right) \;\leq\; e^{-k\varepsilon^2/4}$$
+
+        <p><strong>Two-sided, simplified:</strong></p>
+        <div class="info">
+          $$P(|Y - 1| > \varepsilon) \;\leq\; 2e^{-k\varepsilon^2/4} \;\leq\; 2e^{-k\varepsilon^2/8}$$
+          (using $e^{-k\varepsilon^2/4} \leq e^{-k\varepsilon^2/8}$ for any $k, \varepsilon > 0$; the $/8$ form is looser but conventional)
+        </div>
+      </div>
+
+      <div>
+        <h2>Chebyshev vs. Chernoff — tail comparison &nbsp; <span class="pill pill-jl">viz</span></h2>
+        <p>For $Z \sim \mathcal{N}(0,1)$: three bounds for $P(|Z| > t)$ on a log scale. Note the exponential improvement.</p>
+        <div id="tk-chernoff-chart" style="height:360px"></div>
+        <p class="caption">
+          Chebyshev (red): $1/t^2$ — polynomial decay, quickly becomes loose.<br>
+          Chernoff (orange): $2e^{-t^2/2}$ — the bound from optimizing over $t$ in the MGF approach.<br>
+          True tail (purple): $2(1-\Phi(t))$ — nearly identical to Chernoff for $t \geq 1$.
+        </p>
+
+        <div class="success">
+          <strong>The exponential gap:</strong> At $t = 4$, Chebyshev says $\leq 6.25\%$; the true tail is $6.3 \times 10^{-5}$ (1000× smaller). At $t = 5$, the gap is over $10^6\times$. This is why Chernoff — not Chebyshev — gives JL its logarithmic dimension bound.
+        </div>
+
+        <div class="card" style="margin-top:.8rem">
+          <h3>The key trick in one line</h3>
+          <p style="margin-bottom:.3rem">
+            Markov on $X$: &nbsp; $P(X \geq a) \leq \mu / a$
+          </p>
+          <p style="margin-bottom:.3rem">
+            Markov on $(X-\mu)^2$: &nbsp; $P(|X-\mu| \geq t) \leq \sigma^2/t^2$
+          </p>
+          <p style="margin-bottom:0">
+            Markov on $e^{tX}$: &nbsp; $P(X \geq a) \leq M_X(t) \cdot e^{-ta}$
+          </p>
+          <hr style="margin:.6rem 0">
+          <p style="margin:0;font-size:.84rem;color:#555">
+            Each step plugs a more informative non-negative function into Markov. $e^{tX}$ is the best because it is sensitive to the entire distribution, not just one moment.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ Union Bound -->
+  <div id="tk-union" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h2>The Union Bound (Boole's Inequality)</h2>
+        <div class="info">
+          <strong>Statement.</strong> For any events $A_1, A_2, \ldots, A_m$ (no independence required):
+          $$P\!\left(\bigcup_{i=1}^m A_i\right) \;\leq\; \sum_{i=1}^m P(A_i)$$
+        </div>
+
+        <h3>Proof</h3>
+        <p>Define disjoint events $B_1 = A_1$ and $B_i = A_i \setminus (A_1 \cup \cdots \cup A_{i-1})$ for $i \geq 2$. Then $\cup B_i = \cup A_i$ and $B_i \subseteq A_i$, so:</p>
+        $$P\!\left(\bigcup_i A_i\right) = P\!\left(\bigsqcup_i B_i\right) = \sum_i P(B_i) \;\leq\; \sum_i P(A_i) \quad \square$$
+        <p>Alternatively, by inclusion-exclusion: $P(\cup A_i) = \sum P(A_i) - \sum_{i<j} P(A_i \cap A_j) + \cdots \leq \sum P(A_i)$ (dropping non-positive terms).</p>
+
+        <h3>Why "no independence required" matters</h3>
+        <p>In the JL proof, the events $B_{uv}$ = "pair $(u,v)$ is badly projected" are <em>not</em> independent — if two pairs share a point (e.g., $(u,v)$ and $(u,w)$), their distortions are correlated. The union bound works regardless.</p>
+
+        <h3>When is the union bound tight?</h3>
+        <p>The union bound is <em>exactly tight</em> when the events are disjoint: $P(\cup A_i) = \sum P(A_i)$. It can be very loose when events overlap heavily — in the JL case, many pairs share endpoints, so the true failure probability is much lower than the union bound suggests.</p>
+
+        <h3>Quantitative form for JL</h3>
+        <p>In JL, we have $m = \binom{N}{2} < N^2/2$ events, each with probability $\leq 2e^{-k\varepsilon^2/8}$:</p>
+        $$P(\text{any pair fails}) \leq \frac{N^2}{2} \cdot 2e^{-k\varepsilon^2/8} = N^2 e^{-k\varepsilon^2/8}$$
+        <p>Setting this $< 1$ and solving for $k$:</p>
+        $$N^2 e^{-k\varepsilon^2/8} < 1 \;\Longleftrightarrow\; k > \frac{8 \cdot 2\ln N}{\varepsilon^2} = \frac{16 \ln N}{\varepsilon^2}$$
+      </div>
+
+      <div>
+        <h2>Union bound for JL — visualized &nbsp; <span class="pill pill-jl">viz</span></h2>
+        <p>For $N$ points with $k$ projection dims: union bound on P(any pair fails) vs. the threshold $k^*$ where it crosses 1.</p>
+        <div class="ctrl">
+          <label>$N$ (number of points)</label>
+          <input type="range" id="tk-N" min="2" max="3" step="0.1" value="2" oninput="updateUnion()">
+          <span class="val" id="tk-N-val">100</span>
+        </div>
+        <div class="ctrl">
+          <label>$\varepsilon$ (distortion)</label>
+          <input type="range" id="tk-eps2" min="0.05" max="0.5" step="0.05" value="0.2" oninput="updateUnion()">
+          <span class="val" id="tk-eps2-val">0.20</span>
+        </div>
+        <div id="tk-union-chart" style="height:330px"></div>
+        <div id="tk-union-stat" class="info" style="font-size:.85rem;margin-top:.3rem"></div>
+
+        <div class="warn" style="margin-top:.8rem">
+          <strong>The looseness of the union bound:</strong> in practice, empirical experiments show that $k$ much smaller than $16\ln N/\varepsilon^2$ already works. The union bound is tight only if all $N^2$ failure events were disjoint, which they aren't — they share points. See Section 6 (JL in Action) to compare theory to practice.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑥ The Chain -->
+  <div id="tk-chain" class="tab-pane">
+    <h2>How the inequalities chain together in the JL proof</h2>
+    <div class="cols c11">
+      <div>
+        <p>The JL proof is a carefully assembled pipeline where each inequality feeds into the next:</p>
+
+        <div class="pipe-row" style="flex-direction:column;align-items:stretch;gap:.5rem;margin:1rem 0">
+          <div class="pipe-box" style="border-color:var(--jl);background:#ede9f7;text-align:left;padding:.85rem 1.1rem">
+            <strong>Gaussian structure</strong><br>
+            <span style="font-size:.84rem">Each $(A\mathbf{w})_i = \sum_j A_{ij}w_j \sim \mathcal{N}(0,1)$ since $\|\mathbf{w}\|=1$ and rows of $A$ are i.i.d.</span>
+          </div>
+          <div style="text-align:center;font-size:1.1rem;color:#aaa">↓ sum of $k$ squared i.i.d. $\mathcal{N}(0,1)$</div>
+          <div class="pipe-box" style="border-color:#6a4c93;background:#f0ebfa;text-align:left;padding:.85rem 1.1rem">
+            <strong>Chi-squared distribution</strong><br>
+            <span style="font-size:.84rem">$\|A\mathbf{w}\|^2 \sim \chi^2(k)$, with MGF $(1-2t)^{-k/2}$</span>
+          </div>
+          <div style="text-align:center;font-size:1.1rem;color:#aaa">↓ Markov on $e^{t\cdot\chi^2(k)}$, optimize over $t$</div>
+          <div class="pipe-box" style="border-color:var(--turbo);background:#fff3ef;text-align:left;padding:.85rem 1.1rem">
+            <strong>Chernoff bound (per pair)</strong><br>
+            <span style="font-size:.84rem">$P\!\left(|\|A\mathbf{w}\|^2/k - 1| > \varepsilon\right) \leq 2e^{-k\varepsilon^2/8}$</span>
+          </div>
+          <div style="text-align:center;font-size:1.1rem;color:#aaa">↓ $\sum$ over all $\binom{N}{2}$ pairs (no independence needed)</div>
+          <div class="pipe-box" style="border-color:var(--good);background:#d1f3ef;text-align:left;padding:.85rem 1.1rem">
+            <strong>Union bound (all pairs)</strong><br>
+            <span style="font-size:.84rem">$P(\text{any pair fails}) \leq N^2 e^{-k\varepsilon^2/8}$</span>
+          </div>
+          <div style="text-align:center;font-size:1.1rem;color:#aaa">↓ set this &lt; 1, solve for $k$</div>
+          <div class="pipe-box" style="border-color:#28a745;background:#d4edda;text-align:left;padding:.85rem 1.1rem">
+            <strong>JL Lemma</strong><br>
+            <span style="font-size:.84rem">$k = O\!\left(\frac{\log N}{\varepsilon^2}\right)$ dimensions suffice, independent of $n$</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h2>Role of each ingredient</h2>
+        <table>
+          <tr><th>Tool</th><th>What it gives</th><th>What would break without it</th></tr>
+          <tr><td>Gaussian projection</td><td>$\chi^2(k)$ distribution for each vector</td><td>No distribution to analyze</td></tr>
+          <tr><td>MGF of $\chi^2(k)$</td><td>$(1-2t)^{-k/2}$</td><td>Chernoff bound not computable</td></tr>
+          <tr><td>Chernoff bound</td><td>Exponential tail $e^{-k\varepsilon^2/8}$</td><td>Only $1/t^2$ from Chebyshev → $k = O(N^2)$ needed</td></tr>
+          <tr><td>Union bound</td><td>Cover $N^2$ pairs at cost of $N^2$ multiplier</td><td>Can't extend per-pair to all-pairs</td></tr>
+          <tr><td>Exponential beats $N^2$</td><td>$e^{k\varepsilon^2/8} \gg N^2$ for $k \sim \log N$</td><td>If tails were polynomial, $k$ would be polynomial in $N$</td></tr>
+        </table>
+
+        <div class="success" style="margin-top:1rem">
+          <strong>The deep reason $k = O(\log N)$:</strong><br><br>
+          The exponential function $e^{k\varepsilon^2/8}$ grows as $N^{c}$ when $k = \frac{8c}{\varepsilon^2}\ln N$. So with just $k = O(\log N/\varepsilon^2)$ projection dimensions, the Chernoff tail probability $e^{-k\varepsilon^2/8} = N^{-c}$ shrinks faster than $1/N^2$, making the union bound over $N^2$ pairs go to zero. The logarithm in $k$ is simply the inverse of the exponent in the Chernoff tail — they cancel perfectly.
+        </div>
+
+        <div class="info">
+          <strong>Analogy with the birthday problem:</strong> if $m$ events each have probability $p$, you need $m \cdot p < 1$ for the union bound to guarantee a good outcome. Since $p = 2e^{-k\varepsilon^2/8}$ is exponentially small in $k$, and $m = N^2$ is polynomially large in $N$, you only need $k \sim \log N$ to bring $m \cdot p$ below 1 — that's the heart of the JL argument.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ── end S10 ─────────────────────────────────────────────── -->
+
+<!-- ── S11: Transform Zoo ─────────────────────────────────── -->
+<div id="s11" class="section">
+  <h1>🔭 JL Transform Zoo</h1>
+  <p style="color:#555">Four decades of faster, sparser, and more structured random projections.</p>
+  <hr>
+
+  <p>The original JL proof uses a dense Gaussian matrix. While correct, it is expensive: applying an $k \times d$ matrix costs $O(dk)$ operations and $O(dk)$ space. Subsequent work produced a family of transforms that trade mathematical simplicity for speed, sparsity, or quantization — while preserving the core JL guarantee.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('tz','overview')">① Overview</button>
+    <button class="tab-btn" onclick="tab('tz','gaussian')">② Gaussian</button>
+    <button class="tab-btn" onclick="tab('tz','achlioptas')">③ Achlioptas</button>
+    <button class="tab-btn" onclick="tab('tz','fjlt')">④ FJLT / SRHT</button>
+    <button class="tab-btn" onclick="tab('tz','sparse')">⑤ Sparse JL</button>
+    <button class="tab-btn" onclick="tab('tz','qjl')">⑥ QJL</button>
+  </div>
+
+  <!-- ① Overview -->
+  <div id="tz-overview" class="tab-pane active">
+    <h2>Comparison table</h2>
+    <table>
+      <tr>
+        <th>Transform</th><th>Year</th><th>Apply cost</th><th>Storage</th>
+        <th>Entries</th><th>Key advantage</th>
+      </tr>
+      <tr>
+        <td><strong>Gaussian</strong></td><td>1984 / 2001</td>
+        <td>$O(dk)$</td><td>$O(dk)$</td>
+        <td>$\mathcal{N}(0,1)$ reals</td>
+        <td>Simplest proof; optimal constant</td>
+      </tr>
+      <tr>
+        <td><strong>Achlioptas ±1</strong></td><td>2003</td>
+        <td>$O(dk)$</td><td>$O(dk)$ bits</td>
+        <td>$\pm 1$ integers</td>
+        <td>Integer arithmetic; cache-friendly</td>
+      </tr>
+      <tr>
+        <td><strong>Achlioptas sparse</strong></td><td>2003</td>
+        <td>$O(dk/3)$</td><td>$O(dk)$ bits</td>
+        <td>$0$ (prob ⅔), $\pm\!\sqrt{3}$ (prob ⅙)</td>
+        <td>33% fewer multiply-adds</td>
+      </tr>
+      <tr>
+        <td><strong>FJLT</strong></td><td>2006</td>
+        <td>$O(d \log d)$</td><td>$O(d)$</td>
+        <td>$\pm 1$ signs + subsampling</td>
+        <td>Sub-linear in $k$; implicit $H$</td>
+      </tr>
+      <tr>
+        <td><strong>SRHT</strong></td><td>2011</td>
+        <td>$O(d \log d)$</td><td>$O(d)$</td>
+        <td>$\pm 1$ signs + row sampling</td>
+        <td>Good for least-squares sketching</td>
+      </tr>
+      <tr>
+        <td><strong>Sparse JL</strong></td><td>2014</td>
+        <td>$O(ds)$, $s \ll k$</td><td>$O(ds)$</td>
+        <td>$s$ non-zeros per column</td>
+        <td>Best for sparse inputs</td>
+      </tr>
+      <tr>
+        <td><strong>Count Sketch</strong></td><td>2002</td>
+        <td>$O(d)$</td><td>$O(d)$</td>
+        <td>1 non-zero per column</td>
+        <td>Absolute minimum work</td>
+      </tr>
+      <tr>
+        <td><strong>QJL</strong></td><td>2025</td>
+        <td>$O(dk)$ floats → $O(k/64)$ words</td><td>$k$ bits per vector</td>
+        <td>$\text{sign}(A\mathbf{x})$</td>
+        <td>1 bit/dim; zero memory overhead</td>
+      </tr>
+    </table>
+
+    <div class="cols c11" style="margin-top:1.2rem">
+      <div>
+        <h2>Apply-time complexity vs. input dimension</h2>
+        <p>Operations to project one vector from $\mathbb{R}^d$ to $\mathbb{R}^k$, with $k = 20\log_2 d$ (a typical setting). Log-log scale.</p>
+        <div id="tz-complexity-chart" style="height:370px"></div>
+        <p class="caption">FJLT/SRHT are asymptotically fastest but have large constants for small $d$. For $d \lesssim 10{,}000$, dense transforms often win in practice due to BLAS-optimized matrix multiply.</p>
+      </div>
+      <div>
+        <h2>Matrix structure visualizer &nbsp; <span class="pill pill-jl">interactive</span></h2>
+        <p>Select a transform to see a 16×48 sample of its projection matrix $A$. Color = entry value.</p>
+        <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:.6rem">
+          <button class="btn" id="mz-gaussian" onclick="showMatrix('gaussian')">Gaussian</button>
+          <button class="btn btn-sec" id="mz-achlioptas" onclick="showMatrix('achlioptas')">Achlioptas ±1</button>
+          <button class="btn btn-sec" id="mz-sparse" onclick="showMatrix('sparse')">Sparse JL</button>
+          <button class="btn btn-sec" id="mz-hadamard" onclick="showMatrix('hadamard')">Hadamard</button>
+          <button class="btn btn-sec" id="mz-qjl" onclick="showMatrix('qjl')">QJL (signed)</button>
+        </div>
+        <div id="tz-matrix-chart" style="height:280px"></div>
+        <div id="tz-matrix-stat" class="card" style="font-size:.84rem;margin-top:.3rem"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② Gaussian -->
+  <div id="tz-gaussian" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h2>Gaussian Random Projection</h2>
+        <p><strong>Authors:</strong> Johnson &amp; Lindenstrauss (1984); clean proof by Dasgupta &amp; Gupta (2001).</p>
+
+        <h3>Construction</h3>
+        <p>Draw a matrix $A \in \mathbb{R}^{k \times d}$ with each entry $A_{ij} \overset{\text{i.i.d.}}{\sim} \mathcal{N}(0,1)$. The projection is:</p>
+        $$f(\mathbf{x}) = \frac{1}{\sqrt{k}}\,A\mathbf{x} \;\in\; \mathbb{R}^k$$
+
+        <h3>Why it works</h3>
+        <p>Each projected coordinate $(A\mathbf{x})_i = \mathbf{a}_i \cdot \mathbf{x}$ is a sum of $d$ independent Gaussians, hence $\mathcal{N}(0, \|\mathbf{x}\|^2)$. The squared norm $\|A\mathbf{x}\|^2/k$ therefore follows a $\chi^2(k)/k$ distribution concentrated around 1 — this is the foundation of the entire proof (see Section 2 and Proof Toolkit).</p>
+
+        <h3>Rotational invariance</h3>
+        <p>A key property of the Gaussian distribution: it is rotationally symmetric. This means the projection $A\mathbf{x}$ has the same distribution for all unit vectors $\mathbf{x}$, regardless of direction. This makes the proof clean and the guarantee direction-independent.</p>
+
+        <h3>Complexity</h3>
+        <table>
+          <tr><th>Operation</th><th>Cost</th></tr>
+          <tr><td>Generate $A$</td><td>$O(dk)$ random normals</td></tr>
+          <tr><td>Apply $f(\mathbf{x})$</td><td>$O(dk)$ multiply-adds (matrix-vector)</td></tr>
+          <tr><td>Store $A$</td><td>$O(dk)$ floats (8 bytes each for float64)</td></tr>
+        </table>
+        <p>For $d = 100{,}000$ and $k = 1{,}000$: storing $A$ requires 800 MB. Applying it requires 100M multiply-adds per vector. This motivates all subsequent transforms.</p>
+
+        <h3>JL constant</h3>
+        <p>The Gaussian transform achieves the <strong>optimal JL constant</strong>: among all linear maps, the Gaussian random projection minimizes the required $k$ for a given $(\varepsilon, \delta)$ guarantee. This optimality (shown by various lower bounds) means no linear JL transform can do better in the worst case — only in special cases (structured inputs) can other transforms improve.</p>
+      </div>
+      <div>
+        <h3>The distribution of a single projected coordinate</h3>
+        <p>For fixed $\mathbf{x}$ with $\|\mathbf{x}\|=1$, the $i$-th output coordinate is:</p>
+        $$\left(\frac{1}{\sqrt{k}}A\mathbf{x}\right)_i = \frac{1}{\sqrt{k}} \sum_{j=1}^d A_{ij} x_j \;\sim\; \mathcal{N}\!\left(0,\, \frac{1}{k}\right)$$
+        <p>So the expected squared projection is $\mathbb{E}[(f(\mathbf{x}))_i^2] = 1/k$, and summing $k$ such coordinates:</p>
+        $$\mathbb{E}\!\left[\|f(\mathbf{x})\|^2\right] = k \cdot \frac{1}{k} = 1 = \|\mathbf{x}\|^2 \;\checkmark$$
+
+        <h3>Generating efficiently</h3>
+        <p>In practice, $A$ can be generated on the fly using a pseudorandom number generator seeded with a shared key — both encoder and decoder can reconstruct $A$ without transmitting it. This reduces storage from $O(dk)$ floats to $O(1)$ (just the seed).</p>
+
+        <div class="info">
+          <strong>Practical note:</strong> most software libraries (NumPy, PyTorch, MATLAB) implement highly optimized BLAS matrix-vector products. For moderate $d$ and $k$, the Gaussian transform is often the fastest in wall-clock time despite its $O(dk)$ complexity, because BLAS routines exploit CPU vectorization and cache efficiently.
+        </div>
+
+        <div class="success">
+          <strong>When to use:</strong> small $d$ (≤ 10,000), when simplicity matters, when you need the tightest theoretical guarantee, or when using GPU acceleration (matrix multiply is heavily optimized on GPUs).
+        </div>
+      </div>
+    </div>
+    <hr style="margin:1.2rem 0 0.8rem">
+    <h2>Concentration in practice <span class="pill pill-jl">interactive</span></h2>
+    <p>Empirical histogram of ‖f(x)‖² for 200 random unit vectors in ℝ⁶⁰ vs. the exact χ²(k)/k density. The teal band is the (1±ε) good zone.</p>
+    <div class="cols c11">
+      <div>
+        <label>k = <strong id="tzg-k-val">40</strong></label>
+        <input type="range" id="tzg-k" min="5" max="100" value="40" oninput="updateTzGaussianConc()">
+        <label style="margin-top:.6rem">ε = <strong id="tzg-eps-val">0.20</strong></label>
+        <input type="range" id="tzg-eps" min="0.05" max="0.40" step="0.05" value="0.20" oninput="updateTzGaussianConc()">
+        <button class="btn btn-sec" style="margin-top:.8rem" onclick="tzSeeds.gaussian=Date.now()|0;updateTzGaussianConc()">Re-randomize</button>
+        <div id="tzg-stat" class="card" style="margin-top:.8rem;font-size:.84rem"></div>
+      </div>
+      <div id="tzg-conc" style="height:300px"></div>
+    </div>
+  </div>
+
+  <!-- ③ Achlioptas -->
+  <div id="tz-achlioptas" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h2>Achlioptas / Database-Friendly Transform</h2>
+        <p><strong>Author:</strong> Dimitris Achlioptas, 2003. <em>"Database-friendly random projections: Johnson-Lindenstrauss with binary coins."</em></p>
+
+        <h3>Motivation</h3>
+        <p>The Gaussian transform requires generating and storing floating-point random numbers — expensive in both memory and compute. Achlioptas asked: <em>can we replace the Gaussian entries with simple discrete values and still get a JL guarantee?</em></p>
+
+        <h3>Construction — two variants</h3>
+        <p><strong>Variant 1 (±1):</strong> Each entry $A_{ij}$ is drawn i.i.d. as:</p>
+        $$A_{ij} = \begin{cases} +1 & \text{with probability } \tfrac{1}{2} \\ -1 & \text{with probability } \tfrac{1}{2} \end{cases}$$
+        <p>Apply as $f(\mathbf{x}) = \frac{1}{\sqrt{k}} A\mathbf{x}$.</p>
+
+        <p><strong>Variant 2 (sparse ±√3):</strong> Each entry is:</p>
+        $$A_{ij} = \begin{cases} +\!\sqrt{3} & \text{with probability } \tfrac{1}{6} \\ 0 & \text{with probability } \tfrac{2}{3} \\ -\!\sqrt{3} & \text{with probability } \tfrac{1}{6} \end{cases}$$
+
+        <h3>Why it still works</h3>
+        <p>The proof only needs two conditions on the distribution of entries:</p>
+        <ol style="margin:.5rem 0 .8rem 1.3rem;line-height:1.9">
+          <li>$\mathbb{E}[A_{ij}] = 0$ (zero mean → projection is unbiased)</li>
+          <li>$\mathbb{E}[A_{ij}^2] = 1$ (unit variance → scaling works out)</li>
+        </ol>
+        <p>Both the ±1 distribution ($\mathbb{E}[A^2] = 1$) and the sparse ±√3 distribution ($\mathbb{E}[A^2] = \tfrac{1}{6}\cdot 3 + \tfrac{1}{6}\cdot 3 = 1$) satisfy these conditions. The concentration proof uses higher moments, which are also well-controlled for these distributions.</p>
+      </div>
+      <div>
+        <h3>Complexity gains</h3>
+        <table>
+          <tr><th></th><th>Gaussian</th><th>Achlioptas ±1</th><th>Achlioptas sparse</th></tr>
+          <tr><td>Entry generation</td><td>Normal samples</td><td>1 random bit</td><td>1 value from {0,±√3}</td></tr>
+          <tr><td>Apply cost</td><td>$O(dk)$ float ×</td><td>$O(dk)$ int ±</td><td>$O(dk/3)$ operations</td></tr>
+          <tr><td>Storage</td><td>$dk$ floats</td><td>$dk$ bits</td><td>$dk$ bits</td></tr>
+          <tr><td>Arithmetic</td><td>Float multiply-add</td><td>Add/subtract only</td><td>Add/subtract (fewer)</td></tr>
+        </table>
+
+        <div class="info">
+          <strong>Key insight for the sparse variant:</strong> 2/3 of multiplications become multiplications by 0, which can be skipped entirely. This gives a $3\times$ speedup in the apply step over the dense variants — for free, just by sparsifying the random matrix.
+        </div>
+
+        <h3>JL guarantee</h3>
+        <p>Both variants satisfy the JL lemma with the same asymptotic bound $k = O(\log N / \varepsilon^2)$. The constant factor may be slightly worse than Gaussian, but in practice the difference is negligible.</p>
+
+        <h3>Practical advantages</h3>
+        <ul style="margin:.5rem 0 .8rem 1.3rem;line-height:1.9">
+          <li><strong>Memory:</strong> 1 bit vs 32 bits per entry → $32\times$ memory reduction</li>
+          <li><strong>Speed:</strong> integer/bitwise operations are faster than floating-point multiply on most hardware</li>
+          <li><strong>Cache:</strong> bit-packed matrices fit in cache far better</li>
+          <li><strong>Reproducibility:</strong> deterministic from a seed, easy to regenerate</li>
+        </ul>
+
+        <div class="success">
+          <strong>When to use:</strong> large $d$ and $k$ where memory is a bottleneck, or when floating-point arithmetic is slow (e.g., embedded systems). The sparse variant is particularly effective for dense input vectors.
+        </div>
+      </div>
+    </div>
+    <hr style="margin:1.2rem 0 0.8rem">
+    <h2>All three variants side-by-side <span class="pill pill-jl">interactive</span></h2>
+    <p>Gaussian, Achlioptas ±1, and sparse ±√3 all concentrate identically — confirming the proof only needs zero mean and unit variance, not Gaussianity.</p>
+    <div class="cols c11">
+      <div>
+        <label>k = <strong id="tza-k-val">40</strong></label>
+        <input type="range" id="tza-k" min="5" max="100" value="40" oninput="updateTzAchConc()">
+        <button class="btn btn-sec" style="margin-top:.8rem" onclick="tzSeeds.ach=Date.now()|0;updateTzAchConc()">Re-randomize</button>
+        <div id="tza-stat" class="card" style="margin-top:.8rem;font-size:.84rem"></div>
+      </div>
+      <div id="tza-conc" style="height:300px"></div>
+    </div>
+  </div>
+
+  <!-- ④ FJLT / SRHT -->
+  <div id="tz-fjlt" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h2>Fast JL Transform (FJLT)</h2>
+        <p><strong>Authors:</strong> Nir Ailon &amp; Bernard Chazelle, 2006. <em>"The Fast Johnson-Lindenstrauss Transform and Approximate Nearest Neighbors."</em> SICOMP 2009.</p>
+
+        <h3>Motivation</h3>
+        <p>Both Gaussian and Achlioptas require $O(dk)$ work per vector. But $k = O(\log N / \varepsilon^2)$, so this is $O(d \log N / \varepsilon^2)$. For $N \gg 1$ (large datasets), can we do better?</p>
+        <p>FJLT achieves $O(d \log d)$ — independent of $k$ — by replacing the explicit matrix with a <strong>structured transform</strong>.</p>
+
+        <h3>Construction</h3>
+        <p>The FJLT projection is the composition of three maps:</p>
+        $$f(\mathbf{x}) = \frac{1}{\sqrt{k}}\, P\, H\, D\, \mathbf{x}$$
+        <p>applied right-to-left:</p>
+        <ol style="margin:.5rem 0 .8rem 1.3rem;line-height:1.9">
+          <li>$D \in \mathbb{R}^{d \times d}$: diagonal matrix with i.i.d. random signs $D_{ii} \sim \text{Uniform}\{+1,-1\}$. <em>Randomizes the phases</em> of $\mathbf{x}$.</li>
+          <li>$H \in \mathbb{R}^{d \times d}$: the <strong>Walsh-Hadamard Transform (WHT)</strong> matrix, defined recursively:
+            $H_1 = [1]$, $H_{2^l} = \begin{bmatrix}H_{2^{l-1}} & H_{2^{l-1}} \\ H_{2^{l-1}} & -H_{2^{l-1}}\end{bmatrix}$.
+            Computed in $O(d \log d)$ via the Fast Hadamard Transform (FHT). No matrix is stored — it's applied as a butterfly algorithm.</li>
+          <li>$P \in \mathbb{R}^{k \times d}$: a sparse Gaussian matrix (or uniform subsampling). Selects and rescales $k$ coordinates. Applied in $O(dk)$ but $k \ll d$, or $O(d)$ for pure subsampling.</li>
+        </ol>
+
+        <h3>Total cost</h3>
+        <p>$D\mathbf{x}$: $O(d)$ sign flips. $HD\mathbf{x}$: $O(d\log d)$ Fast Hadamard. $PHD\mathbf{x}$: $O(dk_{\text{eff}})$ or $O(k)$. <strong>Total: $O(d\log d)$</strong>, independent of $k$.</p>
+
+        <h3>Why $D$ is needed</h3>
+        <p>Without $D$, the Hadamard transform is deterministic. A sparse input (many zeros) would concentrate its energy in a few Hadamard coefficients, and uniform subsampling would miss most of the information. The random sign matrix $D$ <em>spreads the energy uniformly</em> across all Hadamard coefficients before subsampling — this is the key insight.</p>
+      </div>
+      <div>
+        <h2>SRHT: Subsampled Randomized Hadamard Transform</h2>
+        <p>A related construction (Tropp, 2011; Ailon &amp; Liberty, 2011):</p>
+        $$f(\mathbf{x}) = \sqrt{\frac{d}{k}}\, S\, H\, D\, \mathbf{x}$$
+        <p>where $S \in \mathbb{R}^{k \times d}$ is a <strong>uniform random row-sampling</strong> matrix (each of the $d$ coordinates is independently included with probability $k/d$). Apply cost: $O(d\log d)$.</p>
+
+        <h3>FJLT vs. SRHT</h3>
+        <table>
+          <tr><th></th><th>FJLT</th><th>SRHT</th></tr>
+          <tr><td>$P$ / $S$</td><td>Sparse Gaussian matrix</td><td>Uniform row sampling</td></tr>
+          <tr><td>Analysis</td><td>More complex</td><td>Cleaner</td></tr>
+          <tr><td>Require $k \geq$</td><td>$O(\varepsilon^{-2}\log^3 N)$</td><td>$O(\varepsilon^{-2}\log^4 d)$</td></tr>
+          <tr><td>Best for</td><td>General JL</td><td>Least-squares sketching</td></tr>
+        </table>
+
+        <div class="info">
+          <strong>The Hadamard matrix:</strong> $H_d$ is a $d\times d$ matrix with $\pm 1$ entries satisfying $H_d H_d^\top = d\,I$. It is the real analogue of the DFT. Each entry is $H_{ij} = (-1)^{\langle i, j\rangle}$ where $\langle i,j\rangle$ is the inner product of the binary representations of $i$ and $j$. Because all entries are ±1, there is no floating-point multiplication in $H\mathbf{x}$ — only additions and subtractions.
+        </div>
+
+        <div class="success">
+          <strong>When to use:</strong> very large $d$ (millions of dimensions), when $k$ is large (e.g., $k \sim 1{,}000$), or when applying many vectors to the same projection (amortize setup cost). Standard in randomized linear algebra (e.g., sketched least squares, randomized SVD).
+        </div>
+
+        <details>
+          <summary>Hadamard butterfly diagram (4×4 example)</summary>
+          <div class="det-body">
+            <p>The Hadamard transform $H_4 \mathbf{x}$ is computed by two butterfly stages:</p>
+            <pre>
+x₀ ──(+)──(+)── y₀ = x₀+x₁+x₂+x₃
+x₁ ──(−)──(+)── y₁ = x₀−x₁+x₂−x₃
+x₂ ──(+)──(−)── y₂ = x₀+x₁−x₂−x₃
+x₃ ──(−)──(−)── y₃ = x₀−x₁−x₂+x₃</pre>
+            <p>Each stage is $O(d)$ additions. With $\log_2 d$ stages total: $O(d\log d)$. No multiplication anywhere.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+    <hr style="margin:1.2rem 0 0.8rem">
+    <h2>Why the D step matters <span class="pill pill-jl">interactive</span></h2>
+    <p>For sparse inputs the WHT without random signs D concentrates energy in a few coefficients — subsampling misses them. D spreads the energy first, restoring concentration.</p>
+    <div class="cols c11">
+      <div>
+        <label>k = <strong id="tzf-k-val">32</strong></label>
+        <input type="range" id="tzf-k" min="4" max="60" value="32" oninput="updateTzFjltConc()">
+        <label style="margin-top:.6rem">Input sparsity = <strong id="tzf-sparsity-val">10%</strong></label>
+        <input type="range" id="tzf-sparsity" min="2" max="100" step="2" value="10" oninput="updateTzFjltConc()">
+        <button class="btn btn-sec" style="margin-top:.8rem" onclick="tzSeeds.fjlt=Date.now()|0;updateTzFjltConc()">Re-randomize</button>
+        <div id="tzf-stat" class="card" style="margin-top:.8rem;font-size:.84rem"></div>
+      </div>
+      <div id="tzf-conc" style="height:300px"></div>
+    </div>
+  </div>
+
+  <!-- ⑤ Sparse JL -->
+  <div id="tz-sparse" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h2>Sparse JL Transform</h2>
+        <p><strong>Authors:</strong> Daniel Kane &amp; Jelani Nelson, 2014. <em>"Sparser Johnson-Lindenstrauss Transforms."</em></p>
+
+        <h3>Setting: sparse input vectors</h3>
+        <p>Many real-world vectors are sparse: TF-IDF text features, one-hot encodings, genomic data, graph adjacency rows. If $\mathbf{x}$ has only $s$ non-zero entries, then applying a dense $k \times d$ matrix still costs $O(dk)$, ignoring the sparsity of $\mathbf{x}$. <strong>Can we build a sparse $A$ that exploits sparse inputs?</strong></p>
+
+        <h3>Construction</h3>
+        <p>Each <em>column</em> $j$ of $A$ has exactly $q$ non-zero entries, placed uniformly at random among the $k$ rows, each with value $\pm 1/\sqrt{q}$ (random sign):</p>
+        $$A_{ij} = \begin{cases} \pm 1/\sqrt{q} & \text{if row } i \text{ selected for column } j \\ 0 & \text{otherwise} \end{cases}$$
+        <p>For column $j$: independently choose $q$ of the $k$ rows without replacement, assign random ±1 signs. Repeat for each of the $d$ columns.</p>
+
+        <h3>Apply cost for sparse inputs</h3>
+        <p>For a vector $\mathbf{x}$ with $s$ non-zeros:</p>
+        $$f(\mathbf{x})_i = \sum_{j:\,x_j\neq 0} A_{ij}\,x_j$$
+        <p>Each non-zero $x_j$ touches at most $q$ rows of $A$ (the non-zeros in column $j$). Total work: $O(qs)$, compared to $O(dk)$ for dense.</p>
+
+        <h3>Required sparsity $q$</h3>
+        <p>Kane &amp; Nelson showed that setting $q = O(\varepsilon^{-1} \log(1/\delta))$ suffices for the JL guarantee (distortion $\leq \varepsilon$ with probability $\geq 1-\delta$). Crucially, $q$ is independent of $d$ and depends only weakly on $k$.</p>
+        <table>
+          <tr><th></th><th>Dense Gaussian</th><th>Sparse JL</th></tr>
+          <tr><td>Non-zeros per column</td><td>$k$ (all)</td><td>$q = O(\varepsilon^{-1}\log(1/\delta))$</td></tr>
+          <tr><td>Apply cost (dense $\mathbf{x}$)</td><td>$O(dk)$</td><td>$O(dq)$</td></tr>
+          <tr><td>Apply cost (sparse $\mathbf{x}$, $s$ nnz)</td><td>$O(sk)$</td><td>$O(sq)$</td></tr>
+          <tr><td>Ratio (for $q \ll k$)</td><td>1×</td><td>$k/q$ faster</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3>Count Sketch (extreme sparsity)</h3>
+        <p>The limiting case of Sparse JL sets $q = 1$ (one non-zero per column):</p>
+        $$f(\mathbf{x})_i = \sum_{j:\,h(j)=i} \sigma_j\, x_j$$
+        <p>where $h: [d] \to [k]$ is a random hash and $\sigma_j \sim \{+1,-1\}$ are random signs.</p>
+        <p>Apply cost: $O(d)$ — each coordinate $x_j$ contributes to exactly one bucket.</p>
+        <p><strong>Limitation:</strong> with $q=1$ the concentration is weaker. Count Sketch preserves $\ell_2$ norms approximately only when $k = \Omega(1/\varepsilon^2)$, with a worse constant than Sparse JL. It is primarily used for frequency estimation and streaming, not as a general-purpose JL transform.</p>
+
+        <div class="info">
+          <strong>Intuition for why sparsity works:</strong> The JL proof only needs each column to have zero mean and unit variance. With $q$ random ±$1/\sqrt{q}$ entries per column, the expected squared norm is $q \cdot (1/q) = 1$ ✓, and the variance is $O(1/q)$. As long as $q$ is large enough relative to $\varepsilon$, concentration holds. The key insight is that $q$ does not need to scale with $d$ — the $d$ dimensions of the input can be handled one column at a time.
+        </div>
+
+        <div class="success">
+          <strong>When to use:</strong> text/NLP pipelines with TF-IDF or bag-of-words vectors (very sparse), genomic data, graph Laplacian problems. If your input is dense, Sparse JL offers less benefit — FJLT or Gaussian are better choices.
+        </div>
+
+        <h3>Lower bound: you can't go below $q = \Omega(\varepsilon^{-1})$</h3>
+        <p>Nelson &amp; Nguyen (2013) proved that any JL transform (linear or nonlinear) achieving distortion $\varepsilon$ requires at least $\Omega(1/\varepsilon^2)$ bits per projected dimension. Since each dimension contributes $O(\log(1/\varepsilon))$ bits, the sparsity $q$ of any column of a linear JL map must satisfy $q = \Omega(\varepsilon^{-1}/\log(1/\varepsilon))$. Kane &amp; Nelson's construction is nearly optimal.</p>
+      </div>
+    </div>
+    <hr style="margin:1.2rem 0 0.8rem">
+    <h2>Effect of column sparsity q <span class="pill pill-jl">interactive</span></h2>
+    <p>Reduce q (non-zeros per column) and the distribution widens. Kane-Nelson theory says q ≥ O(1/ε) is needed — drag q below that threshold and watch concentration degrade.</p>
+    <div class="cols c11">
+      <div>
+        <label>k = <strong id="tzs-k-val">40</strong></label>
+        <input type="range" id="tzs-k" min="5" max="100" value="40" oninput="updateTzSparseConc()">
+        <label style="margin-top:.6rem">q (nnz/col) = <strong id="tzs-q-val">5</strong></label>
+        <input type="range" id="tzs-q" min="1" max="20" value="5" oninput="updateTzSparseConc()">
+        <button class="btn btn-sec" style="margin-top:.8rem" onclick="tzSeeds.sparse=Date.now()|0;updateTzSparseConc()">Re-randomize</button>
+        <div id="tzs-stat" class="card" style="margin-top:.8rem;font-size:.84rem"></div>
+      </div>
+      <div id="tzs-conc" style="height:300px"></div>
+    </div>
+  </div>
+
+  <!-- ⑥ QJL -->
+  <div id="tz-qjl" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h2>Quantized JL (QJL)</h2>
+        <p><strong>Authors:</strong> Zandieh, Han, Mirrokni, Karbasi, 2024. <em>"QJL: 1-Bit Quantized JL Transform for KV Cache Quantization with Zero Overhead."</em> AAAI 2025.</p>
+
+        <h3>Motivation: beyond distance preservation</h3>
+        <p>All previous transforms preserve Euclidean distances by mapping $\mathbf{x} \mapsto f(\mathbf{x}) \in \mathbb{R}^k$. QJL asks: what if we only need to <strong>preserve inner products</strong>, and we store each projected coordinate as a <strong>single bit</strong>?</p>
+
+        <h3>Construction</h3>
+        <p>Let $A \in \mathbb{R}^{k \times d}$ be a Gaussian random matrix. The QJL map is:</p>
+        $$f_{\text{QJL}}(\mathbf{x}) = \text{sign}(A\mathbf{x}) \in \{+1,-1\}^k$$
+        <p>Store only the $k$ sign bits — one bit per projected dimension.</p>
+
+        <h3>What is preserved?</h3>
+        <p>Unlike standard JL which preserves distances, QJL preserves <strong>angular similarity</strong> via the connection between random projections and angular distance:</p>
+        $$\mathbb{E}\!\left[\text{sign}(\mathbf{a}\cdot\mathbf{x})\cdot\text{sign}(\mathbf{a}\cdot\mathbf{y})\right] = 1 - \frac{2}{\pi}\,\theta_{xy}$$
+        <p>where $\theta_{xy}$ is the angle between $\mathbf{x}$ and $\mathbf{y}$, and $\mathbf{a}$ is a random Gaussian vector. This is related to <strong>SimHash</strong> / locality-sensitive hashing for cosine similarity.</p>
+
+        <h3>Inner product estimation</h3>
+        <p>For inner products, the QJL estimator is:</p>
+        $$\langle \mathbf{x}, \mathbf{y} \rangle \;\approx\; \|\mathbf{x}\|\,\|\mathbf{y}\|\,\cos\!\left(\frac{\pi}{2} \cdot \frac{d_H(f(\mathbf{x}),\, f(\mathbf{y}))}{k/2}\right)$$
+        <p>where $d_H$ is the Hamming distance between the two $k$-bit strings. This can be computed extremely fast using popcount CPU instructions ($O(k/64)$ words).</p>
+      </div>
+      <div>
+        <h3>Memory savings</h3>
+        <table>
+          <tr><th></th><th>Standard JL (float32)</th><th>QJL</th></tr>
+          <tr><td>Storage per projected dim</td><td>32 bits</td><td>1 bit</td></tr>
+          <tr><td>Storage for $k=1024$ dims</td><td>4 KB per vector</td><td>128 bytes per vector</td></tr>
+          <tr><td>Compression ratio</td><td>1×</td><td><strong>32×</strong></td></tr>
+          <tr><td>Inner product computation</td><td>$O(k)$ float ops</td><td>$O(k/64)$ popcount ops</td></tr>
+        </table>
+
+        <h3>Error analysis</h3>
+        <p>For unit vectors $\mathbf{x}, \mathbf{y}$ with $k$ QJL bits:</p>
+        $$\left|\hat{\langle \mathbf{x}, \mathbf{y}\rangle} - \langle \mathbf{x}, \mathbf{y}\rangle\right| \;\leq\; O\!\left(\frac{1}{\sqrt{k}}\right)$$
+        <p>with high probability. This is the same $O(1/\sqrt{k})$ rate as unquantized JL — quantization adds only a small constant factor, not an additional error term.</p>
+
+        <h3>Role in TurboQuant</h3>
+        <p>TurboQuant uses QJL as its <em>residual correction stage</em> (Stage 2). After PolarQuant captures the bulk of each KV vector, the residual $\mathbf{r}$ is stored as $\text{sign}(A\mathbf{r})$. The JL guarantee ensures:</p>
+        $$\langle Q_t,\, A^\top \text{sign}(A\mathbf{r})/\sqrt{k}\rangle \;\approx\; \langle Q_t, \mathbf{r}\rangle$$
+        <p>for all query vectors $Q_t$ simultaneously, correcting the inner-product bias from PolarQuant. This is what makes TurboQuant achieve <strong>zero accuracy loss</strong>: the JL guarantee holds for all queries without any per-query calibration.</p>
+
+        <div class="turbo-box">
+          <strong>QJL is fundamentally different from 1-bit JL:</strong> it does not try to preserve Euclidean distances with 1 bit — that is provably impossible. Instead it preserves <em>inner products</em> (which is what attention needs), leveraging the angular geometry of the Gaussian random projection.
+        </div>
+
+        <div class="success">
+          <strong>When to use:</strong> any application that needs inner products or cosine similarities at extreme memory efficiency — LLM KV caches, maximum inner product search (MIPS), dense retrieval, approximate similarity join.
+        </div>
+      </div>
+    </div>
+    <hr style="margin:1.2rem 0 0.8rem">
+    <h2>Inner-product estimation error <span class="pill pill-jl">interactive</span></h2>
+    <p>For 150 random unit-vector pairs, error |⟨x,y⟩<sub>QJL</sub> − ⟨x,y⟩| shrinks as 1/√k. More sign bits → tighter estimates at 32× memory savings vs float32.</p>
+    <div class="cols c11">
+      <div>
+        <label>k (sign bits) = <strong id="tzq-k-val">64</strong></label>
+        <input type="range" id="tzq-k" min="16" max="256" step="16" value="64" oninput="updateTzQjlConc()">
+        <button class="btn btn-sec" style="margin-top:.8rem" onclick="tzSeeds.qjl=Date.now()|0;updateTzQjlConc()">Re-randomize</button>
+        <div id="tzq-stat" class="card" style="margin-top:.8rem;font-size:.84rem"></div>
+      </div>
+      <div id="tzq-conc" style="height:300px"></div>
+    </div>
+  </div>
+</div>
+<!-- ── end S11 ─────────────────────────────────────────────── -->
+
+</main><!-- /main -->
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── RNG (Mulberry32) ──────────────────────────────────────────
+function makeMulberry(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+let ptRng   = makeMulberry(42);
+let projRng = makeMulberry(999);
+
+function randn(rng) {
+  let u = 0, v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ── Log-Gamma (Lanczos) ───────────────────────────────────────
+function logGamma(z) {
+  const p = [0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - logGamma(1 - z);
+  z -= 1;
+  let x = p[0];
+  for (let i = 1; i < 9; i++) x += p[i] / (z + i);
+  const t = z + 7.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+}
+
+function chiSqScaledPDF(y, k) {
+  // PDF of Y = Chi²(k)/k at y > 0
+  if (y <= 1e-10) return 0;
+  const a = k / 2, x = k * y;
+  const logPdf = (a - 1) * Math.log(x) - x / 2 - a * Math.log(2) - logGamma(a);
+  return k * Math.exp(logPdf);
+}
+
+// ── Navigation ────────────────────────────────────────────────
+const LAZY = { s4: initS4, s5: initS5, s6: initS6, s8: initS8, s10: initS10, s11: initS11 };
+const initDone = {};
+const TAB_INIT = {
+  'tz-gaussian':   () => updateTzGaussianConc(),
+  'tz-achlioptas': () => updateTzAchConc(),
+  'tz-fjlt':       () => updateTzFjltConc(),
+  'tz-sparse':     () => updateTzSparseConc(),
+  'tz-qjl':        () => updateTzQjlConc(),
+};
+const tabDone = {};
+
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('onclick') === `nav('${id}')`);
+  });
+  const sec = document.getElementById(id);
+  sec.classList.add('active');
+  if (LAZY[id] && !initDone[id]) { initDone[id] = true; LAZY[id](); }
+  // Resize any Plotly charts in this section after it becomes visible
+  setTimeout(() => {
+    sec.querySelectorAll('[id]').forEach(el => {
+      if (el._fullLayout) Plotly.Plots.resize(el);
+    });
+  }, 50);
+}
+
+function tab(group, id) {
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(p => p.classList.remove('active'));
+  document.querySelectorAll(`.tab-btn[onclick*="${group}"]`).forEach(b => b.classList.remove('active'));
+  const pane = document.getElementById(`${group}-${id}`);
+  pane.classList.add('active');
+  if (event && event.target) event.target.classList.add('active');
+  const key = `${group}-${id}`;
+  if (TAB_INIT[key] && !tabDone[key]) { tabDone[key] = true; TAB_INIT[key](); }
+  setTimeout(() => pane.querySelectorAll('[id]').forEach(el => {
+    if (el._fullLayout) Plotly.Plots.resize(el);
+  }), 50);
+}
+
+// ── Plotly common layout ──────────────────────────────────────
+const PLY = {
+  margin: {t: 30, r: 20, b: 50, l: 60},
+  paper_bgcolor: 'rgba(0,0,0,0)',
+  plot_bgcolor: '#fafafa',
+  font: {family: '-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif', size: 12},
+};
+
+// ── S4: Concentration of Measure ─────────────────────────────
+function initS4() {
+  updateConc();
+}
+
+function updateConc() {
+  const k   = +document.getElementById('s4-k').value;
+  const eps = +document.getElementById('s4-eps').value;
+  document.getElementById('s4-k-val').textContent   = k;
+  document.getElementById('s4-eps-val').textContent = eps.toFixed(2);
+
+  // Chi-squared scaled PDF
+  const xs = [], ys = [];
+  const xMax = Math.max(3, 1 + 5 * Math.sqrt(2 / k));
+  for (let i = 0; i <= 300; i++) {
+    const x = (xMax * i) / 300;
+    xs.push(x);
+    ys.push(chiSqScaledPDF(x, k));
+  }
+
+  const traces = [{
+    x: xs, y: ys, type: 'scatter', mode: 'lines', fill: 'tozeroy',
+    fillcolor: 'rgba(106,76,147,0.15)',
+    line: { color: '#6a4c93', width: 2.5 },
+    name: `k = ${k}`,
+  }];
+
+  const shapes = [{
+    type: 'rect', x0: 1 - eps, x1: 1 + eps, y0: 0, y1: 1,
+    xref: 'x', yref: 'paper',
+    fillcolor: 'rgba(42,157,143,0.15)', line: { color: '#2a9d8f', width: 1.5 }
+  }];
+  const annotations = [{
+    x: 1, y: 0.97, xref: 'x', yref: 'paper', text: '← good zone →',
+    showarrow: false, font: { color: '#2a9d8f', size: 11 }
+  }];
+
+  const layout = {
+    ...PLY, shapes, annotations,
+    xaxis: { title: 'Distortion ratio Y = ‖f(x)‖² / ‖x‖²', range: [0, xMax] },
+    yaxis: { title: 'Probability density' },
+    showlegend: false,
+  };
+  Plotly.react('s4-chart', traces, layout, { responsive: true });
+
+  // Prob info box
+  const mean = 1, std = Math.sqrt(2 / k);
+  const pBad = 2 * Math.exp(-k * eps * eps / 8);
+  const pBadStr = pBad > 1 ? '> 1 (bound is loose here)' : pBad.toExponential(3);
+  document.getElementById('s4-prob').innerHTML =
+    `<strong>k = ${k}, ε = ${eps}:</strong> &nbsp; Mean of Y = ${mean} &nbsp;|&nbsp; Std = ${std.toFixed(4)} &nbsp;|&nbsp; ` +
+    `Tail bound P(|Y−1| > ε) ≤ ${pBadStr}`;
+
+  // Tail bound chart
+  const ks = [], ps = [];
+  for (let ki = 1; ki <= 300; ki++) {
+    ks.push(ki);
+    ps.push(Math.min(1, 2 * Math.exp(-ki * eps * eps / 8)));
+  }
+  const tailTraces = [{
+    x: ks, y: ps, type: 'scatter', mode: 'lines',
+    line: { color: '#e63946', width: 2 }, name: 'P(bad) upper bound'
+  }, {
+    x: [k, k], y: [0, 1], type: 'scatter', mode: 'lines',
+    line: { color: '#6a4c93', width: 2, dash: 'dash' }, name: `current k = ${k}`
+  }];
+  const tailLayout = {
+    ...PLY,
+    xaxis: { title: 'k (projection dimensions)' },
+    yaxis: { title: 'P(|Y−1| > ε) upper bound', type: 'log', range: [-10, 0.1] },
+    showlegend: true, legend: { x: 0.7, y: 1 },
+  };
+  Plotly.react('s4-tail', tailTraces, tailLayout, { responsive: true });
+}
+
+// ── S5: Why log N? ────────────────────────────────────────────
+const EPS_LINES = [
+  { eps: 0.05, color: '#e63946', label: 'ε = 0.05' },
+  { eps: 0.10, color: '#6a4c93', label: 'ε = 0.10' },
+  { eps: 0.20, color: '#2a9d8f', label: 'ε = 0.20' },
+  { eps: 0.30, color: '#e76f51', label: 'ε = 0.30' },
+];
+
+function initS5() {
+  updateKvsN();
+}
+
+function updateKvsN() {
+  const logN = +document.getElementById('s5-N').value;
+  const N = Math.round(Math.pow(10, logN));
+  document.getElementById('s5-N-val').textContent = N.toLocaleString();
+
+  const Nvals = [];
+  for (let i = 10; i <= 1e9; i *= 1.2) Nvals.push(i);
+
+  const traces = EPS_LINES.map(({ eps, color, label }) => ({
+    x: Nvals,
+    y: Nvals.map(n => Math.ceil(16 * Math.log(n) / (eps * eps))),
+    type: 'scatter', mode: 'lines',
+    line: { color, width: 2 }, name: label,
+  }));
+
+  // Vertical cursor
+  traces.push({
+    x: [N, N], y: [0, 1e6], type: 'scatter', mode: 'lines',
+    line: { color: '#333', width: 1.5, dash: 'dot' },
+    name: `N = ${N.toLocaleString()}`, showlegend: true,
+  });
+
+  const layout = {
+    ...PLY,
+    xaxis: { title: 'N (number of points)', type: 'log', range: [1, 9] },
+    yaxis: { title: 'Required k (theory upper bound)', range: [0, 30000] },
+    legend: { x: 0.02, y: 0.98 },
+  };
+  Plotly.react('s5-chart', traces, layout, { responsive: true });
+
+  // Summary table
+  const summRows = EPS_LINES.map(({ eps, color, label }) => {
+    const k = Math.ceil(16 * Math.log(N) / (eps * eps));
+    return `<tr><td><span style="display:inline-block;width:10px;height:10px;background:${color};border-radius:2px"></span> ${label}</td><td>k ≤ ${k.toLocaleString()}</td></tr>`;
+  }).join('');
+  document.getElementById('s5-summary').innerHTML =
+    `<p>For <strong>N = ${N.toLocaleString()}</strong> points:</p><table>${summRows}</table>` +
+    `<p class="caption">Compare to original dimension n — which may be millions — yet k is in the thousands.</p>`;
+}
+
+// ── S6: JL in Action ─────────────────────────────────────────
+const N_PTS = 40, D_DIM = 100;
+let globalPts = null;
+
+function generatePts() {
+  ptRng = makeMulberry(42);
+  const pts = [];
+  for (let i = 0; i < N_PTS; i++) {
+    const p = [];
+    for (let j = 0; j < D_DIM; j++) p.push(randn(ptRng));
+    pts.push(p);
+  }
+  return pts;
+}
+
+function applyJL(pts, k) {
+  projRng = makeMulberry(999 + k * 7);  // deterministic per k
+  const scale = 1 / Math.sqrt(k);
+  const A = [];
+  for (let i = 0; i < k * D_DIM; i++) A.push(randn(projRng));
+
+  return pts.map(pt => {
+    const proj = new Array(k).fill(0);
+    for (let i = 0; i < k; i++)
+      for (let j = 0; j < D_DIM; j++)
+        proj[i] += A[i * D_DIM + j] * pt[j];
+    for (let i = 0; i < k; i++) proj[i] *= scale;
+    return proj;
+  });
+}
+
+function pairDists(pts) {
+  const dists = [];
+  for (let i = 0; i < pts.length; i++)
+    for (let j = i + 1; j < pts.length; j++) {
+      let s = 0;
+      for (let l = 0; l < pts[i].length; l++) {
+        const d = pts[i][l] - pts[j][l]; s += d * d;
+      }
+      dists.push(Math.sqrt(s));
+    }
+  return dists;
+}
+
+function initS6() {
+  globalPts = generatePts();
+  updateJLDemo();
+}
+
+function rerandomize() {
+  ptRng = makeMulberry(Date.now());
+  const pts = [];
+  for (let i = 0; i < N_PTS; i++) {
+    const p = [];
+    for (let j = 0; j < D_DIM; j++) p.push(randn(ptRng));
+    pts.push(p);
+  }
+  globalPts = pts;
+  updateJLDemo();
+}
+
+function updateJLDemo() {
+  if (!globalPts) return;
+  const k   = +document.getElementById('s6-k').value;
+  const eps = +document.getElementById('s6-eps').value;
+  document.getElementById('s6-k-val').textContent   = k;
+  document.getElementById('s6-eps-val').textContent = eps.toFixed(2);
+
+  const projPts  = applyJL(globalPts, k);
+  const origD    = pairDists(globalPts);
+  const projD    = pairDists(projPts);
+  const ratios   = origD.map((d, i) => (d > 1e-10 ? projD[i] / d : 1));
+
+  // ① Distance scatter
+  const inBound = ratios.filter(r => Math.abs(r - 1) <= eps).length;
+  const pct = (100 * inBound / ratios.length).toFixed(1);
+
+  const maxOrig = Math.max(...origD) * 1.05;
+  const scatTraces = [
+    {
+      x: origD, y: projD, type: 'scatter', mode: 'markers',
+      marker: {
+        color: ratios.map(r => Math.abs(r - 1) <= eps ? '#2a9d8f' : '#e63946'),
+        size: 5, opacity: 0.7,
+      },
+      name: 'distance pair',
+    },
+    { x: [0, maxOrig], y: [0, maxOrig], type: 'scatter', mode: 'lines',
+      line: { color: '#333', width: 1.5 }, name: 'y = x', showlegend: false },
+    { x: [0, maxOrig], y: [0, (1 + eps) * maxOrig], type: 'scatter', mode: 'lines',
+      line: { color: '#2a9d8f', width: 1, dash: 'dash' }, name: `y = (1+ε)x`, showlegend: true },
+    { x: [0, maxOrig], y: [0, (1 - eps) * maxOrig], type: 'scatter', mode: 'lines',
+      line: { color: '#2a9d8f', width: 1, dash: 'dash' }, name: `y = (1−ε)x`, showlegend: true },
+  ];
+  const scatLayout = {
+    ...PLY,
+    xaxis: { title: `Original distance in ℝ${D_DIM}` },
+    yaxis: { title: `Projected distance in ℝ${k}` },
+    legend: { x: 0.02, y: 0.98 },
+  };
+  Plotly.react('s6-scatter', scatTraces, scatLayout, { responsive: true });
+
+  const col = +pct >= 80 ? 'success' : 'warn';
+  document.getElementById('s6-scatter-stat').className = col;
+  document.getElementById('s6-scatter-stat').innerHTML =
+    `<strong>k = ${k}, ε = ${eps}:</strong> ${pct}% of ${origD.length} pairs within bounds. ` +
+    `Theory needs k ≥ ${Math.ceil(16 * Math.log(N_PTS) / (eps * eps)).toLocaleString()} — empirical often needs far less.`;
+
+  // ② Distortion histogram
+  const binSize = 0.05, xMin = 0, xMax = 3;
+  const bins = Math.ceil((xMax - xMin) / binSize);
+  const counts = new Array(bins).fill(0);
+  ratios.forEach(r => {
+    const b = Math.floor((r - xMin) / binSize);
+    if (b >= 0 && b < bins) counts[b]++;
+  });
+  const binX = counts.map((_, i) => xMin + (i + 0.5) * binSize);
+
+  const histTraces = [{
+    x: binX, y: counts, type: 'bar',
+    marker: {
+      color: binX.map(x => (Math.abs(x - 1) <= eps) ? '#2a9d8f' : '#e63946'),
+      line: { color: '#fff', width: 0.5 },
+    },
+    width: binSize * 0.95, name: 'pair count',
+  }];
+  const histShapes = [
+    { type: 'line', x0: 1 - eps, x1: 1 - eps, y0: 0, y1: 1, yref: 'paper',
+      line: { color: '#2a9d8f', width: 2, dash: 'dot' } },
+    { type: 'line', x0: 1 + eps, x1: 1 + eps, y0: 0, y1: 1, yref: 'paper',
+      line: { color: '#2a9d8f', width: 2, dash: 'dot' } },
+    { type: 'line', x0: 1, x1: 1, y0: 0, y1: 1, yref: 'paper',
+      line: { color: '#6a4c93', width: 1.5, dash: 'dash' } },
+  ];
+  const histLayout = {
+    ...PLY, shapes: histShapes,
+    xaxis: { title: 'Distortion ratio ‖f(u)−f(v)‖ / ‖u−v‖', range: [0, 3] },
+    yaxis: { title: 'Number of pairs' },
+    showlegend: false,
+  };
+  Plotly.react('s6-hist', histTraces, histLayout, { responsive: true });
+
+  const inBound2 = ratios.filter(r => Math.abs(r - 1) <= eps).length;
+  document.getElementById('s6-hist-stat').innerHTML =
+    `Peak near 1.0 → good projection. <strong>${inBound2}/${ratios.length} pairs (${pct}%)</strong> ` +
+    `within [${(1 - eps).toFixed(2)}, ${(1 + eps).toFixed(2)}] (green bars).`;
+}
+
+let sweepDone = false;
+function runSweep() {
+  if (!globalPts) return;
+  document.getElementById('s6-sweep-status').textContent = 'Computing…';
+  sweepDone = false;
+
+  // Defer to allow UI update
+  setTimeout(() => {
+    const eps = +document.getElementById('s6-eps').value;
+    const origD = pairDists(globalPts);
+    const ks = [], maxDists = [], theoryBounds = [];
+
+    for (let ki = 2; ki <= 100; ki += 3) {
+      const proj = applyJL(globalPts, ki);
+      const projD = pairDists(proj);
+      const ratios = origD.map((d, i) => (d > 1e-10 ? projD[i] / d : 1));
+      const maxRatio = Math.max(...ratios);
+      const minRatio = Math.min(...ratios);
+      const maxDist  = Math.max(maxRatio - 1, 1 - minRatio);
+      ks.push(ki);
+      maxDists.push(maxDist);
+      theoryBounds.push(eps);
+    }
+
+    const sweepTraces = [
+      {
+        x: ks, y: maxDists, type: 'scatter', mode: 'lines+markers',
+        line: { color: '#6a4c93', width: 2 },
+        marker: { color: '#6a4c93', size: 6 },
+        name: 'Empirical max |ratio − 1|',
+      },
+      {
+        x: ks, y: theoryBounds, type: 'scatter', mode: 'lines',
+        line: { color: '#2a9d8f', width: 2, dash: 'dash' },
+        name: `Target ε = ${eps}`,
+      },
+    ];
+    const sweepLayout = {
+      ...PLY,
+      xaxis: { title: 'k (projection dimensions)' },
+      yaxis: { title: 'Max distortion |ratio − 1|', range: [0, Math.max(...maxDists) * 1.15] },
+      legend: { x: 0.5, y: 0.98 },
+    };
+    Plotly.react('s6-sweep', sweepTraces, sweepLayout, { responsive: true });
+    document.getElementById('s6-sweep-status').textContent = 'Done. Empirical distortion falls below ε well before the theoretical bound.';
+    sweepDone = true;
+  }, 20);
+}
+
+// ── S8: TurboQuant ────────────────────────────────────────────
+const MODELS = {
+  '7B':   { layers: 32,  hidden: 4096  },
+  '13B':  { layers: 40,  hidden: 5120  },
+  '34B':  { layers: 48,  hidden: 8192  },
+  '70B':  { layers: 80,  hidden: 8192  },
+  '405B': { layers: 126, hidden: 16384 },
+};
+const CTX_OPTS = [4096, 8192, 16384, 32768, 65536, 131072, 262144, 1048576];
+const CTX_LABELS = ['4k', '8k', '16k', '32k', '64k', '128k', '256k', '1M'];
+const BITS = [16, 8, 4, 3];
+const BIT_NAMES = ['fp16 (baseline)', 'fp8', 'fp4', 'TurboQuant (~3-bit)'];
+const BIT_COLORS = ['#adb5bd', '#6a4c93', '#2a9d8f', '#e76f51'];
+let currentModel = '7B';
+
+function kvGB(model, seqLen, bits) {
+  return 2 * model.layers * model.hidden * seqLen * (bits / 8) / 1e9;
+}
+
+function setModel(name) {
+  currentModel = name;
+  document.querySelectorAll('[id^="mb-"]').forEach(b => {
+    b.className = 'btn' + (b.id === `mb-${name}` ? '' : ' btn-sec');
+  });
+  updateMemCalc();
+}
+
+function initS8() {
+  // KV cache overview chart (Tab 1)
+  const m70 = MODELS['70B'];
+  const bars70 = BITS.map((bits, i) => ({
+    name: BIT_NAMES[i],
+    x: [kvGB(m70, 131072, bits).toFixed(1)],
+    y: [BIT_NAMES[i]],
+    type: 'bar', orientation: 'h',
+    marker: { color: BIT_COLORS[i] },
+    text: [`${kvGB(m70, 131072, bits).toFixed(0)} GB`],
+    textposition: 'outside',
+  }));
+  const kvLayout = {
+    ...PLY, barmode: 'group',
+    xaxis: { title: 'KV Cache Memory (GB)', range: [0, 400] },
+    yaxis: { title: '' },
+    legend: { orientation: 'h', y: -0.2 },
+    title: { text: '70B model, 128k context', font: { size: 13 } },
+    showlegend: false,
+  };
+  Plotly.newPlot('tq-kv-chart', bars70, kvLayout, { responsive: true });
+
+  // Memory calculator
+  updateMemCalc();
+}
+
+function updateMemCalc() {
+  const ctxIdx = +document.getElementById('tq-ctx').value;
+  const seqLen = CTX_OPTS[ctxIdx];
+  document.getElementById('tq-ctx-val').textContent = CTX_LABELS[ctxIdx];
+
+  const model = MODELS[currentModel];
+  const vals = BITS.map(b => +kvGB(model, seqLen, b).toFixed(2));
+
+  const traces = BIT_NAMES.map((name, i) => ({
+    name,
+    x: [vals[i]],
+    y: [name],
+    type: 'bar', orientation: 'h',
+    marker: { color: BIT_COLORS[i] },
+    text: [`${vals[i].toFixed(1)} GB`],
+    textposition: 'outside',
+  }));
+  const xMax = Math.max(...vals) * 1.25;
+  const memLayout = {
+    ...PLY, barmode: 'group',
+    xaxis: { title: 'KV Cache Memory (GB)', range: [0, xMax] },
+    yaxis: { title: '', automargin: true },
+    showlegend: false,
+    margin: { ...PLY.margin, l: 150 },
+  };
+  Plotly.react('tq-mem-chart', traces, memLayout, { responsive: true });
+
+  const fp16 = vals[0], turbo = vals[3];
+  const ratio = (fp16 / turbo).toFixed(1);
+  document.getElementById('tq-mem-stat').innerHTML =
+    `<strong>${currentModel} model, ${CTX_LABELS[ctxIdx]} context:</strong> ` +
+    `fp16 = ${fp16.toFixed(1)} GB &nbsp;|&nbsp; TurboQuant = ${turbo.toFixed(1)} GB &nbsp;|&nbsp; ` +
+    `<strong>${ratio}× compression</strong>. ` +
+    (fp16 > 80 ? `⚠ fp16 exceeds H100 VRAM (80 GB). ` : '') +
+    (turbo <= 80 ? `TurboQuant fits in one H100.` : '');
+}
+
+// ── S10: Proof Toolkit ───────────────────────────────────────
+
+// Normal CDF via erfc approximation (Abramowitz & Stegun 7.1.26)
+function erfc(x) {
+  const t = 1 / (1 + 0.3275911 * Math.abs(x));
+  const p = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+  const r = p * Math.exp(-x * x);
+  return x >= 0 ? r : 2 - r;
+}
+function normalCDF(x) { return 0.5 * erfc(-x / Math.SQRT2); }
+function normalTailProb(t) { return 2 * (1 - normalCDF(t)); }
+
+function initS10() {
+  updateMarkov();
+  drawChernoffChart();
+  updateUnion();
+}
+
+// ── Markov interactive ────────────────────────────────────────
+function updateMarkov() {
+  const a = +document.getElementById('tk-a').value;
+  document.getElementById('tk-a-val').textContent = a.toFixed(1);
+
+  // Exponential(1) distribution: PDF = e^{-x}, P(X >= a) = e^{-a}, E[X]=1
+  const xs = [], ys = [];
+  for (let i = 0; i <= 500; i++) {
+    const x = 6 * i / 500;
+    xs.push(x);
+    ys.push(Math.exp(-x));
+  }
+
+  // Shaded region: x >= a (the tail)
+  const tailX = [], tailY = [];
+  for (let i = 0; i <= 300; i++) {
+    const x = a + (6 - a) * i / 300;
+    tailX.push(x);
+    tailY.push(Math.exp(-x));
+  }
+  tailX.unshift(a); tailY.unshift(0);
+  tailX.push(6);   tailY.push(0);
+
+  const trueTail  = Math.exp(-a);
+  const markovBnd = Math.min(1, 1 / a);  // E[X]/a = 1/a
+
+  const traces = [
+    {
+      x: xs, y: ys, type: 'scatter', mode: 'lines',
+      line: { color: '#6a4c93', width: 2.5 }, name: 'PDF: e⁻ˣ',
+    },
+    {
+      x: tailX, y: tailY, type: 'scatter', mode: 'lines', fill: 'toself',
+      fillcolor: 'rgba(231,111,81,0.25)', line: { color: 'transparent' },
+      name: 'P(X ≥ a)', showlegend: true,
+    },
+    // Horizontal line: true tail probability
+    {
+      x: [0, 6], y: [trueTail, trueTail], type: 'scatter', mode: 'lines',
+      line: { color: '#e76f51', width: 2, dash: 'solid' },
+      name: `True P(X≥${a.toFixed(1)}) = ${trueTail.toFixed(4)}`,
+    },
+    // Horizontal line: Markov bound
+    {
+      x: [0, 6], y: [markovBnd, markovBnd], type: 'scatter', mode: 'lines',
+      line: { color: '#e63946', width: 2, dash: 'dash' },
+      name: `Markov bound = E[X]/a = ${markovBnd.toFixed(4)}`,
+    },
+  ];
+
+  const markovLayout = {
+    ...PLY,
+    xaxis: { title: 'x', range: [0, 6] },
+    yaxis: { title: 'Probability / density', range: [0, 1.05] },
+    legend: { x: 0.35, y: 0.98 },
+    shapes: [{ type: 'line', x0: a, x1: a, y0: 0, y1: 1.05,
+      line: { color: '#333', width: 1.5, dash: 'dot' } }],
+    annotations: [{ x: a, y: 1.02, text: `a = ${a.toFixed(1)}`,
+      showarrow: false, font: { size: 11, color: '#333' } }],
+  };
+  Plotly.react('tk-markov-chart', traces, markovLayout, { responsive: true });
+
+  const ratio = (markovBnd / trueTail).toFixed(1);
+  document.getElementById('tk-markov-stat').innerHTML =
+    `<strong>a = ${a.toFixed(1)}:</strong> &nbsp; ` +
+    `True P(X ≥ a) = e<sup>−${a.toFixed(1)}</sup> = <strong>${trueTail.toFixed(5)}</strong> &nbsp;|&nbsp; ` +
+    `Markov bound = 1/${a.toFixed(1)} = <strong>${markovBnd.toFixed(5)}</strong> &nbsp;|&nbsp; ` +
+    `Bound is <strong>${ratio}× larger</strong> than truth.`;
+}
+
+// ── Chernoff vs Chebyshev chart (static) ─────────────────────
+function drawChernoffChart() {
+  const ts = [], trueP = [], chebyP = [], chernoffP = [];
+  for (let i = 1; i <= 200; i++) {
+    const t = 0.05 + i * 0.05;  // 0.1 to 10.05
+    ts.push(t);
+    trueP.push(Math.max(1e-12, normalTailProb(t)));
+    chebyP.push(Math.min(1, 1 / (t * t)));
+    chernoffP.push(Math.min(1, 2 * Math.exp(-t * t / 2)));
+  }
+
+  const traces = [
+    {
+      x: ts, y: chebyP, type: 'scatter', mode: 'lines',
+      line: { color: '#e63946', width: 2.5 }, name: 'Chebyshev: 1/t²',
+    },
+    {
+      x: ts, y: chernoffP, type: 'scatter', mode: 'lines',
+      line: { color: '#e76f51', width: 2.5, dash: 'dash' }, name: 'Chernoff: 2e⁻ᵗ²/²',
+    },
+    {
+      x: ts, y: trueP, type: 'scatter', mode: 'lines',
+      line: { color: '#6a4c93', width: 2.5 }, name: 'True: 2(1−Φ(t))',
+    },
+  ];
+
+  const chernoffLayout = {
+    ...PLY,
+    xaxis: { title: 'Deviation t (in standard deviations)', range: [0, 6] },
+    yaxis: { title: 'P(|Z| > t)', type: 'log', range: [-12, 0.1] },
+    legend: { x: 0.38, y: 0.98 },
+  };
+  Plotly.newPlot('tk-chernoff-chart', traces, chernoffLayout, { responsive: true });
+}
+
+// ── Union bound interactive ───────────────────────────────────
+function updateUnion() {
+  const logN = +document.getElementById('tk-N').value;
+  const N    = Math.round(Math.pow(10, logN));
+  const eps  = +document.getElementById('tk-eps2').value;
+  document.getElementById('tk-N-val').textContent   = N.toLocaleString();
+  document.getElementById('tk-eps2-val').textContent = eps.toFixed(2);
+
+  const kStar = Math.ceil(16 * Math.log(N) / (eps * eps));
+  const ks = [], ubVals = [], perPair = [];
+  const kMax = Math.min(kStar * 3, 3000);
+
+  for (let ki = 1; ki <= kMax; ki += Math.max(1, Math.floor(kMax / 200))) {
+    const pp = 2 * Math.exp(-ki * eps * eps / 8);
+    const ub = Math.min(1e6, N * N * Math.exp(-ki * eps * eps / 8));
+    ks.push(ki);
+    perPair.push(Math.max(1e-15, pp));
+    ubVals.push(Math.max(1e-15, ub));
+  }
+
+  const traces = [
+    {
+      x: ks, y: ubVals, type: 'scatter', mode: 'lines',
+      line: { color: '#e63946', width: 2.5 }, name: 'Union bound: N²·2e^{−kε²/8}',
+    },
+    {
+      x: ks, y: perPair, type: 'scatter', mode: 'lines',
+      line: { color: '#6a4c93', width: 2, dash: 'dash' }, name: 'Per-pair: 2e^{−kε²/8}',
+    },
+    {
+      x: [0, kMax], y: [1, 1], type: 'scatter', mode: 'lines',
+      line: { color: '#2a9d8f', width: 2, dash: 'dot' }, name: 'Threshold = 1',
+    },
+    {
+      x: [kStar, kStar], y: [1e-15, 1e6], type: 'scatter', mode: 'lines',
+      line: { color: '#333', width: 1.5, dash: 'dot' },
+      name: `k* = ${kStar.toLocaleString()}`,
+    },
+  ];
+
+  const unionLayout = {
+    ...PLY,
+    xaxis: { title: 'k (projection dimensions)' },
+    yaxis: { title: 'Probability bound', type: 'log' },
+    legend: { x: 0.35, y: 0.98 },
+  };
+  Plotly.react('tk-union-chart', traces, unionLayout, { responsive: true });
+
+  document.getElementById('tk-union-stat').innerHTML =
+    `<strong>N = ${N.toLocaleString()}, ε = ${eps}:</strong> &nbsp; ` +
+    `N² = ${(N*N).toLocaleString()} pairs &nbsp;|&nbsp; ` +
+    `Union bound crosses 1 at k* = <strong>${kStar.toLocaleString()}</strong> &nbsp;|&nbsp; ` +
+    `Formula: $\\lceil 16\\ln N / \\varepsilon^2 \\rceil$`;
+}
+
+// ── S11: Transform Zoo ───────────────────────────────────────
+const TZ_RNG = makeMulberry(77777);
+
+function initS11() {
+  drawComplexityChart();
+  showMatrix('gaussian');
+}
+
+// ── Complexity comparison chart ───────────────────────────────
+function drawComplexityChart() {
+  const ds = [];
+  for (let i = 10; i <= 1e6; i *= 1.15) ds.push(Math.round(i));
+
+  // k = 20 * log2(d) for each d
+  const transforms = [
+    {
+      name: 'Gaussian / Achlioptas  O(dk)',
+      color: '#e63946',
+      ops: d => d * Math.max(1, 20 * Math.log2(d)),
+    },
+    {
+      name: 'Achlioptas sparse  O(dk/3)',
+      color: '#e76f51',
+      ops: d => (d * Math.max(1, 20 * Math.log2(d))) / 3,
+    },
+    {
+      name: 'FJLT / SRHT  O(d log d)',
+      color: '#6a4c93',
+      ops: d => d * Math.log2(d),
+    },
+    {
+      name: 'Sparse JL  O(d/ε²)  ε=0.2',
+      color: '#2a9d8f',
+      ops: d => d * (1 / 0.04) * Math.log(20),  // q = O(ε⁻¹ log 1/δ), approximate
+    },
+    {
+      name: 'Count Sketch  O(d)',
+      color: '#adb5bd',
+      ops: d => d,
+    },
+  ];
+
+  const traces = transforms.map(t => ({
+    x: ds,
+    y: ds.map(d => t.ops(d)),
+    type: 'scatter', mode: 'lines',
+    line: { color: t.color, width: 2.5 },
+    name: t.name,
+  }));
+
+  const layout = {
+    ...PLY,
+    xaxis: { title: 'Input dimension d', type: 'log', range: [1, 6] },
+    yaxis: { title: 'Operations to project one vector', type: 'log' },
+    legend: { x: 0.01, y: 0.99, font: { size: 11 } },
+  };
+  Plotly.newPlot('tz-complexity-chart', traces, layout, { responsive: true });
+}
+
+// ── Matrix structure visualizer ───────────────────────────────
+const MATRIX_INFO = {
+  gaussian:    'Gaussian: every entry ~ N(0,1). Dense, real-valued. 32 bits/entry.',
+  achlioptas:  'Achlioptas ±1: every entry is +1 or −1 with equal probability. 1 bit/entry.',
+  sparse:      'Sparse JL (q=3 nnz/col): each column has exactly 3 non-zeros at random rows. Mostly zeros.',
+  hadamard:    'Hadamard: deterministic ±1 pattern H₄₈ (first 16 rows). Applied via butterfly algorithm — never stored explicitly.',
+  qjl:         'QJL: apply Gaussian then take sign(·). Each entry is ±1; store as 1 bit. Inner products ≈ cosine similarity.',
+};
+
+function showMatrix(type) {
+  const K = 16, D = 48;
+  const rng = makeMulberry(12345);
+
+  let z = [];
+
+  if (type === 'gaussian') {
+    for (let i = 0; i < K; i++) {
+      const row = [];
+      for (let j = 0; j < D; j++) row.push(randn(rng));
+      z.push(row);
+    }
+  } else if (type === 'achlioptas') {
+    for (let i = 0; i < K; i++) {
+      const row = [];
+      for (let j = 0; j < D; j++) row.push(rng() < 0.5 ? 1 : -1);
+      z.push(row);
+    }
+  } else if (type === 'sparse') {
+    // q=3 non-zeros per column
+    const q = 3;
+    z = Array.from({ length: K }, () => new Array(D).fill(0));
+    for (let j = 0; j < D; j++) {
+      // pick q distinct rows
+      const rows = [];
+      while (rows.length < q) {
+        const r = Math.floor(rng() * K);
+        if (!rows.includes(r)) rows.push(r);
+      }
+      rows.forEach(r => { z[r][j] = rng() < 0.5 ? 1 : -1; });
+    }
+  } else if (type === 'hadamard') {
+    // First K rows of normalized Hadamard matrix (D must be power of 2; use D=48, pad to 64)
+    const N2 = 64;
+    // Build H_{N2} iteratively
+    let H = [[1]];
+    while (H.length < N2) {
+      const n = H.length;
+      const H2 = [];
+      for (let i = 0; i < n; i++) H2.push([...H[i], ...H[i]]);
+      for (let i = 0; i < n; i++) H2.push([...H[i], ...H[i].map(x => -x)]);
+      H = H2;
+    }
+    z = H.slice(0, K).map(row => row.slice(0, D));
+  } else if (type === 'qjl') {
+    // sign(Gaussian matrix)
+    for (let i = 0; i < K; i++) {
+      const row = [];
+      for (let j = 0; j < D; j++) row.push(randn(rng) >= 0 ? 1 : -1);
+      z.push(row);
+    }
+  }
+
+  const colorscales = {
+    gaussian:    [[0,'#e63946'],[0.5,'#fff'],[1,'#6a4c93']],
+    achlioptas:  [[0,'#e63946'],[0.5,'#f8f9fa'],[1,'#6a4c93']],
+    sparse:      [[0,'#e63946'],[0.45,'#f0ebfa'],[0.55,'#f0ebfa'],[1,'#6a4c93']],
+    hadamard:    [[0,'#e63946'],[0.5,'#fff'],[1,'#2a9d8f']],
+    qjl:         [[0,'#e63946'],[0.5,'#f8f9fa'],[1,'#6a4c93']],
+  };
+
+  const trace = [{
+    z, type: 'heatmap',
+    colorscale: colorscales[type],
+    showscale: false,
+    xgap: 0.5, ygap: 0.5,
+  }];
+  const layout = {
+    ...PLY,
+    xaxis: { title: 'Input dimension j (0 … 47)', showticklabels: false },
+    yaxis: { title: 'Output dim i', showticklabels: false, autorange: 'reversed' },
+    margin: { t: 10, r: 10, b: 40, l: 50 },
+  };
+  Plotly.react('tz-matrix-chart', trace, layout, { responsive: true });
+
+  // Update button styles
+  ['gaussian','achlioptas','sparse','hadamard','qjl'].forEach(t => {
+    const b = document.getElementById(`mz-${t}`);
+    if (b) b.className = 'btn' + (t === type ? '' : ' btn-sec');
+  });
+  document.getElementById('tz-matrix-stat').textContent = MATRIX_INFO[type];
+}
+
+// ── S11: Transform Zoo — per-tab concentration charts ─────────
+
+let tzSeeds = { gaussian: 2001, ach: 2002, fjlt: 2003, sparse: 2004, qjl: 2005 };
+
+function tzNormRatios(N, d, projFn, rng) {
+  const out = [];
+  for (let t = 0; t < N; t++) {
+    let n2 = 0;
+    const x = new Array(d);
+    for (let j = 0; j < d; j++) { x[j] = randn(rng); n2 += x[j] * x[j]; }
+    const inv = 1 / Math.sqrt(n2);
+    for (let j = 0; j < d; j++) x[j] *= inv;
+    out.push(projFn(x, rng).reduce((s, v) => s + v * v, 0));
+  }
+  return out;
+}
+
+function tzHistTrace(vals, color, name) {
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const nB = 30, w = Math.max((hi - lo) / nB, 1e-9);
+  const cnt = new Array(nB).fill(0);
+  vals.forEach(v => cnt[Math.min(Math.floor((v - lo) / w), nB - 1)]++);
+  return {
+    x: cnt.map((_, i) => lo + (i + 0.5) * w),
+    y: cnt.map(c => c / (vals.length * w)),
+    type: 'bar', width: w * 0.88, name,
+    marker: { color, opacity: 0.75 },
+  };
+}
+
+function tzChiTrace(k, xMax, color, name) {
+  const xs = [], ys = [];
+  for (let i = 1; i <= 300; i++) {
+    xs.push(xMax * i / 300);
+    ys.push(chiSqScaledPDF(xMax * i / 300, k));
+  }
+  return { x: xs, y: ys, type: 'scatter', mode: 'lines',
+           line: { color, width: 2, dash: 'dash' }, name };
+}
+
+function tzEpsLayout(eps, xMax) {
+  return {
+    ...PLY,
+    shapes: [{ type: 'rect', x0: 1 - eps, x1: 1 + eps, y0: 0, y1: 1,
+               xref: 'x', yref: 'paper',
+               fillcolor: 'rgba(42,157,143,0.12)', line: { color: '#2a9d8f', width: 1.5 } }],
+    xaxis: { title: 'Distortion ratio ‖f(x)‖²', range: [0, xMax] },
+    yaxis: { title: 'Density' },
+    barmode: 'overlay',
+    legend: { x: 0.52, y: 0.97, font: { size: 11 } },
+    margin: { t: 18, r: 12, b: 48, l: 52 },
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: '#fafafa', font: PLY.font,
+  };
+}
+
+// ── Gaussian concentration ────────────────────────────────────
+function updateTzGaussianConc() {
+  const k   = +document.getElementById('tzg-k').value;
+  const eps = +document.getElementById('tzg-eps').value;
+  document.getElementById('tzg-k-val').textContent   = k;
+  document.getElementById('tzg-eps-val').textContent = eps.toFixed(2);
+  const d = 60, N = 200, s = 1 / Math.sqrt(k);
+  const ratios = tzNormRatios(N, d, (x, r) => {
+    const out = new Array(k).fill(0);
+    for (let i = 0; i < k; i++)
+      for (let j = 0; j < d; j++) out[i] += randn(r) * x[j] * s;
+    return out;
+  }, makeMulberry(tzSeeds.gaussian));
+  const xMax = Math.max(3, 1 + 6 * Math.sqrt(2 / k));
+  const pct  = (100 * ratios.filter(v => Math.abs(v - 1) <= eps).length / N).toFixed(1);
+  const pBad = Math.min(1, 2 * Math.exp(-k * eps * eps / 8));
+  document.getElementById('tzg-stat').innerHTML =
+    `k=${k}, ε=${eps.toFixed(2)} &nbsp;|&nbsp; Empirical good-zone: <strong>${pct}%</strong> &nbsp;|&nbsp; ` +
+    `Tail bound ≤ ${pBad < 0.001 ? pBad.toExponential(2) : pBad.toFixed(4)}`;
+  Plotly.react('tzg-conc', [
+    tzHistTrace(ratios, 'rgba(106,76,147,0.7)', 'Empirical (200 unit vecs)'),
+    tzChiTrace(k, xMax, '#e63946', 'Theory χ²(k)/k'),
+  ], tzEpsLayout(eps, xMax), { responsive: true });
+}
+
+// ── Achlioptas concentration ──────────────────────────────────
+function updateTzAchConc() {
+  const k = +document.getElementById('tza-k').value;
+  document.getElementById('tza-k-val').textContent = k;
+  const d = 60, N = 200, eps = 0.2, s = 1 / Math.sqrt(k);
+  const ratiosG = tzNormRatios(N, d, (x, r) => {
+    const out = new Array(k).fill(0);
+    for (let i = 0; i < k; i++) for (let j = 0; j < d; j++) out[i] += randn(r) * x[j] * s;
+    return out;
+  }, makeMulberry(tzSeeds.ach));
+  const ratiosA = tzNormRatios(N, d, (x, r) => {
+    const out = new Array(k).fill(0);
+    for (let i = 0; i < k; i++) for (let j = 0; j < d; j++) out[i] += (r() < 0.5 ? 1 : -1) * x[j] * s;
+    return out;
+  }, makeMulberry(tzSeeds.ach + 1));
+  const ratiosSp = tzNormRatios(N, d, (x, r) => {
+    const out = new Array(k).fill(0);
+    for (let i = 0; i < k; i++) for (let j = 0; j < d; j++) {
+      const rv = r();
+      out[i] += (rv < 1/6 ? Math.sqrt(3) : rv < 2/6 ? -Math.sqrt(3) : 0) * x[j] * s;
+    }
+    return out;
+  }, makeMulberry(tzSeeds.ach + 2));
+  const xMax = Math.max(3, 1 + 6 * Math.sqrt(2 / k));
+  const pG  = (100*ratiosG.filter(v=>Math.abs(v-1)<=eps).length/N).toFixed(1);
+  const pA  = (100*ratiosA.filter(v=>Math.abs(v-1)<=eps).length/N).toFixed(1);
+  const pSp = (100*ratiosSp.filter(v=>Math.abs(v-1)<=eps).length/N).toFixed(1);
+  document.getElementById('tza-stat').innerHTML =
+    `k=${k}, ε=${eps} &nbsp;|&nbsp; In good zone: Gaussian <strong>${pG}%</strong> · ` +
+    `±1 <strong>${pA}%</strong> · sparse ±√3 <strong>${pSp}%</strong>`;
+  Plotly.react('tza-conc', [
+    tzHistTrace(ratiosG,  'rgba(230,57,70,0.55)',  'Gaussian'),
+    tzHistTrace(ratiosA,  'rgba(106,76,147,0.65)', 'Achlioptas ±1'),
+    tzHistTrace(ratiosSp, 'rgba(42,157,143,0.65)', 'Achlioptas sparse ±√3'),
+    tzChiTrace(k, xMax, '#333', 'χ²(k)/k theory'),
+  ], tzEpsLayout(eps, xMax), { responsive: true });
+}
+
+// ── FJLT concentration ────────────────────────────────────────
+function fwht(a) {
+  const n = a.length;
+  for (let h = 1; h < n; h <<= 1)
+    for (let i = 0; i < n; i += h * 2)
+      for (let j = i; j < i + h; j++) {
+        const u = a[j], v = a[j + h]; a[j] = u + v; a[j + h] = u - v;
+      }
+  return a;
+}
+
+function updateTzFjltConc() {
+  const k     = +document.getElementById('tzf-k').value;
+  const spPct = +document.getElementById('tzf-sparsity').value;
+  document.getElementById('tzf-k-val').textContent        = k;
+  document.getElementById('tzf-sparsity-val').textContent = spPct + '%';
+  const d = 64, N = 200, eps = 0.2;
+  const s = Math.max(1, Math.round(spPct / 100 * d));
+
+  function makeSparseUnit(rng) {
+    const x = new Array(d).fill(0), idx = [];
+    while (idx.length < s) { const r = Math.floor(rng() * d); if (!idx.includes(r)) idx.push(r); }
+    idx.forEach(j => { x[j] = randn(rng); });
+    let n2 = 0; for (let j = 0; j < d; j++) n2 += x[j]*x[j];
+    const inv = 1/Math.sqrt(n2); for (let j = 0; j < d; j++) x[j] *= inv;
+    return x;
+  }
+
+  function fjltProj(x, rng, withD) {
+    const v = x.slice();
+    if (withD) for (let j = 0; j < d; j++) v[j] *= (rng() < 0.5 ? 1 : -1);
+    fwht(v);
+    for (let j = 0; j < d; j++) v[j] /= Math.sqrt(d);
+    const picked = new Set();
+    while (picked.size < k) picked.add(Math.floor(rng() * d));
+    const sc = Math.sqrt(d / k);
+    return [...picked].map(i => v[i] * sc);
+  }
+
+  const rng1 = makeMulberry(tzSeeds.fjlt), rng2 = makeMulberry(tzSeeds.fjlt + 1);
+  const withD = [], withoutD = [];
+  for (let t = 0; t < N; t++) {
+    withD.push(   fjltProj(makeSparseUnit(rng1), rng1, true ).reduce((s,v)=>s+v*v,0));
+    withoutD.push(fjltProj(makeSparseUnit(rng2), rng2, false).reduce((s,v)=>s+v*v,0));
+  }
+  const xMax = Math.max(3, 1 + 8 * Math.sqrt(2 / k));
+  const pW  = (100*withD.filter(v=>Math.abs(v-1)<=eps).length/N).toFixed(1);
+  const pWo = (100*withoutD.filter(v=>Math.abs(v-1)<=eps).length/N).toFixed(1);
+  document.getElementById('tzf-stat').innerHTML =
+    `k=${k}, sparsity=${spPct}% (${s}/${d} nnz), ε=${eps} &nbsp;|&nbsp; ` +
+    `With D: <strong>${pW}%</strong> in good zone &nbsp;·&nbsp; Without D: <strong>${pWo}%</strong>`;
+  Plotly.react('tzf-conc', [
+    tzHistTrace(withD,    'rgba(106,76,147,0.7)',  'PHDx (with D) ✓'),
+    tzHistTrace(withoutD, 'rgba(230,57,70,0.65)',  'PHx (no D)'),
+    tzChiTrace(k, xMax, '#2a9d8f', 'Gaussian χ²(k)/k'),
+  ], tzEpsLayout(eps, xMax), { responsive: true });
+}
+
+// ── Sparse JL concentration ───────────────────────────────────
+function updateTzSparseConc() {
+  const k = +document.getElementById('tzs-k').value;
+  const q = +document.getElementById('tzs-q').value;
+  document.getElementById('tzs-k-val').textContent = k;
+  document.getElementById('tzs-q-val').textContent = q;
+  const d = 60, N = 200, eps = 0.2, qEff = Math.min(q, k);
+  const sc = 1 / Math.sqrt(qEff);
+  const ratios = tzNormRatios(N, d, (x, r) => {
+    const out = new Array(k).fill(0);
+    for (let j = 0; j < d; j++) {
+      const rows = [];
+      while (rows.length < qEff) { const ri = Math.floor(r() * k); if (!rows.includes(ri)) rows.push(ri); }
+      rows.forEach(ri => { out[ri] += (r() < 0.5 ? 1 : -1) * x[j] * sc; });
+    }
+    return out;
+  }, makeMulberry(tzSeeds.sparse));
+  const xMax = Math.max(3, 1 + 6 * Math.sqrt(2 / k));
+  const pct = (100*ratios.filter(v=>Math.abs(v-1)<=eps).length/N).toFixed(1);
+  document.getElementById('tzs-stat').innerHTML =
+    `k=${k}, q=${q} nnz/col, ε=${eps} &nbsp;|&nbsp; <strong>${pct}%</strong> in good zone &nbsp;|&nbsp; ` +
+    `Kane-Nelson: q ≥ ${Math.ceil(1/eps)} recommended for ε=${eps}`;
+  Plotly.react('tzs-conc', [
+    tzHistTrace(ratios, 'rgba(42,157,143,0.75)', `Sparse JL q=${q}`),
+    tzChiTrace(k, xMax, '#6a4c93', 'Dense Gaussian χ²(k)/k'),
+  ], tzEpsLayout(eps, xMax), { responsive: true });
+}
+
+// ── QJL inner-product estimation ─────────────────────────────
+function updateTzQjlConc() {
+  const k = +document.getElementById('tzq-k').value;
+  document.getElementById('tzq-k-val').textContent = k;
+  const d = 50, N = 150, rng = makeMulberry(tzSeeds.qjl);
+  const A = [];
+  for (let i = 0; i < k; i++) {
+    const row = new Array(d);
+    for (let j = 0; j < d; j++) row[j] = randn(rng);
+    A.push(row);
+  }
+  const errors = [];
+  for (let t = 0; t < N; t++) {
+    let nx = 0, ny = 0;
+    const x = new Array(d), y = new Array(d);
+    for (let j = 0; j < d; j++) { x[j] = randn(rng); nx += x[j]*x[j]; y[j] = randn(rng); ny += y[j]*y[j]; }
+    const ix = 1/Math.sqrt(nx), iy = 1/Math.sqrt(ny);
+    let trueIP = 0;
+    for (let j = 0; j < d; j++) trueIP += x[j]*ix * y[j]*iy;
+    let estIP = 0;
+    for (let i = 0; i < k; i++) {
+      let dx = 0, dy = 0;
+      for (let j = 0; j < d; j++) { dx += A[i][j]*x[j]*ix; dy += A[i][j]*y[j]*iy; }
+      estIP += (dx >= 0 ? 1 : -1) * (dy >= 0 ? 1 : -1);
+    }
+    errors.push(Math.abs(estIP/k - trueIP));
+  }
+  const meanErr = errors.reduce((s,v)=>s+v,0)/N;
+  const theory  = 1/Math.sqrt(k);
+  const maxE = Math.max(...errors), nB = 25, w = maxE/nB || 0.01;
+  const cnt = new Array(nB).fill(0);
+  errors.forEach(e => cnt[Math.min(Math.floor(e/w), nB-1)]++);
+  const dens = cnt.map(c => c/(N*w)), yPeak = Math.max(...dens);
+  const traces = [
+    { x: cnt.map((_,i)=>(i+0.5)*w), y: dens, type:'bar', width:w*0.88,
+      name:'|estimated − true inner product|', marker:{color:'rgba(231,111,81,0.75)'} },
+    { x:[meanErr,meanErr], y:[0,yPeak*1.15], type:'scatter', mode:'lines',
+      line:{color:'#6a4c93',width:2,dash:'dash'}, name:`Mean = ${meanErr.toFixed(4)}` },
+    { x:[theory,theory],  y:[0,yPeak*1.15], type:'scatter', mode:'lines',
+      line:{color:'#2a9d8f',width:2,dash:'dot'},  name:`1/√k = ${theory.toFixed(4)}` },
+  ];
+  const layout = { ...PLY, barmode:'overlay',
+    xaxis:{title:'|QJL estimated − true inner product|'}, yaxis:{title:'Density'},
+    legend:{x:0.42,y:0.96,font:{size:11}}, margin:{t:18,r:12,b:48,l:52} };
+  document.getElementById('tzq-stat').innerHTML =
+    `k=${k} sign bits &nbsp;|&nbsp; Mean error <strong>${meanErr.toFixed(4)}</strong> &nbsp;|&nbsp; ` +
+    `1/√k = <strong>${theory.toFixed(4)}</strong>`;
+  Plotly.react('tzq-conc', traces, layout, { responsive: true });
+}
+
+// ── Boot ──────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  nav('s0');
+});
+</script>
+</body>
+</html>
