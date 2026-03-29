@@ -34,17 +34,11 @@ h1{{font-size:1.6rem;font-weight:700;margin-bottom:0.25rem;color:#fff}}
   background:#16213e;border:1px solid #2d2d4e;border-radius:var(--r);
   padding:1rem 1.25rem;display:flex;flex-direction:column;gap:0.5rem;
   transition:border-color 0.15s,transform 0.15s;
+  text-decoration:none;color:inherit;cursor:pointer;
 }}
 .card:hover{{border-color:var(--accent);transform:translateY(-2px)}}
 .card-date{{font-size:0.75rem;color:#8892b0;font-variant-numeric:tabular-nums}}
 .card-title{{font-size:1rem;font-weight:600;color:#e6e6f0;line-height:1.35}}
-.card-link{{
-  display:inline-block;margin-top:0.25rem;padding:0.35rem 0.85rem;
-  background:var(--accent);color:#fff;border-radius:4px;
-  font-size:0.8rem;font-weight:600;text-decoration:none;align-self:flex-start;
-  transition:opacity 0.15s;
-}}
-.card-link:hover{{opacity:0.85}}
 .empty{{color:#8892b0;font-size:0.9rem;padding:0.5rem 0}}
 </style>
 </head>
@@ -67,11 +61,10 @@ SECTION_TMPL = """
 """
 
 CARD_TMPL = """
-    <div class="card">
+    <a class="card" href="{url}">
       <div class="card-date">{date_label}</div>
       <div class="card-title">{title}</div>
-      <a class="card-link" href="{url}">Open &rarr;</a>
-    </div>
+    </a>
 """
 
 
