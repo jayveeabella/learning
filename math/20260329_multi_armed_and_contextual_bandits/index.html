@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Armed &amp; Contextual Bandits — Interactive Explainer</title>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bandit:#e76f51;--ctx:#2a9d8f;--rl:#6a4c93;
+  --sw:242px;--sbg:#1a1a2e;--stext:#c8d0e7;
+  --bg:#f5f6fa;--card:#fff;--border:#dee2e6;
+  --r:6px;--text:#212529;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:15px;line-height:1.65}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);
+  background:var(--sbg);overflow-y:auto;z-index:100;padding:1.4rem 0}
+.sb-logo{padding:0 1.2rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem}
+.sb-logo h2{color:#fff;font-size:1rem;font-weight:700}
+.sb-logo p{color:var(--stext);font-size:.75rem;margin-top:.2rem}
+.home-btn{display:inline-block;margin-top:.6rem;font-size:.75rem;color:var(--stext);
+  text-decoration:none;opacity:.7;transition:opacity .15s}
+.home-btn:hover{opacity:1;color:#fff}
+.nav-btn{display:block;padding:.45rem 1.2rem;color:var(--stext);font-size:.82rem;
+  cursor:pointer;border-left:3px solid transparent;transition:all .15s;
+  background:none;border-top:none;border-right:none;border-bottom:none;
+  text-align:left;width:100%}
+.nav-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-btn.active{border-left-color:var(--bandit);color:#fff;background:rgba(231,111,81,.2)}
+
+/* ── Main ─────────────────────────────────────────────────── */
+#main{margin-left:var(--sw);padding:2rem 2.5rem 5rem;max-width:1150px;width:100%}
+.section{display:none}.section.active{display:block}
+
+h1{font-size:1.85rem;font-weight:700;color:#1a1a2e;margin-bottom:.3rem}
+h2{font-size:1.25rem;font-weight:600;color:#1a1a2e;margin:1.6rem 0 .5rem}
+h3{font-size:1rem;font-weight:600;color:#333;margin:1.1rem 0 .4rem}
+p{margin-bottom:.75rem}
+hr{border:none;border-top:1px solid var(--border);margin:1.4rem 0}
+a{color:var(--bandit)}
+ul,ol{padding-left:1.3rem;margin-bottom:.75rem}
+li{margin-bottom:.2rem}
+
+/* ── Boxes ────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.4rem;margin:1rem 0}
+.info{background:#fef0ec;border-left:4px solid var(--bandit);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.info-ctx{background:#e8f6f5;border-left:4px solid var(--ctx);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.rl-box{background:#ede9f7;border-left:4px solid var(--rl);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.success{background:#d4edda;border-left:4px solid #28a745;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.warn{background:#fff8e1;border-left:4px solid #ffc107;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+
+/* ── Tables ───────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;margin:.9rem 0;font-size:.87rem}
+th{background:#f0f4f8;padding:.5rem .75rem;text-align:left;font-weight:600;border-bottom:2px solid var(--border)}
+td{padding:.45rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+.tab-bar{display:flex;border-bottom:2px solid var(--border);gap:0;margin-top:.5rem}
+.tab-btn{padding:.45rem .95rem;border:none;background:none;cursor:pointer;
+  color:#666;font-size:.87rem;font-weight:500;border-bottom:2px solid transparent;
+  margin-bottom:-2px;transition:all .15s}
+.tab-btn:hover{color:var(--bandit)}
+.tab-btn.active{color:var(--bandit);border-bottom-color:var(--bandit)}
+.tab-pane{display:none;padding-top:.9rem}.tab-pane.active{display:block}
+
+/* ── Controls ─────────────────────────────────────────────── */
+.ctrl{display:flex;align-items:center;gap:.7rem;margin:.5rem 0;flex-wrap:wrap}
+.ctrl label{font-size:.84rem;font-weight:500;min-width:160px}
+.ctrl input[type=range]{width:180px;accent-color:var(--bandit)}
+.val{font-size:.84rem;font-weight:600;color:var(--bandit);min-width:45px}
+.btn{padding:.35rem .9rem;border:1px solid var(--bandit);border-radius:var(--r);
+  background:var(--bandit);color:#fff;cursor:pointer;font-size:.84rem;font-weight:500;margin:.3rem .3rem 0 0}
+.btn:hover{opacity:.85}
+.btn-sec{background:#fff;color:var(--bandit);border-color:var(--bandit)}
+.btn-sec:hover{background:#fef0ec}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.cols{display:grid;gap:1.4rem;margin:.8rem 0}
+.c12{grid-template-columns:1fr 2fr}
+.c21{grid-template-columns:2fr 1fr}
+.c11{grid-template-columns:1fr 1fr}
+.c13{grid-template-columns:1fr 3fr}
+
+/* ── Code ─────────────────────────────────────────────────── */
+pre{background:#1e2235;color:#abb2bf;padding:.9rem 1.1rem;border-radius:var(--r);
+  overflow-x:auto;font-size:.8rem;line-height:1.55;margin:.7rem 0;font-family:'Fira Code',Consolas,monospace}
+
+/* ── Details ────────────────────────────────────────────── */
+details{border:1px solid var(--border);border-radius:var(--r);margin:.7rem 0}
+summary{padding:.55rem 1rem;cursor:pointer;font-weight:500;font-size:.88rem;
+  background:#f8f9fa;border-radius:var(--r);list-style:none;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▶ ';font-size:.68rem;color:#888}
+details[open] summary::before{content:'▼ '}
+details[open] summary{border-radius:var(--r) var(--r) 0 0}
+.det-body{padding:.9rem 1.1rem;border-top:1px solid var(--border)}
+
+/* ── Misc ───────────────────────────────────────────────── */
+.caption{font-size:.81rem;color:#666;font-style:italic;margin-top:.35rem}
+.metric{display:inline-block;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:.7rem 1.1rem;min-width:140px;margin:.3rem .4rem .3rem 0}
+.metric-label{font-size:.76rem;color:#666}
+.metric-value{font-size:1.35rem;font-weight:700;color:#1a1a2e}
+.pill{display:inline-block;padding:.18rem .55rem;border-radius:20px;font-size:.78rem;font-weight:600;margin:.12rem .1rem}
+.pill-best{background:#d1f3ef;color:#1d7a70}
+.pill-mid{background:#e8f4fd;color:#1a5276}
+.pill-bad{background:#fde8ea;color:#c42b3a}
+.loop-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:1rem 0}
+.loop-box{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:.5rem .85rem;font-size:.84rem;font-weight:600;text-align:center;min-width:90px}
+.loop-arrow{font-size:1.1rem;color:#aaa}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+#menu-toggle{display:none;position:fixed;top:.7rem;right:.7rem;z-index:200;
+  background:var(--sbg);color:#fff;border:none;border-radius:6px;
+  padding:.5rem .7rem;cursor:pointer;font-size:1.15rem;line-height:1}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
+@media(max-width:767px){
+  #menu-toggle{display:block}
+  #sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.open{transform:translateX(0)}
+  #sidebar-overlay.open{display:block}
+  #main{margin-left:0;padding:3.5rem 1rem 4rem}
+  .cols.c12,.cols.c21,.cols.c11,.cols.c13{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<button id="menu-toggle" aria-label="Toggle menu" onclick="toggleSidebar()">☰</button>
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <h2>🎰 Bandit Explorer</h2>
+    <p>Multi-Armed &amp; Contextual Bandits</p>
+    <a class="home-btn" href="../../index.html">← Home</a>
+  </div>
+  <button class="nav-btn active"  onclick="nav('s0')">Executive Summary</button>
+  <button class="nav-btn" onclick="nav('s1')">🔄 RL Refresher</button>
+  <button class="nav-btn" onclick="nav('s2')">🎲 The Bandit Problem</button>
+  <button class="nav-btn" onclick="nav('s3')">⚙️ Core Algorithms</button>
+  <button class="nav-btn" onclick="nav('s4')">🧠 Contextual Bandits</button>
+  <button class="nav-btn" onclick="nav('s5')">📈 Viz: Explore vs. Exploit</button>
+  <button class="nav-btn" onclick="nav('s6')">🏆 Viz: Algorithm Showdown</button>
+  <button class="nav-btn" onclick="nav('s7')">📊 Viz: Arm Pull Distribution</button>
+  <button class="nav-btn" onclick="nav('s8')">🎯 Viz: Thompson Posteriors</button>
+  <button class="nav-btn" onclick="nav('s9')">🌍 Applications &amp; Sources</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN
+═══════════════════════════════════════════════════════════════ -->
+<main id="main">
+
+<!-- ── S0: Executive Summary ──────────────────────────────── -->
+<div id="s0" class="section active">
+  <h1>Multi-Armed &amp; Contextual Bandits</h1>
+  <p style="color:#555;font-size:1rem">An interactive explainer &mdash; from Thompson (1933) to neural bandits (2024)</p>
+  <hr>
+
+  <div class="cols c21">
+    <div>
+      <p><strong>The core problem:</strong> You face $K$ options ("arms"), each with an unknown reward distribution. You have $T$ total trials. How do you maximize cumulative reward &mdash; without committing too early to a seemingly good option, yet without wasting trials on obviously bad ones?</p>
+
+      <div class="info">
+        <strong>The fundamental tension — Explore vs. Exploit:</strong>
+        <ul style="margin-top:.4rem">
+          <li><strong>Exploit</strong> &mdash; pull the arm with the highest estimated reward so far</li>
+          <li><strong>Explore</strong> &mdash; try other arms; one might actually be better</li>
+        </ul>
+        <p style="margin:.5rem 0 0">Too much exploitation → stuck on a suboptimal arm forever. Too much exploration → burning trials on arms you already know are bad.</p>
+      </div>
+
+      <p>The key metric is <strong>regret</strong> &mdash; the cumulative loss versus an oracle that always pulls the best arm:</p>
+      $$\text{Regret}(T) = T\mu^* - \sum_{t=1}^{T} r_t$$
+      <p style="margin-top:-.3rem">where $\mu^*$ is the best arm's true mean reward. Good algorithms achieve <em>logarithmic</em> regret &mdash; the per-step loss shrinks as learning accumulates.</p>
+
+      <div class="warn">⚠️ <strong>Bandits ≠ full Reinforcement Learning.</strong> Each bandit round is stateless — your action does not change the state of the world. This simplification makes bandits tractable for real-time production systems.</div>
+    </div>
+
+    <div>
+      <h3>Brief History</h3>
+      <table>
+        <tr><th>Year</th><th>Event</th></tr>
+        <tr><td>1933</td><td>Thompson proposes Thompson Sampling &mdash; largely ignored for 80 years</td></tr>
+        <tr><td>1952</td><td>Robbins formalizes the modern bandit problem</td></tr>
+        <tr><td>1985</td><td>Lai &amp; Robbins prove the logarithmic lower bound on regret</td></tr>
+        <tr><td>2002</td><td>Auer et al. publish UCB1 &mdash; first provably optimal algorithm</td></tr>
+        <tr><td>2011</td><td>Yahoo! deploys contextual bandits for news article personalization</td></tr>
+        <tr><td>2013</td><td>Thompson Sampling empirically "rediscovered" &mdash; found to dominate UCB</td></tr>
+        <tr><td>2018+</td><td>Neural contextual bandits emerge (NeuralUCB, NeuralTS)</td></tr>
+        <tr><td>2024+</td><td>LLM-enhanced bandits: language models feed rich context vectors</td></tr>
+      </table>
+
+      <div id="exec-chart" style="height:250px;margin-top:1rem"></div>
+      <p class="caption">Cumulative regret across algorithms (K=5 arms, T=500 rounds). Flatter = better. The logarithmic curves of UCB1 and Thompson Sampling vs. linear growth of random and steeper ε-greedy.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── S1: RL Refresher ────────────────────────────────────── -->
+<div id="s1" class="section">
+  <h1>🔄 Reinforcement Learning Refresher</h1>
+  <p style="color:#555;font-size:1rem">Where bandits fit in the broader ML landscape</p>
+  <hr>
+
+  <div class="cols c11">
+    <div>
+      <h2>Core RL Vocabulary</h2>
+      <table>
+        <tr><th>Term</th><th>Meaning</th><th>Bandit Equivalent</th></tr>
+        <tr><td><strong>Agent</strong></td><td>The decision-maker</td><td>Your algorithm</td></tr>
+        <tr><td><strong>Environment</strong></td><td>The world that responds</td><td>The $K$ arms</td></tr>
+        <tr><td><strong>Action</strong></td><td>A choice the agent makes</td><td>Pulling arm $i$</td></tr>
+        <tr><td><strong>Reward</strong></td><td>Feedback signal after action</td><td>Payout from arm $i$</td></tr>
+        <tr><td><strong>State</strong></td><td>Observable env. information</td><td>None (MAB) or context $x_t$ (CB)</td></tr>
+        <tr><td><strong>Policy</strong></td><td>Strategy: state → action</td><td>Which arm to pull given history</td></tr>
+      </table>
+    </div>
+
+    <div>
+      <h2>The Feedback Loop</h2>
+      <div class="loop-row">
+        <div class="loop-box" style="border-color:var(--bandit);background:#fef0ec">🧠 Agent<br><small style="color:#666;font-weight:400">algorithm</small></div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-box">Action $a_t$<br><small style="color:#666;font-weight:400">pull arm $i$</small></div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-box" style="border-color:var(--ctx);background:#e8f6f5">🌍 Env.<br><small style="color:#666;font-weight:400">$K$ arms</small></div>
+        <div class="loop-arrow">→</div>
+        <div class="loop-box">Reward $r_t$<br><small style="color:#666;font-weight:400">0 or 1</small></div>
+        <div class="loop-arrow">↩</div>
+      </div>
+      <div class="rl-box" style="margin-top:.8rem">
+        <strong>Key constraint:</strong> You only observe the reward for the arm you <em>chose</em>. The counterfactual &mdash; "what would arm 3 have paid if I had pulled it instead?" &mdash; is <em>never revealed</em>. This information asymmetry is the core challenge.
+      </div>
+    </div>
+  </div>
+
+  <h2>The ML Learning Spectrum</h2>
+  <table>
+    <tr><th>Paradigm</th><th>Feedback Type</th><th>State Transitions?</th><th>Typical Example</th></tr>
+    <tr><td><strong>Supervised Learning</strong></td><td>Full labels for every possible action</td><td>No</td><td>Image classifier</td></tr>
+    <tr><td><strong>Multi-Armed Bandit</strong></td><td>Reward for chosen action only</td><td>No (stateless)</td><td>A/B testing</td></tr>
+    <tr><td><strong>Contextual Bandit</strong></td><td>Reward for chosen action only</td><td>No (context changes, state does not)</td><td>Personalized recommendations</td></tr>
+    <tr><td><strong>Full RL</strong></td><td>Delayed, sparse rewards</td><td>Yes — actions change state</td><td>Game playing, robotics</td></tr>
+  </table>
+
+  <div class="success">💡 <strong>Bandits are the Goldilocks setting.</strong> More realistic than supervised learning (you cannot label all possible choices), but far more tractable than full RL (no credit assignment across time steps). This is why they are heavily used in production ML systems.</div>
+</div>
+
+<!-- ── S2: The Bandit Problem ──────────────────────────────── -->
+<div id="s2" class="section">
+  <h1>🎲 The Bandit Problem</h1>
+  <p style="color:#555;font-size:1rem">Formal setup, regret decomposition, and theoretical limits</p>
+  <hr>
+
+  <div class="cols c11">
+    <div>
+      <h2>Formal Setup</h2>
+      <p>A <strong>stochastic $K$-armed bandit</strong> is defined by:</p>
+      <ul>
+        <li>$K$ arms, indexed $i = 1, \ldots, K$</li>
+        <li>Each arm $i$ has an unknown reward distribution $\nu_i$ with mean $\mu_i$</li>
+        <li>At each round $t$: agent selects $A_t \in \{1,\ldots,K\}$, receives $R_t \sim \nu_{A_t}$</li>
+        <li>Goal: maximize $\sum_{t=1}^T R_t$ over $T$ rounds</li>
+      </ul>
+
+      <div class="info">
+        <strong>Regret decomposition:</strong>
+        $$\text{Regret}(T) = \sum_{t=1}^T \!\left(\mu^* - \mu_{A_t}\right) = \sum_{i=1}^K \Delta_i \cdot \mathbb{E}[N_i(T)]$$
+        <p style="margin:.4rem 0 0">where $\Delta_i = \mu^* - \mu_i$ is the <em>gap</em> of arm $i$ and $N_i(T)$ is how often arm $i$ was pulled. Each suboptimal pull costs exactly $\Delta_i$.</p>
+      </div>
+
+      <p>An arm with a <strong>large gap $\Delta_i$</strong> is obviously bad — we learn to avoid it quickly. An arm with a <strong>small gap $\Delta_i \approx 0$</strong> is nearly optimal and worth exploring. This motivates concentrating exploration near the top arms.</p>
+    </div>
+
+    <div>
+      <h2>Why Uncertainty Matters</h2>
+      <p>Consider two arms, each pulled 5 times:</p>
+      <table>
+        <tr><th>Arm</th><th>Outcomes</th><th>Estimate $\hat\mu$</th><th>Should we explore?</th></tr>
+        <tr><td>A</td><td>1,0,1,1,0</td><td>0.60</td><td>Moderate — 5 pulls is few</td></tr>
+        <tr><td>B</td><td>0,0,0,0,1</td><td>0.20</td><td>Probably bad, but uncertain</td></tr>
+      </table>
+
+      <p>After 100 more pulls of each:</p>
+      <table>
+        <tr><th>Arm</th><th>Pulls</th><th>Estimate $\hat\mu$</th><th>Should we explore?</th></tr>
+        <tr><td>A</td><td>105</td><td>0.58</td><td>Low — we know it well</td></tr>
+        <tr><td>B</td><td>105</td><td>0.22</td><td>Very low — confidently bad</td></tr>
+      </table>
+
+      <div class="info-ctx">The key insight: <strong>exploration need should decrease as pulls accumulate.</strong> ε-greedy ignores this (always explores with prob. ε). UCB1 and Thompson Sampling tie exploration directly to remaining uncertainty.</div>
+    </div>
+  </div>
+
+  <details>
+    <summary>📐 Theoretical Lower Bound — Lai &amp; Robbins (1985)</summary>
+    <div class="det-body">
+      <p>Lai and Robbins proved that <em>any</em> consistent algorithm must satisfy:</p>
+      $$\liminf_{T\to\infty} \frac{\mathbb{E}[\text{Regret}(T)]}{\ln T} \;\geq\; \sum_{i:\,\Delta_i > 0} \frac{\Delta_i}{\text{KL}(\nu_i \,\|\, \nu^*)}$$
+      <p>where $\text{KL}(\nu_i \| \nu^*)$ is the KL-divergence between arm $i$'s distribution and the optimal arm's. This establishes that <strong>logarithmic regret is the best achievable</strong>. Algorithms that match this bound (UCB1, Thompson Sampling) are called <em>asymptotically optimal</em>. ε-greedy achieves only $O(\sqrt{T \ln K})$.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>📝 Bernoulli Bandits — The Setup Used in This Explainer</summary>
+    <div class="det-body">
+      <p>All simulations here use <strong>Bernoulli bandits</strong>: each arm $i$ pays reward $R = 1$ with probability $p_i$ and $R = 0$ with probability $1 - p_i$. The unknown parameters are the probabilities $p_1, \ldots, p_K \in [0,1]$.</p>
+      <p>This is the natural model for click-through rates, conversion rates, and engagement signals &mdash; the dominant reward type in production recommendation systems. Thompson Sampling's Beta prior is the <em>conjugate prior</em> for Bernoulli likelihoods, which is why it fits so naturally here.</p>
+    </div>
+  </details>
+</div>
+
+<!-- ── S3: Core Algorithms ─────────────────────────────────── -->
+<div id="s3" class="section">
+  <h1>⚙️ Core Algorithms</h1>
+  <p style="color:#555;font-size:1rem">Three fundamental strategies for the explore-exploit tradeoff</p>
+  <hr>
+
+  <div class="tab-bar" id="alg-tabs">
+    <button class="tab-btn active" onclick="switchTab(this,'alg-tabs','alg-eg')">ε-Greedy</button>
+    <button class="tab-btn" onclick="switchTab(this,'alg-tabs','alg-ucb')">UCB1</button>
+    <button class="tab-btn" onclick="switchTab(this,'alg-tabs','alg-ts')">Thompson Sampling</button>
+  </div>
+
+  <!-- ε-Greedy -->
+  <div id="alg-eg" class="tab-pane active">
+    <div class="cols c11">
+      <div>
+        <h3>Idea</h3>
+        <p>With probability $\varepsilon$, explore randomly. Otherwise, exploit the current best estimate:</p>
+        $$A_t = \begin{cases} \text{uniform random arm} & \text{with prob. } \varepsilon \\ \arg\max_i \hat{\mu}_i & \text{with prob. } 1-\varepsilon \end{cases}$$
+        <p>After observing reward $r_t$ for chosen arm $a$, update the running mean:</p>
+        $$\hat{\mu}_a \;\leftarrow\; \hat{\mu}_a + \frac{1}{N_a}\bigl(r_t - \hat{\mu}_a\bigr)$$
+        <pre>eps = 0.1
+counts = [0]*K;  mu_hat = [0.0]*K
+
+for t in range(T):
+    if random() &lt; eps:
+        arm = randint(0, K)      # explore
+    else:
+        arm = argmax(mu_hat)     # exploit
+
+    reward = env.pull(arm)
+    counts[arm] += 1
+    mu_hat[arm] += (reward - mu_hat[arm]) / counts[arm]</pre>
+      </div>
+      <div>
+        <h3>Properties</h3>
+        <div class="success">✅ <strong>Strengths:</strong> Trivially simple to implement and explain. Works in non-stationary environments (just use decaying or sliding-window ε). No assumptions about reward structure.</div>
+        <div class="warn">⚠️ <strong>Weakness:</strong> Explores <em>uniformly at random</em> — pulls arms you already know are bad with the same probability as unknown arms. Regret is $O(\sqrt{T})$, not optimal $O(\log T)$.</div>
+        <h3>Sensitivity to ε</h3>
+        <table>
+          <tr><th>ε</th><th>Behavior</th></tr>
+          <tr><td>ε = 0</td><td>Pure greedy — commits to first apparent winner, never corrects</td></tr>
+          <tr><td>ε = 0.1</td><td>Standard default — 10% random, 90% exploit</td></tr>
+          <tr><td>ε = 0.5</td><td>Half random — very slow convergence</td></tr>
+          <tr><td>ε → 0 (annealed)</td><td>Approaches optimal if schedule is $\varepsilon_t = c/(t+1)$</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- UCB1 -->
+  <div id="alg-ucb" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h3>Idea: Optimism Under Uncertainty</h3>
+        <p>Add an <em>exploration bonus</em> to each arm's estimate that is large when the arm is under-explored, and shrinks as pulls accumulate. Always select the arm with the highest <em>upper confidence bound</em>:</p>
+        $$A_t = \arg\max_i \;\underbrace{\hat{\mu}_i}_{\text{exploit}} + \underbrace{\sqrt{\dfrac{2\ln t}{N_i(t-1)}}}_{\text{explore bonus}}$$
+        <p>Pull each arm once at initialization, then apply UCB from round $K+1$ onward.</p>
+        <pre># Initialize: pull each arm once
+for i in range(K):
+    counts[i] = 1
+    mu_hat[i] = env.pull(i)
+
+# Main loop
+for t in range(K, T):
+    ucb_scores = [mu_hat[i] + sqrt(2*log(t)/counts[i])
+                  for i in range(K)]
+    arm = argmax(ucb_scores)
+    reward = env.pull(arm)
+    counts[arm] += 1
+    mu_hat[arm] += (reward - mu_hat[arm]) / counts[arm]</pre>
+      </div>
+      <div>
+        <h3>Properties</h3>
+        <div class="success">✅ <strong>Strengths:</strong> <strong>Deterministic</strong> — fully reproducible, auditable, cannot be gamed by adversarial environments. Achieves optimal $O(\log T)$ regret. No tuning required.</div>
+        <div class="warn">⚠️ <strong>Weakness:</strong> The confidence bonus is somewhat conservative — UCB1 over-explores arms that are close in value. Empirically outpaced by Thompson Sampling in most benchmarks.</div>
+        <h3>Why does the bonus work?</h3>
+        <div class="info">
+          By <strong>Hoeffding's inequality</strong>, the true mean $\mu_i$ lies below $\hat{\mu}_i + \sqrt{2\ln t / N_i}$ with probability at least $1 - 1/t^4$. Choosing the highest UCB is equivalent to asking: <em>"Which arm could plausibly be optimal right now?"</em> — and committing to it. Uncertainty naturally collapses as $N_i \to \infty$.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thompson Sampling -->
+  <div id="alg-ts" class="tab-pane">
+    <div class="cols c11">
+      <div>
+        <h3>Idea: Sample from Posterior Beliefs</h3>
+        <p>Maintain a probability distribution over each arm's unknown reward probability. At each round, <em>sample</em> one value from each distribution and pull the arm with the highest sample:</p>
+        $$\theta_i \sim \text{Beta}(\alpha_i,\, \beta_i), \qquad A_t = \arg\max_i \theta_i$$
+        <p>Start with $\alpha_i = \beta_i = 1$ (uniform prior — total ignorance). Update after each pull:</p>
+        $$\text{reward}=1:\quad \alpha_{A_t} \mathrel{+}= 1 \qquad \text{reward}=0:\quad \beta_{A_t} \mathrel{+}= 1$$
+        <pre>alpha = [1]*K;  beta = [1]*K
+
+for t in range(T):
+    # Sample one value per arm from its current belief
+    theta = [sample_beta(alpha[i], beta[i]) for i in range(K)]
+    arm = argmax(theta)
+
+    reward = env.pull(arm)
+
+    if reward == 1: alpha[arm] += 1
+    else:           beta[arm]  += 1</pre>
+      </div>
+      <div>
+        <h3>Properties</h3>
+        <div class="success">✅ <strong>Strengths:</strong> Matches optimal $O(\log T)$ regret. Empirically best among the three algorithms. Handles non-stationary environments naturally. The Beta distribution is the statistically correct model for Bernoulli rewards.</div>
+        <div class="warn">⚠️ <strong>Weakness:</strong> Stochastic — different runs yield different results. Requires a tractable posterior; for complex reward functions, approximations (bootstrapping, Laplace) are needed.</div>
+        <h3>What Beta($\alpha$, $\beta$) represents</h3>
+        <table>
+          <tr><th>Distribution</th><th>Meaning</th><th>Mean</th></tr>
+          <tr><td>Beta(1, 1)</td><td>Uniform — total ignorance</td><td>0.50</td></tr>
+          <tr><td>Beta(2, 8)</td><td>10 obs, 2 wins — likely bad</td><td>0.20</td></tr>
+          <tr><td>Beta(8, 2)</td><td>10 obs, 8 wins — likely good</td><td>0.80</td></tr>
+          <tr><td>Beta(80, 20)</td><td>100 obs, 80 wins — confident ~0.8</td><td>0.80</td></tr>
+        </table>
+        <div class="info-ctx">The mean of Beta($\alpha$,$\beta$) is $\frac{\alpha}{\alpha+\beta}$ and the variance shrinks as $\alpha+\beta$ grows &mdash; the distribution <em>narrows</em> as evidence accumulates. See the Thompson Posteriors visualization (section 8) to watch this live.</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Algorithm Comparison</h2>
+  <table>
+    <tr><th>Algorithm</th><th>Regret Bound</th><th>Deterministic?</th><th>Hyperparameters</th><th>Best Use Case</th></tr>
+    <tr><td>ε-Greedy</td><td>$O(\sqrt{T})$</td><td>No</td><td>ε</td><td>Simplicity; non-stationary rewards</td></tr>
+    <tr><td>UCB1</td><td>$O(\log T)$ ✓</td><td><strong>Yes</strong></td><td>None</td><td>Auditable, reproducible systems</td></tr>
+    <tr><td>Thompson Sampling</td><td>$O(\log T)$ ✓</td><td>No</td><td>Prior (usually Beta(1,1))</td><td>Best empirical performance</td></tr>
+  </table>
+</div>
+
+<!-- ── S4: Contextual Bandits ──────────────────────────────── -->
+<div id="s4" class="section">
+  <h1>🧠 Contextual Bandits</h1>
+  <p style="color:#555;font-size:1rem">Personalizing decisions with side information</p>
+  <hr>
+
+  <div class="cols c11">
+    <div>
+      <h2>The Key Extension</h2>
+      <p>Standard MAB finds one global best arm. Contextual bandits ask: <em>"What is the best arm for <strong>this specific situation</strong>?"</em></p>
+
+      <div class="info-ctx">
+        <strong>Contextual bandit loop (each round $t$):</strong>
+        <ol style="margin-top:.4rem">
+          <li>Observe context $x_t \in \mathbb{R}^d$ (a feature vector)</li>
+          <li>Choose arm $A_t = \pi(x_t)$ using learned policy $\pi$</li>
+          <li>Observe reward $r_t \sim p(\cdot \mid x_t, A_t)$</li>
+          <li>Update policy using the triple $(x_t, A_t, r_t)$</li>
+        </ol>
+      </div>
+
+      <p>The reward now depends on both <em>who is asking</em> and <em>what you show them</em>. The algorithm learns a mapping from context to optimal arm, rather than a single universal winner.</p>
+
+      <h3>Context Feature Examples</h3>
+      <table>
+        <tr><th>Domain</th><th>Context Features $x_t$</th></tr>
+        <tr><td>E-commerce</td><td>Purchase history, device type, time of day</td></tr>
+        <tr><td>Healthcare</td><td>Patient vitals, medication history, symptoms</td></tr>
+        <tr><td>Education</td><td>Past performance, engagement patterns, topic history</td></tr>
+        <tr><td>Behavioral health</td><td>Engagement signals, session history, recent mood indicators</td></tr>
+      </table>
+    </div>
+
+    <div>
+      <h2>LinUCB Algorithm</h2>
+      <p>Assumes reward is a linear function of context: $\mathbb{E}[r \mid x, a] = x^\top \theta_a$</p>
+      <p>Each arm $a$ maintains covariance matrix $A_a \in \mathbb{R}^{d\times d}$ and accumulator $b_a \in \mathbb{R}^d$:</p>
+      $$\hat{\theta}_a = A_a^{-1} b_a$$
+      $$\text{Score}(a) = \underbrace{x_t^\top \hat{\theta}_a}_{\text{estimated reward}} + \;\alpha \underbrace{\sqrt{x_t^\top A_a^{-1} x_t}}_{\text{uncertainty bonus}}$$
+      <p>Choose $A_t = \arg\max_a \text{Score}(a)$, then update:</p>
+      $$A_a \leftarrow A_a + x_t x_t^\top, \qquad b_a \leftarrow b_a + r_t\, x_t$$
+
+      <div class="info">The uncertainty term $\sqrt{x_t^\top A_a^{-1} x_t}$ is <strong>large when $x_t$ is far from previously seen contexts</strong> &mdash; the arm earns an exploration bonus whenever it encounters a novel situation, exactly where we should be least confident.</div>
+
+      <details style="margin-top:.7rem">
+        <summary>🧮 Contextual Thompson Sampling &amp; Neural Variants</summary>
+        <div class="det-body">
+          <p><strong>Contextual TS:</strong> Maintain posterior $\theta_a \sim \mathcal{N}(\hat\theta_a, A_a^{-1})$ per arm. At each round, sample $\tilde\theta_a \sim \mathcal{N}(\hat\theta_a, A_a^{-1})$ and pick $a = \arg\max_a\, x_t^\top \tilde\theta_a$.</p>
+          <p><strong>Neural contextual bandits (NeuralUCB/NeuralTS):</strong> Replace the linear reward model with a neural network. Uncertainty comes from the final layer's covariance. Enables learning non-linear context–reward relationships at the cost of more computation and data.</p>
+          <p><strong>LLM-enhanced bandits (2024+):</strong> Use a language model to generate or enrich the context vector $x_t$ from unstructured data (chat logs, search history). Dramatically expands expressiveness of the context representation.</p>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <h2>MAB vs. Contextual Bandit — Side by Side</h2>
+  <div class="cols c11">
+    <div class="card">
+      <h3 style="color:var(--bandit)">Multi-Armed Bandit</h3>
+      <p>Finds <strong>one globally best arm</strong> across all users and situations.</p>
+      <p><strong>Policy:</strong> $A_t = f(\text{history of pulls})$</p>
+      <p><strong>Analogy:</strong> Classic A/B test — one winning variant for all users</p>
+      <p><strong>When to use:</strong> Homogeneous users; no meaningful feature signal</p>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--ctx)">Contextual Bandit</h3>
+      <p>Finds <strong>the best arm per individual</strong> given their observed context.</p>
+      <p><strong>Policy:</strong> $A_t = f(x_t,\, \text{history})$</p>
+      <p><strong>Analogy:</strong> Personalized recommendation — different variant per user</p>
+      <p><strong>When to use:</strong> Heterogeneous users; rich features available</p>
+    </div>
+  </div>
+
+  <div class="success">💡 <strong>Critical practitioner insight:</strong> Feature engineering typically outweighs algorithm choice. A well-designed context vector with LinUCB often beats a poorly-designed one with NeuralUCB. Start simple, add complexity only when improvement is measurable.</div>
+</div>
+
+<!-- ── S5: Viz: Explore vs. Exploit ────────────────────────── -->
+<div id="s5" class="section">
+  <h1>📈 Viz: Explore vs. Exploit</h1>
+  <p style="color:#555;font-size:1rem">Watch ε-greedy's running average reward converge toward the optimal arm's mean</p>
+  <hr>
+
+  <div class="card">
+    <div class="ctrl">
+      <label>Exploration rate ε</label>
+      <input type="range" id="s5-eps" min="0" max="0.5" step="0.01" value="0.1"
+             oninput="document.getElementById('s5-eps-v').textContent=this.value">
+      <span class="val" id="s5-eps-v">0.1</span>
+    </div>
+    <div class="ctrl">
+      <label>Arms K</label>
+      <input type="range" id="s5-k" min="2" max="8" step="1" value="5"
+             oninput="document.getElementById('s5-k-v').textContent=this.value">
+      <span class="val" id="s5-k-v">5</span>
+    </div>
+    <div class="ctrl">
+      <label>Rounds T</label>
+      <input type="range" id="s5-n" min="200" max="2000" step="100" value="1000"
+             oninput="document.getElementById('s5-n-v').textContent=this.value">
+      <span class="val" id="s5-n-v">1000</span>
+    </div>
+    <button class="btn" onclick="runS5()">▶ Simulate</button>
+    <div id="s5-arms" style="margin-top:.7rem;font-size:.82rem;color:#555"></div>
+  </div>
+
+  <div id="s5-chart" style="height:340px;margin-top:.5rem"></div>
+  <p class="caption">Blue line: running average reward. Orange dashed: optimal arm mean μ*. The shaded gap between them represents per-step regret &mdash; watch it shrink as the algorithm learns which arm is best.</p>
+  <div id="s5-note" style="display:none;margin-top:.5rem"></div>
+</div>
+
+<!-- ── S6: Viz: Algorithm Showdown ────────────────────────── -->
+<div id="s6" class="section">
+  <h1>🏆 Viz: Algorithm Showdown</h1>
+  <p style="color:#555;font-size:1rem">Cumulative regret comparison — logarithmic vs. linear growth</p>
+  <hr>
+
+  <div class="card">
+    <div class="ctrl">
+      <label>Arms K</label>
+      <input type="range" id="s6-k" min="3" max="10" step="1" value="5"
+             oninput="document.getElementById('s6-k-v').textContent=this.value">
+      <span class="val" id="s6-k-v">5</span>
+    </div>
+    <div class="ctrl">
+      <label>Rounds T</label>
+      <input type="range" id="s6-n" min="500" max="3000" step="100" value="1500"
+             oninput="document.getElementById('s6-n-v').textContent=this.value">
+      <span class="val" id="s6-n-v">1500</span>
+    </div>
+    <div class="ctrl">
+      <label>ε (for ε-Greedy)</label>
+      <input type="range" id="s6-eps" min="0.01" max="0.3" step="0.01" value="0.1"
+             oninput="document.getElementById('s6-eps-v').textContent=this.value">
+      <span class="val" id="s6-eps-v">0.1</span>
+    </div>
+    <button class="btn" onclick="runS6()">▶ Run Showdown</button>
+  </div>
+
+  <div id="s6-chart" style="height:360px;margin-top:.5rem"></div>
+  <p class="caption">Cumulative regret = total reward lost versus always pulling the best arm. Flatter = better. Logarithmic curves (UCB1, Thompson) versus the steeper growth of ε-greedy and random selection.</p>
+  <div id="s6-summary" style="margin-top:.5rem"></div>
+</div>
+
+<!-- ── S7: Viz: Arm Pull Distribution ─────────────────────── -->
+<div id="s7" class="section">
+  <h1>📊 Viz: Arm Pull Distribution</h1>
+  <p style="color:#555;font-size:1rem">Which arms does each algorithm explore — and which does it commit to?</p>
+  <hr>
+
+  <div class="info">Run the <strong>Algorithm Showdown</strong> (previous section) first to populate these charts. They share the same simulation data.</div>
+
+  <div id="s7-chart" style="height:400px;margin-top:.5rem"></div>
+  <p class="caption">Number of times each arm was pulled, per algorithm. The best arm (highest true reward probability) is teal. Notice how ε-greedy distributes pulls more evenly while UCB1 and Thompson Sampling concentrate heavily on the best arm.</p>
+  <div id="s7-table" style="margin-top:.5rem"></div>
+</div>
+
+<!-- ── S8: Viz: Thompson Posteriors ───────────────────────── -->
+<div id="s8" class="section">
+  <h1>🎯 Viz: Thompson Posterior Evolution</h1>
+  <p style="color:#555;font-size:1rem">Watch Beta distributions narrow as the algorithm learns each arm's true reward probability</p>
+  <hr>
+
+  <div class="info-ctx">Four arms with fixed but initially hidden true reward probabilities. All start at Beta(1,1) — uniform ignorance. Step through rounds to watch distributions narrow, peaks shift, and the best arm emerge. True probabilities are revealed after 100 rounds.</div>
+
+  <div class="card">
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+      <button class="btn btn-sec" onclick="stepTS(1)">+1 Round</button>
+      <button class="btn btn-sec" onclick="stepTS(10)">+10 Rounds</button>
+      <button class="btn btn-sec" onclick="stepTS(50)">+50 Rounds</button>
+      <button class="btn btn-sec" onclick="stepTS(200)">+200 Rounds</button>
+      <button class="btn" onclick="resetTS()">↺ Reset</button>
+      <span id="s8-round" style="font-size:.85rem;color:#555;margin-left:.4rem">Round: 0</span>
+    </div>
+    <div id="s8-info" style="margin-top:.65rem;font-size:.82rem"></div>
+  </div>
+
+  <div id="s8-chart" style="height:380px;margin-top:.5rem"></div>
+  <p class="caption">Beta(α,β) density for each arm. Vertical dashed lines show true reward probabilities (revealed after 100 rounds). As evidence accumulates, each distribution narrows around its arm's true probability. The arm whose peak is furthest right is the algorithm's current best guess for the optimal arm.</p>
+  <div id="s8-reveal" class="success" style="display:none;margin-top:.5rem"></div>
+</div>
+
+<!-- ── S9: Applications & Sources ─────────────────────────── -->
+<div id="s9" class="section">
+  <h1>🌍 Applications &amp; Sources</h1>
+  <hr>
+
+  <h2>Real-World Applications</h2>
+  <table>
+    <tr><th>Use Case</th><th>Domain</th><th>Arms</th><th>Context Features</th><th>Reward</th></tr>
+    <tr><td>News article selection</td><td>Media (Yahoo!, 2011)</td><td>Articles</td><td>User history, topic affinity</td><td>Click</td></tr>
+    <tr><td>Ad targeting</td><td>Advertising</td><td>Ad variants</td><td>User demographics, session</td><td>Click / conversion</td></tr>
+    <tr><td>Adaptive A/B testing</td><td>Product</td><td>Feature variants</td><td>User segment</td><td>Engagement metric</td></tr>
+    <tr><td>Content thumbnails</td><td>Streaming (Netflix)</td><td>Thumbnail designs</td><td>Viewing history, genre affinity</td><td>Play rate</td></tr>
+    <tr><td>Clinical trial allocation</td><td>Healthcare</td><td>Treatment arms</td><td>Patient vitals, history</td><td>Health outcome</td></tr>
+    <tr><td>Adaptive intervention</td><td>Behavioral health</td><td>Intervention types</td><td>Engagement signals, session history</td><td>Resilience indicator</td></tr>
+    <tr><td>Push notification timing</td><td>Mobile apps</td><td>Send time / channel</td><td>Past open rates, time zone</td><td>Open rate</td></tr>
+    <tr><td>Fantasy sports picks</td><td>Gaming (Dream11, 2025)</td><td>Player recommendations</td><td>Match context, user history</td><td>Revenue (+0.4%)</td></tr>
+  </table>
+
+  <h2>Further Study</h2>
+  <table>
+    <tr><th>Resource</th><th>Type</th><th>Best For</th></tr>
+    <tr><td><a href="https://en.wikipedia.org/wiki/Multi-armed_bandit" target="_blank">Multi-armed bandit — Wikipedia</a></td><td>Reference</td><td>Quick overview + algorithm list</td></tr>
+    <tr><td><a href="https://lilianweng.github.io/posts/2018-01-23-multi-armed-bandit/" target="_blank">Lil'Log: The MAB Problem and Its Solutions</a></td><td>Blog post</td><td>Deep mathematical dive, code snippets</td></tr>
+    <tr><td><a href="https://www.findingtheta.com/blog/ultimate-guide-to-contextual-bandits-from-theory-to-python-implementation" target="_blank">Ultimate Guide to Contextual Bandits</a></td><td>Tutorial</td><td>Python implementation, LinUCB</td></tr>
+    <tr><td><a href="https://compneuro.neuromatch.io/tutorials/W3D4_ReinforcementLearning/student/W3D4_Tutorial2.html" target="_blank">Neuromatch Academy: MAB Interactive Tutorial</a></td><td>Interactive</td><td>Epsilon slider, live simulation</td></tr>
+    <tr><td><a href="https://stanford.edu/~ashlearn/RLForFinanceBook/MultiArmedBandits.pdf" target="_blank">Stanford: Bandits for Finance (Ashwin Rao)</a></td><td>Lecture notes</td><td>Mathematical depth, regret bounds</td></tr>
+    <tr><td><a href="https://www.kameleoon.com/blog/contextual-bandits" target="_blank">Kameleoon: Contextual Bandits Guide</a></td><td>Industry blog</td><td>Business applications, A/B vs. bandits</td></tr>
+    <tr><td><a href="https://github.com/david-cortes/contextualbandits" target="_blank">contextualbandits — Python library</a></td><td>Code</td><td>Production-ready implementations</td></tr>
+    <tr><td><a href="https://www.braze.com/resources/articles/contextual-bandits" target="_blank">Braze: AI Decisioning with Contextual Bandits</a></td><td>Industry</td><td>Real deployment patterns</td></tr>
+  </table>
+</div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════════ -->
+<script>
+// ── Navigation ────────────────────────────────────────────────
+const SECTION_IDS = ['s0','s1','s2','s3','s4','s5','s6','s7','s8','s9'];
+
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const idx = SECTION_IDS.indexOf(id);
+  if (idx >= 0) document.querySelectorAll('.nav-btn')[idx].classList.add('active');
+  if (window.innerWidth <= 767) toggleSidebar();
+  if (window.MathJax) MathJax.typesetPromise();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+
+function switchTab(btn, barId, paneId) {
+  const bar = document.getElementById(barId);
+  const section = bar.parentElement;
+  section.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById(paneId).classList.add('active');
+  if (window.MathJax) MathJax.typesetPromise();
+}
+
+// ── Statistical Utilities ─────────────────────────────────────
+function randn() {
+  let u = 0, v = 0;
+  while (u === 0) u = Math.random();
+  while (v === 0) v = Math.random();
+  return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
+
+// Lanczos approximation for log-Gamma
+function logGamma(x) {
+  if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+  x -= 1;
+  let a = 0.99999999999980993;
+  const c = [676.5203681218851, -1259.1392167224028, 771.32342877765313,
+             -176.61502916214059, 12.507343278686905, -0.13857109526572012,
+             9.9843695780195716e-6, 1.5056327351493116e-7];
+  for (let i = 0; i < 8; i++) a += c[i] / (x + i + 1);
+  const t = x + 7.5;
+  return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+}
+
+function betaPDF(x, a, b) {
+  if (x <= 0 || x >= 1) return 0;
+  const logB = logGamma(a) + logGamma(b) - logGamma(a + b);
+  const val = Math.exp((a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - logB);
+  return isFinite(val) ? val : 0;
+}
+
+function sampleGamma(shape) {
+  if (shape < 1) return sampleGamma(1 + shape) * Math.pow(Math.random(), 1 / shape);
+  const d = shape - 1/3, c = 1 / Math.sqrt(9 * d);
+  for (;;) {
+    let x = randn(), v = 1 + c * x;
+    if (v <= 0) continue;
+    v = v * v * v;
+    const u = Math.random();
+    if (u < 1 - 0.0331 * x * x * x * x) return d * v;
+    if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v;
+  }
+}
+
+function sampleBeta(a, b) {
+  if (a <= 0 || b <= 0) return 0.5;
+  const ga = sampleGamma(a), gb = sampleGamma(b);
+  return ga / (ga + gb);
+}
+
+// ── Simulation Helpers ────────────────────────────────────────
+function genMeans(k) {
+  const means = [];
+  let tries = 0;
+  while (means.length < k && tries < 10000) {
+    tries++;
+    const m = +(0.2 + Math.random() * 0.65).toFixed(3);
+    if (means.every(x => Math.abs(x - m) > 0.07)) means.push(m);
+  }
+  return means;
+}
+
+function cumulativeRegret(rewards, muStar) {
+  let cum = 0;
+  return rewards.map(r => { cum += muStar - r; return cum; });
+}
+
+function runningAvg(rewards) {
+  let sum = 0;
+  return rewards.map((r, i) => { sum += r; return sum / (i + 1); });
+}
+
+// ── Algorithm Implementations ─────────────────────────────────
+function runEpsilonGreedy(k, n, eps, means) {
+  const counts = new Array(k).fill(0), est = new Array(k).fill(0);
+  const rewards = [], pulls = new Array(k).fill(0);
+  for (let t = 0; t < n; t++) {
+    const arm = (Math.random() < eps)
+      ? Math.floor(Math.random() * k)
+      : est.indexOf(Math.max(...est));
+    const r = Math.random() < means[arm] ? 1 : 0;
+    counts[arm]++; pulls[arm]++;
+    est[arm] += (r - est[arm]) / counts[arm];
+    rewards.push(r);
+  }
+  return { rewards, pulls };
+}
+
+function runUCB1(k, n, means) {
+  const counts = new Array(k).fill(1), est = means.map((m, i) => {
+    return Math.random() < m ? 1 : 0;
+  });
+  const pulls = counts.slice();
+  const rewards = est.slice();
+  for (let t = k; t < n; t++) {
+    let arm = 0, best = -Infinity;
+    for (let i = 0; i < k; i++) {
+      const score = est[i] + Math.sqrt(2 * Math.log(t + 1) / counts[i]);
+      if (score > best) { best = score; arm = i; }
+    }
+    const r = Math.random() < means[arm] ? 1 : 0;
+    counts[arm]++; pulls[arm]++;
+    est[arm] += (r - est[arm]) / counts[arm];
+    rewards.push(r);
+  }
+  return { rewards, pulls };
+}
+
+function runThompson(k, n, means) {
+  const alpha = new Array(k).fill(1), beta = new Array(k).fill(1);
+  const rewards = [], pulls = new Array(k).fill(0);
+  for (let t = 0; t < n; t++) {
+    const samples = alpha.map((a, i) => sampleBeta(a, beta[i]));
+    const arm = samples.indexOf(Math.max(...samples));
+    const r = Math.random() < means[arm] ? 1 : 0;
+    if (r) alpha[arm]++; else beta[arm]++;
+    pulls[arm]++; rewards.push(r);
+  }
+  return { rewards, pulls };
+}
+
+function runRandom(k, n, means) {
+  const rewards = [], pulls = new Array(k).fill(0);
+  for (let t = 0; t < n; t++) {
+    const arm = Math.floor(Math.random() * k);
+    const r = Math.random() < means[arm] ? 1 : 0;
+    pulls[arm]++; rewards.push(r);
+  }
+  return { rewards, pulls };
+}
+
+// ── S0: Executive Chart ───────────────────────────────────────
+function renderExecChart() {
+  const means = [0.3, 0.45, 0.55, 0.7, 0.85];
+  const muStar = 0.85, n = 500;
+  const xs = Array.from({ length: n }, (_, i) => i + 1);
+  const eg  = runEpsilonGreedy(5, n, 0.1, means);
+  const ucb = runUCB1(5, n, means);
+  const ts  = runThompson(5, n, means);
+  const rnd = runRandom(5, n, means);
+  Plotly.newPlot('exec-chart', [
+    { x: xs, y: cumulativeRegret(rnd.rewards, muStar), name: 'Random',
+      line: { color: '#aaa', dash: 'dot', width: 1.5 } },
+    { x: xs, y: cumulativeRegret(eg.rewards,  muStar), name: 'ε-Greedy (ε=0.1)',
+      line: { color: '#e63946', width: 2 } },
+    { x: xs, y: cumulativeRegret(ucb.rewards, muStar), name: 'UCB1',
+      line: { color: '#457b9d', width: 2 } },
+    { x: xs, y: cumulativeRegret(ts.rewards,  muStar), name: 'Thompson',
+      line: { color: '#2a9d8f', width: 2 } },
+  ], {
+    margin: { t: 10, b: 45, l: 50, r: 10 },
+    xaxis: { title: 'Round', titlefont: { size: 11 } },
+    yaxis: { title: 'Cumulative Regret', titlefont: { size: 11 } },
+    legend: { orientation: 'h', y: -0.25, font: { size: 10 } },
+    paper_bgcolor: 'transparent', plot_bgcolor: '#f9fafb',
+    font: { size: 11 },
+  }, { responsive: true, displayModeBar: false });
+}
+
+// ── S5: Explore vs. Exploit ───────────────────────────────────
+function runS5() {
+  const eps = +document.getElementById('s5-eps').value;
+  const k   = +document.getElementById('s5-k').value;
+  const n   = +document.getElementById('s5-n').value;
+  const means = genMeans(k);
+  const muStar = Math.max(...means);
+  const { rewards, pulls } = runEpsilonGreedy(k, n, eps, means);
+  const avg = runningAvg(rewards);
+  const xs  = Array.from({ length: n }, (_, i) => i + 1);
+
+  // Arm info pills
+  const armsEl = document.getElementById('s5-arms');
+  armsEl.innerHTML = 'True arm means: ' + means.map((m, i) => {
+    const cls = m === muStar ? 'pill-best' : m > muStar - 0.15 ? 'pill-mid' : 'pill-bad';
+    return `<span class="pill ${cls}">Arm ${i+1}: ${m.toFixed(3)}${m === muStar ? ' ★' : ''}</span>`;
+  }).join('');
+
+  // Gap shading between running avg and muStar
+  Plotly.newPlot('s5-chart', [
+    { x: xs, y: new Array(n).fill(muStar),
+      name: `Optimal μ* = ${muStar.toFixed(3)}`,
+      line: { color: '#e76f51', dash: 'dash', width: 2 } },
+    { x: [...xs, ...xs.slice().reverse()],
+      y: [...new Array(n).fill(muStar), ...avg.slice().reverse()],
+      fill: 'toself', fillcolor: 'rgba(231,111,81,0.08)',
+      line: { width: 0 }, showlegend: false, hoverinfo: 'skip' },
+    { x: xs, y: avg, name: 'Running avg reward',
+      line: { color: '#457b9d', width: 2.5 } },
+  ], {
+    margin: { t: 20, b: 55, l: 60, r: 20 },
+    xaxis: { title: 'Round t', titlefont: { size: 12 } },
+    yaxis: { title: 'Average Reward', range: [0, 1.05], titlefont: { size: 12 } },
+    legend: { font: { size: 11 } },
+    paper_bgcolor: 'transparent', plot_bgcolor: '#f9fafb',
+  }, { responsive: true, displayModeBar: false });
+
+  const gap = muStar - avg[n - 1];
+  const noteEl = document.getElementById('s5-note');
+  noteEl.style.display = 'block';
+  noteEl.className = gap > 0.08 ? 'warn' : 'success';
+  noteEl.innerHTML = `At round ${n}: running avg = <strong>${avg[n-1].toFixed(3)}</strong>, optimal = <strong>${muStar.toFixed(3)}</strong>. ` +
+    `Per-step regret gap = <strong>${gap.toFixed(3)}</strong>. ` +
+    (eps > 0 ? `With ε=${eps}, the algorithm perpetually explores randomly — this gap never fully closes.`
+             : 'With ε=0 (pure greedy), the algorithm committed early and may be locked onto a suboptimal arm.');
+}
+
+// ── S6 & S7: Algorithm Showdown ───────────────────────────────
+let s6Data = null;
+
+function runS6() {
+  const k   = +document.getElementById('s6-k').value;
+  const n   = +document.getElementById('s6-n').value;
+  const eps = +document.getElementById('s6-eps').value;
+  const means  = genMeans(k);
+  const muStar = Math.max(...means);
+  const xs = Array.from({ length: n }, (_, i) => i + 1);
+
+  const eg  = runEpsilonGreedy(k, n, eps, means);
+  const ucb = runUCB1(k, n, means);
+  const ts  = runThompson(k, n, means);
+  const rnd = runRandom(k, n, means);
+  s6Data = { k, n, means, muStar, eg, ucb, ts, rnd };
+
+  Plotly.newPlot('s6-chart', [
+    { x: xs, y: cumulativeRegret(rnd.rewards, muStar), name: 'Random',
+      line: { color: '#aaa', dash: 'dot', width: 2 } },
+    { x: xs, y: cumulativeRegret(eg.rewards,  muStar), name: `ε-Greedy (ε=${eps})`,
+      line: { color: '#e63946', width: 2 } },
+    { x: xs, y: cumulativeRegret(ucb.rewards, muStar), name: 'UCB1',
+      line: { color: '#457b9d', width: 2 } },
+    { x: xs, y: cumulativeRegret(ts.rewards,  muStar), name: 'Thompson Sampling',
+      line: { color: '#2a9d8f', width: 2 } },
+  ], {
+    margin: { t: 20, b: 55, l: 70, r: 20 },
+    xaxis: { title: 'Round t', titlefont: { size: 12 } },
+    yaxis: { title: 'Cumulative Regret', titlefont: { size: 12 } },
+    legend: { font: { size: 11 } },
+    paper_bgcolor: 'transparent', plot_bgcolor: '#f9fafb',
+  }, { responsive: true, displayModeBar: false });
+
+  // Summary metrics
+  const results = [
+    ['Random',      cumulativeRegret(rnd.rewards, muStar)[n-1]],
+    [`ε-Greedy`,    cumulativeRegret(eg.rewards,  muStar)[n-1]],
+    ['UCB1',        cumulativeRegret(ucb.rewards, muStar)[n-1]],
+    ['Thompson',    cumulativeRegret(ts.rewards,  muStar)[n-1]],
+  ].sort((a, b) => a[1] - b[1]);
+
+  document.getElementById('s6-summary').innerHTML =
+    '<div class="card" style="padding:.7rem 1.1rem"><strong>Final cumulative regret at T=' + n + ':</strong> ' +
+    results.map(([name, reg], i) => {
+      const cls = i === 0 ? 'pill-best' : i === 3 ? 'pill-bad' : 'pill-mid';
+      return `<span class="pill ${cls}">${name}: ${reg.toFixed(1)}</span>`;
+    }).join(' ') + '</div>';
+
+  renderS7();
+}
+
+function renderS7() {
+  if (!s6Data) {
+    document.getElementById('s7-chart').innerHTML =
+      '<p style="padding:2rem;color:#888;text-align:center">Run the Algorithm Showdown first (previous section).</p>';
+    return;
+  }
+  const { k, means, muStar, eg, ucb, ts } = s6Data;
+  const bestArm = means.indexOf(muStar);
+  const labels = means.map((m, i) =>
+    `Arm ${i+1}<br>p=${m.toFixed(2)}${i === bestArm ? ' ★' : ''}`);
+
+  const mkColor = i => i === bestArm ? '#2a9d8f' : '#adb5bd';
+  const egColors  = means.map((_, i) => mkColor(i));
+  const ucbColors = means.map((_, i) => mkColor(i));
+  const tsColors  = means.map((_, i) => mkColor(i));
+
+  Plotly.newPlot('s7-chart', [
+    { x: labels, y: eg.pulls,  name: 'ε-Greedy',         type: 'bar',
+      marker: { color: egColors }, offsetgroup: 0 },
+    { x: labels, y: ucb.pulls, name: 'UCB1',              type: 'bar',
+      marker: { color: ucbColors }, offsetgroup: 1 },
+    { x: labels, y: ts.pulls,  name: 'Thompson Sampling', type: 'bar',
+      marker: { color: tsColors }, offsetgroup: 2 },
+  ], {
+    barmode: 'group',
+    margin: { t: 20, b: 70, l: 60, r: 20 },
+    xaxis: { title: 'Arm', titlefont: { size: 12 } },
+    yaxis: { title: 'Times Pulled', titlefont: { size: 12 } },
+    legend: { font: { size: 11 } },
+    paper_bgcolor: 'transparent', plot_bgcolor: '#f9fafb',
+  }, { responsive: true, displayModeBar: false });
+
+  document.getElementById('s7-table').innerHTML =
+    '<div class="info-ctx" style="font-size:.84rem"><strong>True arm probabilities:</strong> ' +
+    means.map((m, i) => {
+      const cls = i === bestArm ? 'pill-best' : 'pill-mid';
+      return `<span class="pill ${cls}">Arm ${i+1}: ${m.toFixed(3)}${i === bestArm ? ' (best)' : ''}</span>`;
+    }).join('') + '</div>';
+}
+
+// ── S8: Thompson Posteriors ───────────────────────────────────
+const TS4_MEANS  = [0.25, 0.45, 0.65, 0.82];
+const TS4_COLORS = ['#e63946', '#f4a261', '#457b9d', '#2a9d8f'];
+const TS4_NAMES  = ['Arm A (p=?)', 'Arm B (p=?)', 'Arm C (p=?)', 'Arm D (p=?)'];
+let tsAlpha = [1, 1, 1, 1], tsBeta = [1, 1, 1, 1], tsRound = 0;
+
+function renderS8() {
+  const N_POINTS = 200;
+  const xs = Array.from({ length: N_POINTS }, (_, i) => (i + 0.5) / N_POINTS);
+
+  const traces = tsAlpha.map((a, i) => {
+    const ys = xs.map(x => betaPDF(x, a, tsBeta[i]));
+    return {
+      x: xs, y: ys,
+      name: `${TS4_NAMES[i]} — Beta(${a}, ${tsBeta[i]})`,
+      line: { color: TS4_COLORS[i], width: 2.5 },
+      fill: 'tozeroy',
+      fillcolor: TS4_COLORS[i] + '18',
+      mode: 'lines',
+    };
+  });
+
+  // Vertical lines for true means (shown after 100 rounds)
+  const shapes = tsRound >= 100 ? TS4_MEANS.map((m, i) => ({
+    type: 'line', x0: m, x1: m, y0: 0, y1: 1,
+    xref: 'x', yref: 'paper',
+    line: { color: TS4_COLORS[i], width: 1.5, dash: 'dot' },
+  })) : [];
+
+  Plotly.newPlot('s8-chart', traces, {
+    margin: { t: 20, b: 55, l: 55, r: 20 },
+    xaxis: { title: 'Reward Probability p', range: [0, 1], titlefont: { size: 12 } },
+    yaxis: { title: 'Probability Density', titlefont: { size: 12 } },
+    shapes,
+    legend: { font: { size: 11 } },
+    paper_bgcolor: 'transparent', plot_bgcolor: '#f9fafb',
+  }, { responsive: true, displayModeBar: false });
+
+  document.getElementById('s8-round').textContent = `Round: ${tsRound}`;
+
+  // Belief summary
+  document.getElementById('s8-info').innerHTML = tsAlpha.map((a, i) => {
+    const mean = (a / (a + tsBeta[i])).toFixed(3);
+    const obs  = a + tsBeta[i] - 2;
+    return `<span class="pill" style="background:${TS4_COLORS[i]}22;color:${TS4_COLORS[i]};border:1px solid ${TS4_COLORS[i]}44">` +
+      `Arm ${['A','B','C','D'][i]}: belief mean=${mean}, ${obs} obs</span>`;
+  }).join(' ');
+
+  // Reveal true values after 100 rounds
+  const revEl = document.getElementById('s8-reveal');
+  if (tsRound >= 100) {
+    revEl.style.display = 'block';
+    revEl.innerHTML = '✅ <strong>True arm probabilities revealed:</strong> ' +
+      TS4_MEANS.map((m, i) =>
+        `<span class="pill" style="background:${TS4_COLORS[i]}22;color:${TS4_COLORS[i]}">` +
+        `Arm ${['A','B','C','D'][i]}: p=${m}</span>`
+      ).join(' ') +
+      ' — compare these to each distribution\'s peak. How close are the beliefs to the truth?';
+  } else {
+    revEl.style.display = 'none';
+  }
+}
+
+function stepTS(steps) {
+  for (let s = 0; s < steps; s++) {
+    const samples = tsAlpha.map((a, i) => sampleBeta(a, tsBeta[i]));
+    const arm = samples.indexOf(Math.max(...samples));
+    const r = Math.random() < TS4_MEANS[arm] ? 1 : 0;
+    if (r) tsAlpha[arm]++; else tsBeta[arm]++;
+    tsRound++;
+  }
+  renderS8();
+}
+
+function resetTS() {
+  tsAlpha = [1, 1, 1, 1]; tsBeta = [1, 1, 1, 1]; tsRound = 0;
+  renderS8();
+}
+
+// ── Init ──────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  renderExecChart();
+  renderS8();
+});
+</script>
+</body>
+</html>
