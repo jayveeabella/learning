@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Locality Sensitive Hashing — Interactive Explainer</title>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --lsh:#2a9d8f;--lsh2:#e76f51;--lsh3:#457b9d;
+  --sw:242px;--sbg:#1a1a2e;--stext:#c8d0e7;
+  --bg:#f5f6fa;--card:#fff;--border:#dee2e6;
+  --r:6px;--text:#212529;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:15px;line-height:1.65}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);
+  background:var(--sbg);overflow-y:auto;z-index:100;padding:1.4rem 0}
+.sb-logo{padding:0 1.2rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem}
+.sb-logo h2{color:#fff;font-size:1rem;font-weight:700}
+.sb-logo p{color:var(--stext);font-size:.75rem;margin-top:.2rem}
+.home-btn{display:inline-block;margin-top:.6rem;font-size:.75rem;color:var(--stext);
+  text-decoration:none;opacity:.7;transition:opacity .15s}
+.home-btn:hover{opacity:1;color:#fff}
+.nav-btn{display:block;padding:.45rem 1.2rem;color:var(--stext);font-size:.82rem;
+  cursor:pointer;border-left:3px solid transparent;transition:all .15s;
+  background:none;border-top:none;border-right:none;border-bottom:none;
+  text-align:left;width:100%}
+.nav-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-btn.active{border-left-color:var(--lsh);color:#fff;background:rgba(42,157,143,.2)}
+
+/* ── Main ─────────────────────────────────────────────────── */
+#main{margin-left:var(--sw);padding:2rem 2.5rem 5rem;max-width:1150px;width:100%}
+.section{display:none}.section.active{display:block}
+
+h1{font-size:1.85rem;font-weight:700;color:#1a1a2e;margin-bottom:.3rem}
+h2{font-size:1.25rem;font-weight:600;color:#1a1a2e;margin:1.6rem 0 .5rem}
+h3{font-size:1rem;font-weight:600;color:#333;margin:1.1rem 0 .4rem}
+p{margin-bottom:.75rem}
+hr{border:none;border-top:1px solid var(--border);margin:1.4rem 0}
+a{color:var(--lsh)}
+ul,ol{padding-left:1.3rem;margin-bottom:.75rem}
+li{margin-bottom:.2rem}
+
+/* ── Boxes ────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.4rem;margin:1rem 0}
+.info{background:#e5f5f3;border-left:4px solid var(--lsh);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.info2{background:#fef0ec;border-left:4px solid var(--lsh2);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.success{background:#d4edda;border-left:4px solid #28a745;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.warn{background:#fff8e1;border-left:4px solid #ffc107;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+
+/* ── Tables ───────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;margin:.9rem 0;font-size:.87rem}
+th{background:#f0f4f8;padding:.5rem .75rem;text-align:left;font-weight:600;border-bottom:2px solid var(--border)}
+td{padding:.45rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+.tab-bar{display:flex;border-bottom:2px solid var(--border);gap:0;margin-top:.5rem;flex-wrap:wrap}
+.tab-btn{padding:.45rem .95rem;border:none;background:none;cursor:pointer;
+  color:#666;font-size:.87rem;font-weight:500;border-bottom:2px solid transparent;
+  margin-bottom:-2px;transition:all .15s}
+.tab-btn:hover{color:var(--lsh)}
+.tab-btn.active{color:var(--lsh);border-bottom-color:var(--lsh)}
+.tab-pane{display:none;padding-top:.9rem}.tab-pane.active{display:block}
+
+/* ── Controls ─────────────────────────────────────────────── */
+.ctrl{display:flex;align-items:center;gap:.7rem;margin:.5rem 0;flex-wrap:wrap}
+.ctrl label{font-size:.84rem;font-weight:500;min-width:160px}
+.ctrl input[type=range]{width:180px;accent-color:var(--lsh)}
+.val{font-size:.84rem;font-weight:600;color:var(--lsh);min-width:45px}
+.btn{padding:.35rem .9rem;border:1px solid var(--lsh);border-radius:var(--r);
+  background:var(--lsh);color:#fff;cursor:pointer;font-size:.84rem;font-weight:500;margin:.3rem .3rem 0 0}
+.btn:hover{opacity:.85}
+.btn-sec{background:#fff;color:var(--lsh);border-color:var(--lsh)}
+.btn-sec:hover{background:#e5f5f3}
+.btn-dis{opacity:.35;pointer-events:none}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.cols{display:grid;gap:1.4rem;margin:.8rem 0}
+.c12{grid-template-columns:1fr 2fr}
+.c21{grid-template-columns:2fr 1fr}
+.c11{grid-template-columns:1fr 1fr}
+.c13{grid-template-columns:1fr 3fr}
+.c23{grid-template-columns:2fr 3fr}
+
+/* ── Code ─────────────────────────────────────────────────── */
+pre{background:#1e2235;color:#abb2bf;padding:.9rem 1.1rem;border-radius:var(--r);
+  overflow-x:auto;font-size:.8rem;line-height:1.55;margin:.7rem 0;font-family:'Fira Code',Consolas,monospace}
+
+/* ── Details ────────────────────────────────────────────── */
+details{border:1px solid var(--border);border-radius:var(--r);margin:.7rem 0}
+summary{padding:.55rem 1rem;cursor:pointer;font-weight:500;font-size:.88rem;
+  background:#f8f9fa;border-radius:var(--r);list-style:none;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▶ ';font-size:.68rem;color:#888}
+details[open] summary::before{content:'▼ '}
+details[open] summary{border-radius:var(--r) var(--r) 0 0}
+.det-body{padding:.9rem 1.1rem;border-top:1px solid var(--border)}
+
+/* ── Misc ───────────────────────────────────────────────── */
+.caption{font-size:.81rem;color:#666;font-style:italic;margin-top:.35rem}
+.metric{display:inline-block;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:.7rem 1.1rem;min-width:140px;margin:.3rem .4rem .3rem 0}
+.metric-label{font-size:.76rem;color:#666}
+.metric-value{font-size:1.35rem;font-weight:700;color:#1a1a2e}
+.pill{display:inline-block;padding:.18rem .55rem;border-radius:20px;font-size:.78rem;font-weight:600;margin:.12rem .1rem}
+.pill-best{background:#d1f3ef;color:#1d7a70}
+.pill-mid{background:#e8f4fd;color:#1a5276}
+.pill-bad{background:#fde8ea;color:#c42b3a}
+.pill-ok{background:#fff3cd;color:#856404}
+
+/* ── MinHash matrix ──────────────────────────────────────── */
+.mh-table{border-collapse:collapse;width:auto;margin:.5rem auto;font-size:.85rem}
+.mh-table th{background:#f0f4f8;padding:.4rem .8rem;text-align:center;font-weight:600;border-bottom:2px solid var(--border)}
+.mh-table td{padding:.32rem .8rem;border-bottom:1px solid var(--border);text-align:center;transition:background .2s}
+.mh-both{background:#c6f0ec !important;font-weight:700}
+.mh-a{background:#fff0ed !important}
+.mh-b{background:#e8f0ff !important}
+.mh-none{background:#f8f9fa !important;color:#aaa}
+.mh-highlight{outline:3px solid #e76f51;outline-offset:-1px}
+
+/* ── Pipeline steps ──────────────────────────────────────── */
+.pipe-step{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.2rem 1.5rem;min-height:220px}
+.pipe-step h3{margin-top:0;color:var(--lsh);font-size:1.05rem}
+.pipe-docs{display:flex;gap:1rem;flex-wrap:wrap;margin:.8rem 0}
+.pipe-doc{background:#f5f6fa;border:2px solid var(--border);border-radius:var(--r);padding:.7rem 1rem;flex:1;min-width:200px}
+.pipe-doc.highlight{border-color:var(--lsh)}
+.pipe-doc strong{font-size:.82rem;color:#555;display:block;margin-bottom:.3rem}
+.sig-row{display:flex;gap:.5rem;align-items:center;margin:.4rem 0;font-size:.85rem}
+.sig-cell{width:38px;height:32px;display:flex;align-items:center;justify-content:center;
+  border-radius:4px;font-weight:700;font-size:.85rem;border:1px solid #ddd}
+.sig-band-1{background:#d1f3ef;border-color:#2a9d8f}
+.sig-band-2{background:#fde8d8;border-color:#e76f51}
+.sig-band-3{background:#dce8f8;border-color:#457b9d}
+.bucket-box{display:inline-block;background:#f0f4f8;border:1px solid var(--border);
+  border-radius:var(--r);padding:.4rem .8rem;margin:.3rem;font-size:.82rem}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+#menu-toggle{display:none;position:fixed;top:.7rem;right:.7rem;z-index:200;
+  background:var(--sbg);color:#fff;border:none;border-radius:6px;
+  padding:.5rem .7rem;cursor:pointer;font-size:1.15rem;line-height:1}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
+@media(max-width:767px){
+  #menu-toggle{display:block}
+  #sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.open{transform:translateX(0)}
+  #sidebar-overlay.open{display:block}
+  #main{margin-left:0;padding:3.5rem 1rem 4rem}
+  .cols.c12,.cols.c21,.cols.c11,.cols.c13,.cols.c23{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<button id="menu-toggle" aria-label="Toggle menu" onclick="toggleSidebar()">☰</button>
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <h2>🪣 LSH Explorer</h2>
+    <p>Locality Sensitive Hashing</p>
+    <a class="home-btn" href="../../index.html">← Home</a>
+  </div>
+  <button class="nav-btn active"  onclick="nav('s0')">Overview</button>
+  <button class="nav-btn" onclick="nav('s1')">📐 The Math</button>
+  <button class="nav-btn" onclick="nav('s2')">🔑 Hash Families</button>
+  <button class="nav-btn" onclick="nav('s3')">🔬 Visualizations</button>
+  <button class="nav-btn" onclick="nav('s4')">🤖 ML Applications</button>
+  <button class="nav-btn" onclick="nav('s5')">📚 Sources</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN
+═══════════════════════════════════════════════════════════════ -->
+<main id="main">
+
+<!-- ── S0: Overview ───────────────────────────────────────── -->
+<div id="s0" class="section active">
+  <h1>Locality Sensitive Hashing</h1>
+  <p style="color:#555;font-size:1rem">An interactive explainer &mdash; from Indyk &amp; Motwani (1998) to LLM inference (2025)</p>
+  <hr>
+
+  <div class="cols c21">
+    <div>
+      <p><strong>The core problem:</strong> Given a dataset of $n$ high-dimensional vectors, find the nearest neighbor to a query point. Exact methods like k-d trees run in $O(2^d \log n)$ — exponential in dimension $d$. At $d = 100$, this is worse than brute force.</p>
+
+      <div class="info">
+        <strong>The key insight of LSH:</strong> Instead of searching exactly, accept a small approximation. If the true nearest neighbor is at distance $r$, find <em>any</em> point within distance $c \cdot r$ (for small constant $c > 1$). This breaks the curse of dimensionality — query time becomes $O(n^\rho \cdot d)$ with $\rho < 1$.
+      </div>
+
+      <p>LSH works by constructing hash functions that are <em>similarity-sensitive</em>: nearby points collide in the same bucket with high probability, while distant points rarely collide. Candidate neighbors come only from matching buckets — a tiny fraction of the dataset.</p>
+
+      <div class="warn">⚠️ <strong>LSH ≠ one algorithm.</strong> It is a <em>framework</em>. The specific hash family depends on your distance metric: MinHash for Jaccard, SimHash for cosine, p-stable projections for Euclidean. Each has different collision probabilities and performance tradeoffs.</div>
+    </div>
+
+    <div>
+      <h3>Brief History</h3>
+      <table>
+        <tr><th>Year</th><th>Event</th></tr>
+        <tr><td>1984</td><td>Johnson–Lindenstrauss lemma: random projections preserve distances in $O(\log N)$ dims</td></tr>
+        <tr><td>1997</td><td>Broder (AltaVista) invents <strong>MinHash</strong> for near-duplicate web page detection</td></tr>
+        <tr><td>1998</td><td>Indyk &amp; Motwani formalize LSH framework; prove sublinear ANN query time (STOC)</td></tr>
+        <tr><td>2002</td><td>Charikar introduces <strong>SimHash</strong> / hyperplane LSH for cosine similarity (STOC)</td></tr>
+        <tr><td>2004</td><td>Datar et al.: p-stable distribution LSH for Euclidean / $L_p$ norms</td></tr>
+        <tr><td>2006</td><td>Andoni &amp; Indyk: near-optimal LSH achieving $\rho = 1/c^2$ via Leech lattice</td></tr>
+        <tr><td>2020</td><td>Reformer (Kitaev et al.): LSH attention reduces Transformer cost $O(L^2) \to O(L \log L)$</td></tr>
+        <tr><td>2025</td><td>MagicPIG: SimHash sparsifies LLM KV-cache for 5× decoding throughput (ICLR Spotlight)</td></tr>
+      </table>
+
+      <h3 style="margin-top:1.2rem">Complexity Comparison (ANN search)</h3>
+      <table>
+        <tr><th>Method</th><th>Query time</th><th>Exact?</th></tr>
+        <tr><td>Brute force</td><td>$O(n \cdot d)$</td><td>✅</td></tr>
+        <tr><td>k-d tree</td><td>$O(2^d \log n)$</td><td>✅</td></tr>
+        <tr><td>LSH (Indyk–Motwani)</td><td>$O(n^\rho \cdot d),\ \rho < 1$</td><td>$c$-approx</td></tr>
+        <tr><td>LSH (Andoni–Indyk)</td><td>$O(d \cdot n^{1/c^2})$</td><td>$c$-approx</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ── S1: The Math ───────────────────────────────────────── -->
+<div id="s1" class="section">
+  <h1>📐 The Math</h1>
+  <hr>
+
+  <h2>The $(r_1, r_2, p_1, p_2)$-Sensitive Family</h2>
+  <div class="cols c21">
+    <div>
+      <p>A family of hash functions $\mathcal{H} = \{h : \mathcal{M} \to S\}$ over metric space $(\mathcal{M}, d)$ is <strong>$(r_1, r_2, p_1, p_2)$-sensitive</strong> if for all $a, b \in \mathcal{M}$ and $h$ drawn uniformly from $\mathcal{H}$:</p>
+
+      $$\text{If } d(a,b) \leq r_1 \implies \Pr[h(a) = h(b)] \geq p_1$$
+      $$\text{If } d(a,b) \geq r_2 \implies \Pr[h(a) = h(b)] \leq p_2$$
+
+      <p>with the strict requirement $p_1 > p_2$ and approximation factor $c = r_2 / r_1 > 1$.</p>
+
+      <table>
+        <tr><th>Parameter</th><th>Meaning</th><th>Want</th></tr>
+        <tr><td>$r_1$</td><td>"near" distance threshold</td><td>—</td></tr>
+        <tr><td>$r_2 = c \cdot r_1$</td><td>"far" distance threshold</td><td>—</td></tr>
+        <tr><td>$p_1$</td><td>collision prob for near pairs</td><td>High</td></tr>
+        <tr><td>$p_2$</td><td>collision prob for far pairs</td><td>Low</td></tr>
+        <tr><td>$c$</td><td>approximation factor</td><td>Small (near 1)</td></tr>
+      </table>
+    </div>
+    <div>
+      <div class="info">
+        <strong>Intuition:</strong> A hash function is "locality sensitive" if it respects distances. Points close in the original metric end up in the same bucket <em>more often</em> than points that are far apart. The larger the gap $p_1 - p_2$, the better the hash family distinguishes near from far.
+      </div>
+      <p>The canonical picture: imagine drawing a random bucket boundary through the space. Nearby points are more likely to fall on the same side; distant points are more likely to be separated. LSH formalizes this intuition for arbitrary metric spaces.</p>
+    </div>
+  </div>
+
+  <hr>
+  <h2>The $\rho$ Parameter — Query Complexity</h2>
+  <div class="cols c12">
+    <div>
+      <p>The central performance metric of any LSH scheme is:</p>
+      $$\rho = \frac{\log(1/p_1)}{\log(1/p_2)} \in (0, 1)$$
+
+      <p>An ANN data structure built from this family achieves:</p>
+      <ul>
+        <li><strong>Query time:</strong> $O(n^\rho \cdot d)$</li>
+        <li><strong>Space:</strong> $O(n^{1+\rho})$</li>
+      </ul>
+
+      <p>Since $\rho < 1$, query time is <strong>sublinear in $n$</strong> — the core win over brute force. For example, with $c = 2$ and a good hash family achieving $\rho = 0.5$, querying 1 million points costs roughly $O(\sqrt{n})$ — about 1,000 comparisons instead of 1,000,000.</p>
+
+      <div class="info2">
+        <strong>Historical progress on $\rho$:</strong><br>
+        Datar et al. (2004): $\rho = 1/c$ for $L_2$<br>
+        Andoni &amp; Indyk (2006): $\rho = 1/c^2$ — provably near-optimal
+      </div>
+    </div>
+    <div>
+      <div id="rho-chart" style="height:320px"></div>
+      <p class="caption">Query complexity $n^\rho$ as a fraction of $n$. Smaller $\rho$ means faster queries. The 2006 result ($\rho = 1/c^2$) substantially improves over 2004 ($\rho = 1/c$) especially for small approximation factors.</p>
+    </div>
+  </div>
+
+  <hr>
+  <h2>Probability Amplification: AND–OR Construction</h2>
+  <p>A single hash function rarely separates $p_1$ and $p_2$ enough for practical use. Two composition steps fix this:</p>
+
+  <div class="cols c11">
+    <div class="card">
+      <h3>AND composition (k functions concatenated)</h3>
+      <p>Define $g(x) = (h_1(x), \ldots, h_k(x))$ — match requires <em>all</em> $k$ to agree.</p>
+      $$p_1' = p_1^k \qquad p_2' = p_2^k$$
+      <p>Since $p_1 > p_2$, the gap $p_1^k / p_2^k = (p_1/p_2)^k$ grows exponentially with $k$. But both probabilities shrink, so we need the OR step to recover sensitivity.</p>
+    </div>
+    <div class="card">
+      <h3>OR composition (L independent tables)</h3>
+      <p>Build $L$ independent hash tables. Report a candidate if <em>any</em> table has a match.</p>
+      $$P_{\text{near}} = 1 - (1 - p_1^k)^L \to 1$$
+      $$P_{\text{far}} = 1 - (1 - p_2^k)^L \ll 1$$
+      <p>Choose $k = \log_{1/p_2}(n)$ and $L = n^\rho$. The resulting structure has the promised query time $O(n^\rho \cdot d)$.</p>
+    </div>
+  </div>
+
+  <hr>
+  <h2>The ANN Query Algorithm</h2>
+  <div class="cols c11">
+    <div>
+      <h3>Preprocessing (once)</h3>
+      <ol>
+        <li>Draw $L$ independent composite hash functions $g_1, \ldots, g_L$, each $g_i(x) = (h_{i,1}(x), \ldots, h_{i,k}(x))$</li>
+        <li>Build $L$ hash tables $T_1, \ldots, T_L$</li>
+        <li>Store each point $p$ in bucket $g_i(p)$ of table $T_i$ for all $i$</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Query for point $q$</h3>
+      <ol>
+        <li>For each table $T_i$, compute $g_i(q)$ and retrieve bucket contents</li>
+        <li>Union all retrieved candidates across $L$ tables</li>
+        <li>Compute exact distances to each candidate</li>
+        <li>Return closest candidate found</li>
+      </ol>
+    </div>
+  </div>
+  <div class="success">The true nearest neighbor $p^*$ collides with $q$ in at least one table with probability $\geq 1 - (1-p_1^k)^L$, which approaches 1 by construction. False positives appear rarely (probability $p_2^k$ per table), so the candidate set stays small.</div>
+</div>
+
+<!-- ── S2: Hash Families ──────────────────────────────────── -->
+<div id="s2" class="section">
+  <h1>🔑 Hash Families</h1>
+  <hr>
+  <p>The choice of hash family determines which similarity metric LSH approximates. Each family provides a concrete collision probability formula.</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('hf','minhash')">MinHash (Jaccard)</button>
+    <button class="tab-btn" onclick="tab('hf','simhash')">SimHash (Cosine)</button>
+    <button class="tab-btn" onclick="tab('hf','pstable')">p-Stable (Euclidean)</button>
+    <button class="tab-btn" onclick="tab('hf','jl')">JL Connection</button>
+  </div>
+
+  <!-- MinHash -->
+  <div id="hf-minhash" class="tab-pane active">
+    <div class="cols c21">
+      <div>
+        <h2>MinHash — Jaccard Similarity</h2>
+        <p><strong>Inventor:</strong> Andrei Broder (AltaVista, 1997) for near-duplicate web page detection.</p>
+        <p><strong>Metric:</strong> Jaccard similarity over sets: $J(A,B) = \dfrac{|A \cap B|}{|A \cup B|}$</p>
+
+        <p><strong>Hash function:</strong> For a random permutation $\pi$ of the universe $\mathcal{U}$:</p>
+        $$h_\pi(S) = \min_{x \in S}\, \pi(x)$$
+
+        <div class="info">
+          <strong>Core theorem:</strong>
+          $$\Pr_\pi[h_\pi(A) = h_\pi(B)] = J(A, B)$$
+          <p style="margin:.4rem 0 0">The proof is elegant: $h_\pi(A) = h_\pi(B)$ if and only if the element with the smallest $\pi$-value lies in $A \cap B$, not just $A \setminus B$ or $B \setminus A$. Among all elements in $A \cup B$, the fraction that lie in $A \cap B$ is exactly $J(A,B)$.</p>
+        </div>
+
+        <p>MinHash is a <strong>perfect</strong> unbiased estimator of Jaccard similarity — no approximation error in the single-hash case, only variance. Using $k$ independent hash functions reduces variance to $O(1/\sqrt{k})$.</p>
+
+        <details>
+          <summary>Implementation note: avoiding actual permutations</summary>
+          <div class="det-body">
+            <p>Permuting a universe of size $|\mathcal{U}|$ is expensive. In practice, use a universal hash function family:</p>
+            <pre>h_{a,b}(x) = ((a·x + b) mod p) mod n</pre>
+            <p>where $a, b$ are random integers, $p$ is a large prime. This simulates a random permutation with high probability. The resulting MinHash values are then the minimum over all elements $x \in S$.</p>
+          </div>
+        </details>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>Characteristic Matrix Picture</h3>
+          <p>Represent documents as columns in a 0/1 matrix where rows = shingles (elements). Jaccard = count of <span style="background:#c6f0ec;padding:.1rem .3rem;border-radius:3px">(1,1) rows</span> divided by count of <span style="background:#c6f0ec;padding:.1rem .3rem;border-radius:3px">(1,1)</span> + <span style="background:#fff0ed;padding:.1rem .3rem;border-radius:3px">(1,0)</span> + <span style="background:#e8f0ff;padding:.1rem .3rem;border-radius:3px">(0,1)</span> rows.</p>
+          <table style="width:auto;margin:.5rem auto">
+            <tr><th>Row type</th><th>Count (example)</th><th>Contributes to</th></tr>
+            <tr><td><span style="background:#c6f0ec;padding:.1rem .4rem;border-radius:3px">(1,1)</span></td><td>4</td><td>Intersection ∩ Union</td></tr>
+            <tr><td><span style="background:#fff0ed;padding:.1rem .4rem;border-radius:3px">(1,0)</span></td><td>2</td><td>Union only</td></tr>
+            <tr><td><span style="background:#e8f0ff;padding:.1rem .4rem;border-radius:3px">(0,1)</span></td><td>2</td><td>Union only</td></tr>
+            <tr><td>(0,0)</td><td>2</td><td>Neither</td></tr>
+          </table>
+          <p>Jaccard = $4 / (4+2+2) = 0.50$</p>
+          <p>A random permutation is equally likely to surface any element in the union first. The probability it surfaces one in the intersection = Jaccard. That's the whole proof.</p>
+        </div>
+
+        <div class="success">
+          <strong>Still dominant in 2025</strong> for sparse Jaccard similarity: document deduplication, recommendation systems with sparse interaction matrices, genomics sketching (Mash, sourmash). No other method matches MinHash on sparse set similarity.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SimHash -->
+  <div id="hf-simhash" class="tab-pane">
+    <div class="cols c21">
+      <div>
+        <h2>SimHash / Hyperplane LSH — Cosine Similarity</h2>
+        <p><strong>Inventor:</strong> Moses Charikar (2002, STOC).</p>
+        <p><strong>Metric:</strong> Cosine distance: $d_{\cos}(u, v) = \theta(u,v) / \pi$ where $\theta$ is the angle.</p>
+
+        <p><strong>Hash function:</strong> Choose a random unit vector $r$ from a spherically symmetric distribution:</p>
+        $$h_r(u) = \text{sign}(r \cdot u) \in \{+1, -1\}$$
+
+        <div class="info">
+          <strong>Core theorem:</strong>
+          $$\Pr_r[h_r(u) = h_r(v)] = 1 - \frac{\theta(u,v)}{\pi}$$
+          <p style="margin:.4rem 0 0"><strong>Geometric intuition:</strong> A random hyperplane with normal $r$ separates $u$ and $v$ if and only if it passes between them. The fraction of all orientations that split them equals $\theta/\pi$ — the angle they span as a fraction of the semicircle.</p>
+        </div>
+
+        <p><strong>$k$-bit SimHash signature:</strong> Draw $k$ independent random vectors $r_1, \ldots, r_k$. Compute $(\text{sign}(r_1 \cdot u), \ldots, \text{sign}(r_k \cdot u)) \in \{0,1\}^k$. The expected Hamming distance between signatures of $u$ and $v$ is proportional to $\theta(u,v)/\pi$.</p>
+
+        <p>Google's web crawler uses SimHash to detect near-duplicate web pages. With a 64-bit signature, pairs differing in $\leq 3$ bits are flagged as near-duplicates — an $O(1)$ check at crawl scale.</p>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>Why sign($r \cdot u$)?</h3>
+          <p>Imagine the unit sphere in $\mathbb{R}^d$. Project $u$ and $v$ onto the sphere (normalize). A random hyperplane through the origin divides the sphere into two hemispheres. The probability that $u$ and $v$ end up in <em>different</em> hemispheres equals the fraction of great circles passing between them — which equals $\theta(u,v)/\pi$.</p>
+          <p>This is exact for any dimension $d$ — no approximation from the hash function itself, only statistical variance from using finite $k$.</p>
+        </div>
+
+        <table>
+          <tr><th>Angle $\theta$</th><th>Cosine similarity</th><th>$\Pr[\text{collision}]$</th></tr>
+          <tr><td>$0°$</td><td>1.00</td><td>1.000</td></tr>
+          <tr><td>$30°$</td><td>0.87</td><td>0.833</td></tr>
+          <tr><td>$60°$</td><td>0.50</td><td>0.667</td></tr>
+          <tr><td>$90°$</td><td>0.00</td><td>0.500</td></tr>
+          <tr><td>$120°$</td><td>−0.50</td><td>0.333</td></tr>
+          <tr><td>$180°$</td><td>−1.00</td><td>0.000</td></tr>
+        </table>
+        <p class="caption">SimHash collision probability by angle. Note: even orthogonal vectors ($\theta=90°$) collide 50% of the time — use multiple hash functions and banding to discriminate.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- p-Stable -->
+  <div id="hf-pstable" class="tab-pane">
+    <div class="cols c21">
+      <div>
+        <h2>p-Stable Distribution LSH — Euclidean / $L_p$ Distance</h2>
+        <p><strong>Inventors:</strong> Datar, Immorlica, Indyk, Mirrokni (2004, SCG).</p>
+        <p><strong>Metric:</strong> Euclidean ($L_2$) distance, or more generally $L_p$ norms.</p>
+
+        <p><strong>Hash function:</strong> Draw $a \sim \mathcal{N}(0, I_d)$ (i.i.d. Gaussian entries) and $b \sim \text{Uniform}[0, W]$:</p>
+        $$h_{a,b}(v) = \left\lfloor \frac{a \cdot v + b}{W} \right\rfloor$$
+
+        <p><strong>Intuition:</strong> Project $v$ onto a random line (direction $a$), then discretize into bins of width $W$. Two nearby points project to nearby values on the line and are likely to land in the same bin. The parameter $W$ controls the bucket width.</p>
+
+        <div class="info">
+          <strong>Collision probability:</strong> For two points at Euclidean distance $\|u - v\| = c$:
+          $$\Pr[h(u) = h(v)] = \int_0^W \frac{1}{c} f_2\!\left(\frac{t}{c}\right)\!\left(1 - \frac{t}{W}\right) dt$$
+          where $f_2$ is the density of the $|$standard normal$|$ (2-stable distribution). This is a decreasing function of $c/W$ — larger distances → lower collision probability.
+        </div>
+
+        <p>The achieved $\rho$ for $L_2$ with this scheme is $\rho \approx 1/c$ (where $c$ is the approximation factor). Andoni &amp; Indyk (2006) improved this to the near-optimal $\rho = 1/c^2$ using a more sophisticated hash family based on the 24-dimensional Leech lattice.</p>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>Why Gaussian projections?</h3>
+          <p>A <strong>$p$-stable distribution</strong> $\mathcal{D}$ has the property: if $X_1, \ldots, X_d \sim \mathcal{D}$ i.i.d. and $c_1, \ldots, c_d$ are real scalars, then $\sum_i c_i X_i \sim \|c\|_p \cdot X$ for $X \sim \mathcal{D}$.</p>
+          <p>For $p=2$ (Euclidean), the 2-stable distribution is the Gaussian. This means $a \cdot (u - v) \sim \|u-v\|_2 \cdot \mathcal{N}(0,1)$ when $a \sim \mathcal{N}(0, I)$. The projected difference is thus proportional to the $L_2$ distance — exactly what we want.</p>
+          <p>For $p=1$ (Manhattan), use Cauchy-distributed $a_i$ (1-stable distribution).</p>
+        </div>
+
+        <table>
+          <tr><th>Distance</th><th>$p$-stable dist</th><th>$\rho$ (Datar 2004)</th></tr>
+          <tr><td>$L_1$ (Manhattan)</td><td>Cauchy</td><td>$1/c$</td></tr>
+          <tr><td>$L_2$ (Euclidean)</td><td>Gaussian</td><td>$1/c$</td></tr>
+          <tr><td>$L_2$ (near-optimal)</td><td>Leech lattice</td><td>$1/c^2$ (2006)</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- JL -->
+  <div id="hf-jl" class="tab-pane">
+    <div class="cols c21">
+      <div>
+        <h2>The Johnson–Lindenstrauss Connection</h2>
+        <p><strong>Lemma (Johnson &amp; Lindenstrauss, 1984):</strong> For any $0 < \varepsilon < 1$ and any $N$ points in $\mathbb{R}^d$, there exists a linear map $f: \mathbb{R}^d \to \mathbb{R}^k$ with $k = O\!\left(\dfrac{\log N}{\varepsilon^2}\right)$ such that for all pairs $u, v$:</p>
+
+        $$(1-\varepsilon)\|u-v\|^2 \leq \|f(u)-f(v)\|^2 \leq (1+\varepsilon)\|u-v\|^2$$
+
+        <p>The map $f$ can be a <strong>random orthogonal projection</strong> (or random Gaussian matrix scaled by $1/\sqrt{k}$). This guarantees $O(\log N)$ dimensions suffice to approximately preserve all pairwise distances — <em>independent of the original dimension $d$</em>.</p>
+
+        <div class="info">
+          <strong>Connection to LSH:</strong> JL embedding provides a preprocessing step. After projecting to $k = O(\log N / \varepsilon^2)$ dimensions, standard p-stable LSH is applied. The Fast JL Transform reduces hash computation from $O(d)$ to $O(d \log d)$. Effectively: JL reduces the dimensionality problem, then LSH handles the search problem.
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>Why does random projection preserve distances?</h3>
+          <p>A random Gaussian matrix $A \in \mathbb{R}^{k \times d}$ (entries i.i.d. $\mathcal{N}(0, 1/k)$) has the property that each row is a random unit-ish vector. The projection $Av$ replaces each coordinate of $v$ with a random linear combination of all coordinates.</p>
+          <p>For any fixed vector $u - v$, the random variable $\|A(u-v)\|^2$ is a sum of $k$ i.i.d. random variables each with mean $\|u-v\|^2/k$. By concentration of measure (sub-Gaussian tail bounds), the sum concentrates sharply around its mean $\|u-v\|^2$ with deviation $O(\varepsilon \|u-v\|^2)$ when $k = \Omega(\log N / \varepsilon^2)$.</p>
+        </div>
+
+        <table>
+          <tr><th>$N$ points</th><th>$\varepsilon = 0.1$</th><th>$\varepsilon = 0.3$</th></tr>
+          <tr><td>1,000</td><td>$k \approx 690$</td><td>$k \approx 77$</td></tr>
+          <tr><td>10,000</td><td>$k \approx 921$</td><td>$k \approx 102$</td></tr>
+          <tr><td>100,000</td><td>$k \approx 1,151$</td><td>$k \approx 128$</td></tr>
+          <tr><td>1,000,000</td><td>$k \approx 1,382$</td><td>$k \approx 154$</td></tr>
+        </table>
+        <p class="caption">Required projection dimension $k \approx (4/\varepsilon^2) \ln(2N)$. Grows only logarithmically with $N$ — a huge reduction from typical $d \sim 768$ to $d' \sim 100$.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── S3: Visualizations ─────────────────────────────────── -->
+<div id="s3" class="section">
+  <h1>🔬 Interactive Visualizations</h1>
+  <hr>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('viz','hp')">1. Hyperplane Hashing</button>
+    <button class="tab-btn" onclick="tab('viz','mh')">2. MinHash Matrix</button>
+    <button class="tab-btn" onclick="tab('viz','sc')">3. S-Curve / Banding</button>
+    <button class="tab-btn" onclick="tab('viz','pl')">4. LSH Pipeline</button>
+  </div>
+
+  <!-- Viz 1: Hyperplane Hashing -->
+  <div id="viz-hp" class="tab-pane active">
+    <h2>Hyperplane Hashing — How Random Lines Create Buckets</h2>
+    <p>Each random hyperplane (line in 2D) through the origin assigns a binary bit to every point: $+1$ if on the positive side, $0$ if on the negative side. With $k$ hyperplanes, each point gets a $k$-bit code. Points sharing the same code are in the same bucket — the candidates returned for a query.</p>
+
+    <div class="ctrl">
+      <label>Hyperplanes $k$:</label>
+      <input type="range" id="v1-k" min="1" max="6" value="2" oninput="updateViz1()">
+      <span class="val" id="v1-k-val">2</span>
+      <span style="font-size:.82rem;color:#888;margin-left:.5rem">— more lines = finer grid = fewer false positives</span>
+    </div>
+
+    <div class="cols c12">
+      <div>
+        <div id="v1-chart" style="height:380px"></div>
+        <p class="caption">Points are colored by their bucket (hash code). Dashed lines are the random hyperplanes. Click a point to highlight its bucket-mates.</p>
+      </div>
+      <div>
+        <div class="card">
+          <h3>Reading the visualization</h3>
+          <ul>
+            <li><strong>Same color</strong> = same hash bucket = candidates for each other</li>
+            <li><strong>Dashed lines</strong> = random hyperplanes through the origin</li>
+            <li>Each hyperplane adds one bit to every point's code</li>
+            <li>With $k$ hyperplanes, up to $2^k$ distinct buckets are possible</li>
+          </ul>
+          <hr style="margin:.8rem 0">
+          <p id="v1-info" style="font-size:.84rem;color:#555"></p>
+        </div>
+
+        <div class="card" style="margin-top:1rem">
+          <h3>The tradeoff</h3>
+          <table>
+            <tr><th>$k$</th><th>Max buckets</th><th>Typical false positives</th></tr>
+            <tr><td>1</td><td>2</td><td>Very high</td></tr>
+            <tr><td>2</td><td>4</td><td>High</td></tr>
+            <tr><td>3</td><td>8</td><td>Moderate</td></tr>
+            <tr><td>4</td><td>16</td><td>Low</td></tr>
+            <tr><td>5</td><td>32</td><td>Very low</td></tr>
+            <tr><td>6</td><td>64</td><td>Risk of false negatives</td></tr>
+          </table>
+          <p style="font-size:.82rem;color:#666;margin-top:.5rem">Too many hyperplanes → true neighbors may end up in different buckets (false negatives). The banding technique (S-curve viz) fixes this.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Viz 2: MinHash Matrix -->
+  <div id="viz-mh" class="tab-pane">
+    <h2>MinHash — Why $\Pr[h(A) = h(B)] = J(A,B)$</h2>
+    <p>Below is the characteristic matrix for two document sets A and B. Each row is a shingle (element). Rows are color-coded by type: <span style="background:#c6f0ec;padding:.1rem .4rem;border-radius:3px;font-size:.83rem">(1,1) both</span> contributes to the intersection; <span style="background:#fff0ed;padding:.1rem .4rem;border-radius:3px;font-size:.83rem">(1,0)</span> and <span style="background:#e8f0ff;padding:.1rem .4rem;border-radius:3px;font-size:.83rem">(0,1)</span> contribute only to the union; (0,0) rows are irrelevant.</p>
+
+    <div class="cols c11">
+      <div>
+        <div class="info" style="margin-bottom:.8rem">
+          <strong>The MinHash claim:</strong> Pick a random permutation of all rows. The first row where either A <em>or</em> B has a 1 — what's the probability it's a (1,1) row? Exactly $J(A,B) = \frac{|\text{(1,1) rows}|}{|\text{non-(0,0) rows}|}$.
+        </div>
+
+        <div style="overflow-x:auto">
+          <table class="mh-table" id="mh-matrix">
+            <thead>
+              <tr><th>Row</th><th>Set A</th><th>Set B</th><th>Type</th></tr>
+            </thead>
+            <tbody id="v2-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>Live experiment</h3>
+          <p style="font-size:.84rem">Click <strong>Shuffle &amp; Sample</strong> to randomly permute the rows and find the first non-(0,0) row. Track whether it's a (1,1) match. Over many trials, the fraction of matches converges to the Jaccard similarity.</p>
+
+          <button class="btn" onclick="shuffleAndSample()" style="margin-bottom:.8rem">Shuffle &amp; Sample</button>
+          <button class="btn btn-sec" onclick="runV2Trials(100)">Run 100 trials</button>
+
+          <div style="margin-top:1rem">
+            <div class="metric">
+              <div class="metric-label">Trials run</div>
+              <div class="metric-value" id="v2-trials">0</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">Fraction matched</div>
+              <div class="metric-value" id="v2-frac">—</div>
+            </div>
+            <div class="metric">
+              <div class="metric-label">True Jaccard</div>
+              <div class="metric-value" id="v2-jaccard">0.500</div>
+            </div>
+          </div>
+
+          <div id="v2-result" style="margin-top:.8rem;font-size:.87rem;min-height:1.5rem"></div>
+        </div>
+
+        <div class="card" style="margin-top:1rem">
+          <h3>Matrix statistics</h3>
+          <table style="width:auto">
+            <tr><td><span style="background:#c6f0ec;padding:.1rem .5rem;border-radius:3px">(1,1)</span></td><td>&nbsp;4 rows</td><td>&nbsp;Intersection</td></tr>
+            <tr><td><span style="background:#fff0ed;padding:.1rem .5rem;border-radius:3px">(1,0)</span></td><td>&nbsp;2 rows</td><td>&nbsp;A only</td></tr>
+            <tr><td><span style="background:#e8f0ff;padding:.1rem .5rem;border-radius:3px">(0,1)</span></td><td>&nbsp;2 rows</td><td>&nbsp;B only</td></tr>
+            <tr><td>(0,0)</td><td>&nbsp;2 rows</td><td>&nbsp;Neither</td></tr>
+            <tr><td><strong>Jaccard</strong></td><td colspan="2">&nbsp;$4/(4+2+2) = \mathbf{0.500}$</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Viz 3: S-Curve -->
+  <div id="viz-sc" class="tab-pane">
+    <h2>The S-Curve: Banding Amplification</h2>
+    <p>A single hash function gives a <em>linear</em> relationship between similarity and collision probability — not sharp enough to distinguish near from far pairs. The <strong>banding trick</strong> transforms this into an S-shaped curve with a tunable threshold.</p>
+
+    <div class="info">
+      <strong>Formula:</strong> Divide the $n$-element signature into $b$ bands of $r$ rows each. Two items become candidates if they match exactly in <em>at least one</em> band:
+      $$P(\text{candidate} \mid \text{similarity} = s) = 1 - (1 - s^r)^b$$
+      Threshold (inflection point): $t \approx (1/b)^{1/r}$. The curve steepens as $b \cdot r$ (total hash functions) increases.
+    </div>
+
+    <div class="cols c12">
+      <div>
+        <div class="ctrl">
+          <label>Bands $b$:</label>
+          <input type="range" id="v3-b" min="1" max="50" value="20" oninput="updateViz3()">
+          <span class="val" id="v3-b-val">20</span>
+        </div>
+        <div class="ctrl">
+          <label>Rows per band $r$:</label>
+          <input type="range" id="v3-r" min="1" max="10" value="5" oninput="updateViz3()">
+          <span class="val" id="v3-r-val">5</span>
+        </div>
+
+        <div id="v3-chart" style="height:360px"></div>
+        <p class="caption">Orange dashed line = threshold $t$. The ideal step function (gray dotted) is what we approximate. Move sliders to watch the curve change.</p>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>Current settings</h3>
+          <div class="metric">
+            <div class="metric-label">Threshold $t \approx (1/b)^{1/r}$</div>
+            <div class="metric-value" id="v3-thresh">0.55</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Total hash fns ($b \cdot r$)</div>
+            <div class="metric-value" id="v3-total">100</div>
+          </div>
+          <hr style="margin:.8rem 0">
+          <p style="font-size:.84rem">At $s = 0.80$: <strong id="v3-p80">—</strong> chance of being a candidate</p>
+          <p style="font-size:.84rem">At $s = 0.20$: <strong id="v3-p20">—</strong> chance of being a candidate</p>
+        </div>
+
+        <div class="card" style="margin-top:1rem">
+          <h3>Tuning intuition</h3>
+          <table>
+            <tr><th>Increase</th><th>Effect</th></tr>
+            <tr><td>$b$ (more bands)</td><td>Threshold shifts left; more candidates retrieved (recall ↑, precision ↓)</td></tr>
+            <tr><td>$r$ (more rows/band)</td><td>Threshold shifts right; fewer candidates (precision ↑, recall ↓)</td></tr>
+            <tr><td>$b \cdot r$ (both)</td><td>Steeper curve; better approximation of ideal step function</td></tr>
+          </table>
+          <p style="font-size:.82rem;color:#666;margin-top:.5rem">Classic example from Stanford CS246: $b=20$, $r=5$ → threshold $\approx 0.55$. At $s=0.80$, $P \approx 99.96\%$. At $s=0.20$, $P \approx 0.63\%$.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Viz 4: Pipeline -->
+  <div id="viz-pl" class="tab-pane">
+    <h2>LSH Pipeline — End-to-End Walkthrough</h2>
+    <p>A step-by-step tour from raw documents to candidate retrieval. Use the buttons to advance through each phase.</p>
+
+    <div id="pipe-step-display" class="pipe-step"></div>
+
+    <div style="display:flex;align-items:center;gap:.5rem;margin-top:1rem">
+      <button class="btn btn-sec" id="pipe-prev" onclick="pipeStep(-1)">← Prev</button>
+      <span id="pipe-step-label" style="padding:.35rem .9rem;font-size:.84rem;color:#555;font-weight:500"></span>
+      <button class="btn" id="pipe-next" onclick="pipeStep(1)">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── S4: ML Applications ────────────────────────────────── -->
+<div id="s4" class="section">
+  <h1>🤖 ML Applications</h1>
+  <hr>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('app','ann')">ANN &amp; Vector Search</button>
+    <button class="tab-btn" onclick="tab('app','rec')">Recommendations</button>
+    <button class="tab-btn" onclick="tab('app','ref')">Reformer (LSH Attention)</button>
+    <button class="tab-btn" onclick="tab('app','when')">When to Use LSH</button>
+  </div>
+
+  <!-- ANN & Vector Search -->
+  <div id="app-ann" class="tab-pane active">
+    <div class="cols c21">
+      <div>
+        <h2>Approximate Nearest Neighbor Search</h2>
+        <p>The primary ML use of LSH: finding similar embeddings (BERT, CLIP, text-embedding-ada-002, etc.) among millions of vectors without $O(N \cdot d)$ brute-force comparison.</p>
+
+        <p><strong>FAISS IndexLSH</strong> (Meta AI): flat binary index where vectors are hashed to binary codes compared via Hamming distance. However, FAISS's own team notes that IVF and HNSW indexes consistently outperform LSH on dense embeddings in recall-speed tradeoffs.</p>
+
+        <div class="warn">⚠️ LSH has largely been displaced for <em>dense embedding search</em> by HNSW and IVF-PQ, which achieve better recall-latency curves in practice. LSH's advantage is formal theoretical guarantees — HNSW is a graph heuristic with no approximation proof.</div>
+
+        <h3>Comparison: LSH vs HNSW vs IVF-PQ</h3>
+        <table>
+          <tr><th>Index</th><th>Recall@10</th><th>Memory</th><th>Build</th><th>Query</th><th>Best for</th></tr>
+          <tr>
+            <td><strong>LSH</strong></td>
+            <td><span class="pill pill-ok">Medium</span></td>
+            <td><span class="pill pill-best">Low</span></td>
+            <td><span class="pill pill-best">Fast</span></td>
+            <td><span class="pill pill-ok">Medium</span></td>
+            <td>Sparse/Jaccard, guarantees</td>
+          </tr>
+          <tr>
+            <td><strong>HNSW</strong></td>
+            <td><span class="pill pill-best">Highest</span></td>
+            <td><span class="pill pill-bad">Very high</span></td>
+            <td><span class="pill pill-bad">Slow</span></td>
+            <td><span class="pill pill-best">Very fast</span></td>
+            <td>Dense embeddings, real-time</td>
+          </tr>
+          <tr>
+            <td><strong>IVF-PQ</strong></td>
+            <td><span class="pill pill-best">High</span></td>
+            <td><span class="pill pill-best">Low–Med</span></td>
+            <td><span class="pill pill-ok">Medium</span></td>
+            <td><span class="pill pill-best">Fast</span></td>
+            <td>Billion-scale, disk-friendly</td>
+          </tr>
+        </table>
+      </div>
+
+      <div>
+        <div id="ann-chart" style="height:320px"></div>
+        <p class="caption">Query complexity vs dataset size. LSH's sublinear $O(n^\rho)$ vs linear brute force — the theoretical advantage holds. In practice HNSW achieves even better empirical performance on dense embeddings.</p>
+
+        <div class="card" style="margin-top:1rem">
+          <h3>MagicPIG: LSH for LLM Inference (ICLR 2025)</h3>
+          <p style="font-size:.87rem">Uses SimHash to sparsify the KV-cache attention operation during LLM decoding. Key tokens are sampled only when they share a hash bucket with the query in $\geq 2$ of $L$ tables. Result: <strong>5× decoding throughput</strong> on Llama-3.1-8B with 96k context on an RTX 4090, achieving 54 ms latency — demonstrating LSH's continued relevance for attention approximation in long-context LLMs.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommendations -->
+  <div id="app-rec" class="tab-pane">
+    <div class="cols c21">
+      <div>
+        <h2>Recommendation Systems</h2>
+        <p>Recommendation is one of LSH's most established industrial applications, dating to its earliest use at AltaVista.</p>
+
+        <h3>Core pattern: Collaborative Filtering with LSH</h3>
+        <ol>
+          <li>Represent users/items as sparse vectors over the interaction space (e.g., a user's 100-item purchase history over a 10M-item catalog)</li>
+          <li>MinHash compresses each vector to a $k$-element signature preserving Jaccard similarity</li>
+          <li>LSH banding identifies candidate similar users/items without $O(N^2)$ comparisons</li>
+          <li>Collaborative filtering only operates on the candidate pool</li>
+        </ol>
+
+        <div class="info">
+          <strong>Why MinHash specifically?</strong> User-item interaction matrices are extremely sparse (a user interacts with $\ll 0.01\%$ of items). Jaccard similarity naturally handles this: $J(\text{user}_A, \text{user}_B) = \frac{|\text{shared items}|}{|\text{union of items}|}$. MinHash is perfect for this. Dense embedding methods (HNSW) are less suitable for sparse binary vectors.
+        </div>
+
+        <h3>Complexity improvement</h3>
+        <p>With $N$ users, naive user-user similarity requires $O(N^2 \cdot d)$ comparisons — infeasible at $N = 10^8$. MinHash + LSH reduces this to near-$O(N)$ candidate generation, with exact similarity computed only for the candidate pool.</p>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>Real-world pipeline</h3>
+          <ol style="font-size:.87rem">
+            <li><strong>Shingle users:</strong> represent each user as the set of items they interacted with</li>
+            <li><strong>MinHash signatures:</strong> compute $k=128$ MinHash values per user (~1KB per user for $10^8$ users = 100GB total, vs. raw interaction matrix ≫ 1TB)</li>
+            <li><strong>LSH index:</strong> build band-based hash tables for fast lookup</li>
+            <li><strong>At query time:</strong> hash the target user's signature, retrieve candidate similar users from matching buckets</li>
+            <li><strong>Re-rank:</strong> compute exact Jaccard or cosine similarity for the $\sim$50–200 candidates</li>
+            <li><strong>Recommend:</strong> aggregate items from the top-$k$ most similar users</li>
+          </ol>
+        </div>
+
+        <div class="success" style="margin-top:1rem">
+          MinHash-based LSH for collaborative filtering is still widely deployed at web scale in 2025. It handles the sparse, high-dimensional nature of user-item interaction data better than dense embedding methods.
+        </div>
+
+        <div class="card" style="margin-top:1rem">
+          <h3>Near-duplicate content filtering</h3>
+          <p style="font-size:.87rem">Recommendation systems also use MinHash to de-duplicate item catalogs — preventing the same article from appearing multiple times with slight rephrasing. Google's web crawler has used SimHash for web-scale dedup since ~2007.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reformer -->
+  <div id="app-ref" class="tab-pane">
+    <div class="cols c21">
+      <div>
+        <h2>Reformer: LSH Attention in Transformers</h2>
+        <p><strong>Paper:</strong> "Reformer: The Efficient Transformer" — Kitaev, Kaiser, Levskaya. ICLR 2020.</p>
+
+        <p><strong>Problem:</strong> Standard Transformer self-attention computes $QK^T$ for all pairs, giving $O(L^2 \cdot d)$ cost. For $L = 64{,}000$ tokens (book-length), this is intractable.</p>
+
+        <p><strong>Key insight:</strong> In dot-product attention, query $q_i$ only receives large weight from keys $k_j$ with high cosine similarity to $q_i$ — the attention distribution is sparse. Attending only within LSH buckets approximates full attention at $O(L \log L)$ cost.</p>
+
+        <div class="info2">
+          <strong>The tie trick:</strong> Standard attention has independent $W_Q \neq W_K$. Reformer <em>ties</em> $W_Q = W_K$ so queries and keys come from the same projection. This is necessary: LSH can only find similar vectors if queries and keys are in the same space.
+        </div>
+
+        <h3>Angular LSH procedure</h3>
+        <ol>
+          <li>L2-normalize each query/key vector (project onto unit sphere)</li>
+          <li>Sample random rotation matrix $R \in \mathbb{R}^{d \times b/2}$</li>
+          <li>Compute $xR$, concatenate with $-xR$ → shape $[d, b]$</li>
+          <li>$\text{bucket}(x) = \text{argmax}(\text{concat}(xR,\, -xR))$</li>
+          <li>Repeat with different $R$ for multiple hash tables</li>
+        </ol>
+      </div>
+
+      <div>
+        <div id="reformer-chart" style="height:280px"></div>
+        <p class="caption">Attention computation cost vs sequence length. LSH attention achieves the $O(L \log L)$ scaling that makes book-length sequences tractable.</p>
+
+        <div class="card" style="margin-top:1rem">
+          <h3>Additional Reformer innovations</h3>
+          <ul style="font-size:.87rem">
+            <li><strong>Reversible residual layers:</strong> eliminate need to store $N$ layer activations during backprop, reducing memory from $O(N \cdot L \cdot d)$ to $O(L \cdot d)$</li>
+            <li><strong>Chunked FFN layers:</strong> compute feed-forward in chunks to avoid large intermediate tensors</li>
+          </ul>
+          <p style="font-size:.87rem">Together, these let the Reformer process sequences up to <strong>1 million tokens</strong> on a single 16GB accelerator.</p>
+        </div>
+
+        <div class="warn" style="margin-top:1rem">
+          <strong>Reformer limitations:</strong> Tied Q/K is architecturally restrictive. Stochastic bucket assignment requires multiple hash rounds. For sequences $< 2048$ tokens, standard attention is faster. The Reformer has largely been superseded by FlashAttention (IO-aware exact attention) and sliding-window attention in production — but it introduced the powerful concept of using LSH to sparsify attention.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- When to use -->
+  <div id="app-when" class="tab-pane">
+    <h2>When to Use LSH vs Alternatives (2025)</h2>
+
+    <div class="cols c11">
+      <div>
+        <div class="success">
+          <strong>Use LSH when:</strong>
+          <ul style="margin-top:.4rem">
+            <li><strong>Sparse vectors + Jaccard similarity</strong> — MinHash is unbeaten for document dedup, sparse recommendation CF, genomics sketching</li>
+            <li><strong>Formal approximation guarantees required</strong> — HNSW is a heuristic; LSH has proven $(r_1, r_2, p_1, p_2)$-sensitivity</li>
+            <li><strong>Very high-dimensional sparse data</strong> ($d > 10{,}000$, sparsity $> 99\%$) — IVF/HNSW degrade here</li>
+            <li><strong>Memory-constrained environments</strong> — no graph structure overhead vs HNSW</li>
+            <li><strong>LLM attention sparsification</strong> — MagicPIG (ICLR 2025) shows 5× gains on long-context inference</li>
+            <li><strong>Near-duplicate detection at crawl scale</strong> — SimHash remains Google's method of choice</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <div class="info2">
+          <strong>Use HNSW when:</strong>
+          <ul style="margin-top:.4rem">
+            <li>Dense embeddings (BERT, CLIP, OpenAI embeddings)</li>
+            <li>High recall required (&gt;95%)</li>
+            <li>Real-time insertions/deletions needed</li>
+            <li>Moderate scale (tens to hundreds of millions of vectors)</li>
+            <li>Sufficient RAM available</li>
+          </ul>
+        </div>
+
+        <div class="info" style="margin-top:1rem">
+          <strong>Use IVF-PQ when:</strong>
+          <ul style="margin-top:.4rem">
+            <li>Billion-scale datasets</li>
+            <li>Disk-resident or memory-constrained at scale</li>
+            <li>Filtered similarity search</li>
+            <li>Batch query workloads</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <h2>Decision Flowchart</h2>
+    <table>
+      <tr><th>Condition</th><th>Recommended index</th><th>Reason</th></tr>
+      <tr><td>Sparse vectors, Jaccard metric</td><td><strong>MinHash + LSH</strong></td><td>Exact Jaccard preservation, no competitor</td></tr>
+      <tr><td>Dense embeddings, $N &lt; 10^8$</td><td><strong>HNSW</strong></td><td>Best recall-latency curve in practice</td></tr>
+      <tr><td>Dense embeddings, $N &gt; 10^8$</td><td><strong>IVF-PQ</strong> or IVF-HNSW hybrid</td><td>Memory efficiency at billion scale</td></tr>
+      <tr><td>Near-duplicate detection (text/web)</td><td><strong>SimHash</strong></td><td>$O(1)$ lookup for 64-bit fingerprints</td></tr>
+      <tr><td>Long-context LLM inference KV-cache</td><td><strong>SimHash sampling</strong></td><td>MagicPIG: 5× throughput gains</td></tr>
+      <tr><td>Theoretical guarantees needed</td><td><strong>LSH</strong></td><td>Only ANN method with formal proofs</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ── S5: Sources ─────────────────────────────────────────── -->
+<div id="s5" class="section">
+  <h1>📚 Sources &amp; Further Reading</h1>
+  <hr>
+
+  <h2>Foundational Papers</h2>
+  <table>
+    <tr><th>Year</th><th>Paper</th><th>Contribution</th></tr>
+    <tr><td>1984</td><td>Johnson &amp; Lindenstrauss, "Extensions of Lipschitz mappings into a Hilbert space"</td><td>Distance-preserving random projections</td></tr>
+    <tr><td>1997</td><td>Broder, "On the Resemblance and Containment of Documents"</td><td>MinHash for Jaccard similarity</td></tr>
+    <tr><td>1998</td><td><a href="https://dl.acm.org/doi/10.1145/276698.276876" target="_blank">Indyk &amp; Motwani, STOC'98</a></td><td>LSH framework + ANN with sublinear query time</td></tr>
+    <tr><td>2002</td><td><a href="https://www.cs.princeton.edu/courses/archive/spr04/cos598B/bib/CharikarEstim.pdf" target="_blank">Charikar, STOC'02</a></td><td>SimHash / hyperplane LSH for cosine similarity</td></tr>
+    <tr><td>2004</td><td>Datar, Immorlica, Indyk, Mirrokni, SCG'04</td><td>p-stable distribution LSH for $L_p$ norms</td></tr>
+    <tr><td>2006</td><td><a href="https://people.csail.mit.edu/indyk/p117-andoni.pdf" target="_blank">Andoni &amp; Indyk, FOCS'06</a></td><td>Near-optimal $\rho = 1/c^2$ via Leech lattice</td></tr>
+    <tr><td>2020</td><td><a href="https://arxiv.org/abs/2001.04451" target="_blank">Reformer: The Efficient Transformer, ICLR'20</a></td><td>LSH attention: $O(L^2) \to O(L \log L)$</td></tr>
+    <tr><td>2025</td><td><a href="https://arxiv.org/abs/2410.16179" target="_blank">MagicPIG, ICLR'25</a></td><td>SimHash for LLM KV-cache sparsification</td></tr>
+  </table>
+
+  <h2 style="margin-top:1.4rem">Interactive Learning Resources</h2>
+  <table>
+    <tr><th>Resource</th><th>Best for</th></tr>
+    <tr><td><a href="https://www.pinecone.io/learn/series/faiss/locality-sensitive-hashing/" target="_blank">Pinecone: LSH Illustrated Guide</a></td><td>Best overall visual explainer; S-curve; banding diagram</td></tr>
+    <tr><td><a href="https://tylerneylon.com/a/lsh1/" target="_blank">Tyler Neylon: Introduction to LSH</a></td><td>Best collision-region intuition; animated figures; Python code</td></tr>
+    <tr><td><a href="https://randorithms.com/2019/09/19/Visual-LSH.html" target="_blank">Randorithms: 4 Pictures that Explain LSH</a></td><td>Best quick intro; 4-step visual walkthrough</td></tr>
+    <tr><td><a href="https://robertheaton.com/2014/05/02/jaccard-similarity-and-minhash-for-winners/" target="_blank">Robert Heaton: MinHash for Winners</a></td><td>Best Jaccard/MinHash intuition; Twitter follower analogy</td></tr>
+    <tr><td><a href="https://web.stanford.edu/class/cs246/slides/03-lsh.pdf" target="_blank">Stanford CS246 Slides</a></td><td>Gold-standard academic treatment; characteristic matrix diagrams</td></tr>
+    <tr><td><a href="http://infolab.stanford.edu/~ullman/mmds/book.pdf" target="_blank">Mining Massive Datasets (Ullman, Leskovec)</a></td><td>Definitive textbook reference; Chapter 3</td></tr>
+    <tr><td><a href="https://www.mit.edu/~andoni/LSH/" target="_blank">MIT LSH Home Page (Andoni)</a></td><td>Research page; implementations; links to all major papers</td></tr>
+  </table>
+
+  <h2 style="margin-top:1.4rem">Related Topics on This Site</h2>
+  <table>
+    <tr><th>Topic</th><th>Connection to LSH</th></tr>
+    <tr><td><a href="../20260328_johnson_lindenstrauss_lemma/index.html">Johnson–Lindenstrauss Lemma</a></td><td>JL random projections underpin p-stable LSH and dimensionality reduction preprocessing</td></tr>
+    <tr><td><a href="../20260327_random_fourier_features/index.html">Random Fourier Features</a></td><td>RFF also uses random projections to approximate kernel functions — a sibling idea to LSH</td></tr>
+  </table>
+</div>
+
+</main>
+
+<script>
+// ── PRNG (Mulberry32) ─────────────────────────────────────────────────────
+function mkRng(seed) {
+  let s = seed | 0;
+  function rand() {
+    s += 0x6D2B79F5;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  function randn() {
+    const u = rand() || 1e-10, v = rand();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function arr(n, fn) { return Array.from({length: n}, fn); }
+  return { rand, randn, arr };
+}
+
+// ── Plotly shared config ──────────────────────────────────────────────────
+const PLT = {
+  lsh:  '#2a9d8f',
+  lsh2: '#e76f51',
+  lsh3: '#457b9d',
+  layout(extra) {
+    return Object.assign({
+      margin: {l:50, r:20, t:40, b:50},
+      paper_bgcolor: 'white', plot_bgcolor: '#fafafa',
+      font: {family: '-apple-system, sans-serif', size: 12},
+    }, extra);
+  },
+  config: {responsive: true, displayModeBar: false},
+};
+
+// ── Navigation ────────────────────────────────────────────────────────────
+const initialized = new Set();
+
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  if (!initialized.has(id)) {
+    initialized.add(id);
+    initSection(id);
+  }
+  if (window.MathJax) MathJax.typesetPromise([document.getElementById(id)]);
+  if (window.innerWidth < 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  }
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+
+function tab(group, id) {
+  const bar = event.currentTarget.closest('.tab-bar');
+  bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(p => p.classList.remove('active'));
+  document.getElementById(`${group}-${id}`).classList.add('active');
+}
+
+function initSection(id) {
+  const fns = {
+    s1: initMath,
+    s3: initViz,
+    s4: initApps,
+  };
+  if (fns[id]) fns[id]();
+}
+
+// ── S1: Math — rho chart ──────────────────────────────────────────────────
+function initMath() {
+  const c = Array.from({length: 200}, (_, i) => 1.05 + i * (3 - 1.05) / 199);
+  const rho1 = c.map(ci => 1 / ci);
+  const rho2 = c.map(ci => 1 / (ci * ci));
+
+  Plotly.newPlot('rho-chart', [
+    {x: c, y: rho1, mode: 'lines', name: 'Datar et al. (2004): ρ = 1/c',
+     line: {color: PLT.lsh3, width: 2.5}},
+    {x: c, y: rho2, mode: 'lines', name: 'Andoni & Indyk (2006): ρ = 1/c²',
+     line: {color: PLT.lsh, width: 2.5}},
+    {x: [1.05, 3], y: [1, 1], mode: 'lines', name: 'Brute force (ρ=1)',
+     line: {color: PLT.lsh2, width: 1.5, dash: 'dot'}, showlegend: true},
+  ], PLT.layout({
+    xaxis: {title: 'Approximation factor c', gridcolor: '#eee', range: [1, 3]},
+    yaxis: {title: 'ρ (query exponent)', gridcolor: '#eee', range: [0, 1.05]},
+    title: {text: 'Query time exponent ρ — smaller is faster', font: {size: 12}},
+    legend: {x: 0.35, y: 0.98},
+    height: 300,
+    shapes: [{type:'line', x0:2, x1:2, y0:0, y1:1, xref:'x', yref:'paper',
+              line:{color:'#bbb', dash:'dash', width:1}}],
+    annotations: [{x:2.05, y:0.92, xref:'x', yref:'paper', text:'c=2',
+                   showarrow:false, font:{size:10, color:'#888'}}],
+  }), PLT.config);
+}
+
+// ── S3: Viz 1 — Hyperplane hashing ───────────────────────────────────────
+const PALETTE = ['#2a9d8f','#e76f51','#457b9d','#e9c46a','#264653','#f4a261',
+                 '#a8dadc','#e63946','#6a4c93','#80b918','#fb8500','#023e8a'];
+
+let v1Pts = null, v1Angles = null;
+
+function initViz1() {
+  const rng = mkRng(42);
+  v1Pts = Array.from({length: 28}, () => [rng.rand() * 6 - 3, rng.rand() * 6 - 3]);
+  const rng2 = mkRng(99);
+  v1Angles = Array.from({length: 6}, () => rng2.rand() * Math.PI);
+  updateViz1();
+
+  document.getElementById('v1-chart').on('plotly_click', function(data) {
+    if (!data.points.length) return;
+    const idx = data.points[0].pointIndex;
+    const k = +document.getElementById('v1-k').value;
+    const codes = v1Pts.map(([x, y]) =>
+      v1Angles.slice(0, k).map(t => x * Math.cos(t) + y * Math.sin(t) > 0 ? 1 : 0).join('')
+    );
+    const clickedCode = codes[idx];
+    const sizes = codes.map((c, i) => c === clickedCode ? 14 : 7);
+    const opacity = codes.map((c) => c === clickedCode ? 1.0 : 0.35);
+    Plotly.restyle('v1-chart', {'marker.size': [sizes], 'marker.opacity': [opacity]}, [0]);
+    document.getElementById('v1-info').textContent =
+      `Code "${clickedCode}" → ${codes.filter(c => c === clickedCode).length} points in this bucket`;
+  });
+}
+
+function updateViz1() {
+  if (!v1Pts) return;
+  const k = +document.getElementById('v1-k').value;
+  document.getElementById('v1-k-val').textContent = k;
+
+  const codes = v1Pts.map(([x, y]) =>
+    v1Angles.slice(0, k).map(t => x * Math.cos(t) + y * Math.sin(t) > 0 ? 1 : 0).join('')
+  );
+
+  const codeSet = [...new Set(codes)].sort();
+  const colorMap = {};
+  codeSet.forEach((c, i) => colorMap[c] = PALETTE[i % PALETTE.length]);
+  const colors = codes.map(c => colorMap[c]);
+
+  const shapes = v1Angles.slice(0, k).map((t, i) => {
+    const dx = -Math.sin(t), dy = Math.cos(t);
+    return {
+      type: 'line',
+      x0: -dx * 5, y0: -dy * 5, x1: dx * 5, y1: dy * 5,
+      line: {color: PALETTE[i % PALETTE.length], width: 1.8, dash: 'dash'},
+    };
+  });
+
+  const bucketCount = codeSet.length;
+  document.getElementById('v1-info').textContent =
+    `${k} hyperplane${k > 1 ? 's' : ''} → ${bucketCount} active bucket${bucketCount > 1 ? 's' : ''} (of ${Math.pow(2, k)} possible). Click a point to highlight its bucket.`;
+
+  Plotly.react('v1-chart', [{
+    x: v1Pts.map(p => p[0]),
+    y: v1Pts.map(p => p[1]),
+    mode: 'markers',
+    marker: {color: colors, size: 9, line: {color: '#fff', width: 1.5}},
+    text: codes.map((c, i) => `Point ${i}: code "${c}"`),
+    hoverinfo: 'text',
+    showlegend: false,
+  }], PLT.layout({
+    xaxis: {range: [-3.5, 3.5], title: '', gridcolor: '#eee', zeroline: true, zerolinecolor: '#ccc'},
+    yaxis: {range: [-3.5, 3.5], scaleanchor: 'x', title: '', gridcolor: '#eee', zeroline: true, zerolinecolor: '#ccc'},
+    shapes,
+    title: {text: `k=${k} hyperplane${k>1?'s':''} → up to ${Math.pow(2,k)} buckets`, font: {size: 12}},
+    height: 360,
+  }), PLT.config);
+}
+
+// ── S3: Viz 2 — MinHash matrix ────────────────────────────────────────────
+const MH_A = [1,1,0,1,0,1,0,1,0,1];
+const MH_B = [1,0,1,1,0,0,1,1,0,1];
+let v2Trials = 0, v2Matches = 0;
+
+function initViz2() {
+  v2Trials = 0; v2Matches = 0;
+  renderMHMatrix(Array.from({length: 10}, (_, i) => i), null, null);
+  updateV2Stats();
+}
+
+function rowType(a, b) {
+  if (a === 1 && b === 1) return 'both';
+  if (a === 1) return 'a';
+  if (b === 1) return 'b';
+  return 'none';
+}
+
+function renderMHMatrix(perm, firstIdx, isMatch) {
+  const tbody = document.getElementById('v2-tbody');
+  tbody.innerHTML = '';
+  perm.forEach((origRow, dispRow) => {
+    const a = MH_A[origRow], b = MH_B[origRow];
+    const t = rowType(a, b);
+    const isHL = firstIdx === dispRow;
+    const tr = document.createElement('tr');
+    if (isHL) tr.classList.add('mh-highlight');
+    if (t === 'both') tr.classList.add('mh-both');
+    else if (t === 'a') tr.classList.add('mh-a');
+    else if (t === 'b') tr.classList.add('mh-b');
+    else tr.classList.add('mh-none');
+    tr.innerHTML = `
+      <td>R${origRow}</td>
+      <td>${a}</td>
+      <td>${b}</td>
+      <td>${t === 'both' ? '✓ (1,1)' : t === 'a' ? '(1,0)' : t === 'b' ? '(0,1)' : '–'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function shuffleAndSample() {
+  const perm = Array.from({length: 10}, (_, i) => i);
+  for (let i = 9; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [perm[i], perm[j]] = [perm[j], perm[i]];
+  }
+  let firstIdx = null;
+  for (let i = 0; i < 10; i++) {
+    if (MH_A[perm[i]] === 1 || MH_B[perm[i]] === 1) { firstIdx = i; break; }
+  }
+  const isMatch = firstIdx !== null && MH_A[perm[firstIdx]] === 1 && MH_B[perm[firstIdx]] === 1;
+  v2Trials++;
+  if (isMatch) v2Matches++;
+  renderMHMatrix(perm, firstIdx, isMatch);
+  updateV2Stats();
+  const el = document.getElementById('v2-result');
+  if (firstIdx !== null) {
+    el.innerHTML = isMatch
+      ? `<span style="color:#28a745">✓ First non-(0,0) row was a <strong>(1,1)</strong> — MinHash values match!</span>`
+      : `<span style="color:#e76f51">✗ First non-(0,0) row was <strong>(1,0) or (0,1)</strong> — MinHash values differ.</span>`;
+  } else {
+    el.innerHTML = '<span style="color:#888">No non-(0,0) rows found in this permutation.</span>';
+  }
+}
+
+function runV2Trials(n) {
+  for (let i = 0; i < n; i++) {
+    const perm = Array.from({length: 10}, (_, j) => j);
+    for (let j = 9; j > 0; j--) {
+      const k = Math.floor(Math.random() * (j + 1));
+      [perm[j], perm[k]] = [perm[k], perm[j]];
+    }
+    let firstIdx = null;
+    for (let j = 0; j < 10; j++) {
+      if (MH_A[perm[j]] === 1 || MH_B[perm[j]] === 1) { firstIdx = j; break; }
+    }
+    v2Trials++;
+    if (firstIdx !== null && MH_A[perm[firstIdx]] === 1 && MH_B[perm[firstIdx]] === 1) v2Matches++;
+  }
+  renderMHMatrix(Array.from({length: 10}, (_, i) => i), null, null);
+  updateV2Stats();
+  document.getElementById('v2-result').innerHTML =
+    `<span style="color:#555">Ran ${n} trials. Fraction matched: <strong>${(v2Matches/v2Trials).toFixed(3)}</strong> (true Jaccard = 0.500)</span>`;
+}
+
+function updateV2Stats() {
+  document.getElementById('v2-trials').textContent = v2Trials;
+  document.getElementById('v2-frac').textContent = v2Trials > 0 ? (v2Matches / v2Trials).toFixed(3) : '—';
+}
+
+// ── S3: Viz 3 — S-Curve ───────────────────────────────────────────────────
+function initViz3() { updateViz3(); }
+
+function updateViz3() {
+  const b = +document.getElementById('v3-b').value;
+  const r = +document.getElementById('v3-r').value;
+  document.getElementById('v3-b-val').textContent = b;
+  document.getElementById('v3-r-val').textContent = r;
+  document.getElementById('v3-total').textContent = b * r;
+
+  const n = 300;
+  const s = Array.from({length: n}, (_, i) => i / (n - 1));
+  const P = s.map(si => 1 - Math.pow(1 - Math.pow(si, r), b));
+  const t = Math.pow(1 / b, 1 / r);
+
+  document.getElementById('v3-thresh').textContent = t.toFixed(3);
+
+  const P80 = 1 - Math.pow(1 - Math.pow(0.8, r), b);
+  const P20 = 1 - Math.pow(1 - Math.pow(0.2, r), b);
+  document.getElementById('v3-p80').textContent = (P80 * 100).toFixed(1) + '%';
+  document.getElementById('v3-p20').textContent = (P20 * 100).toFixed(1) + '%';
+
+  Plotly.react('v3-chart', [
+    {x: s, y: P, mode: 'lines', name: `b=${b}, r=${r}  [n=${b*r}]`,
+     line: {color: PLT.lsh, width: 3}},
+    {x: [0, 1], y: [0, 1], mode: 'lines', name: 'Ideal step fn (reference)',
+     line: {color: '#bbb', dash: 'dot', width: 1.5}, showlegend: true},
+  ], PLT.layout({
+    xaxis: {title: 'Jaccard similarity  s', range: [0, 1], gridcolor: '#eee'},
+    yaxis: {title: 'P(become candidate)', range: [0, 1], gridcolor: '#eee'},
+    shapes: [{
+      type: 'line', x0: t, x1: t, y0: 0, y1: 1, xref: 'x', yref: 'paper',
+      line: {color: PLT.lsh2, dash: 'dash', width: 2},
+    }],
+    annotations: [{
+      x: t + 0.02, y: 0.5, xref: 'x', yref: 'paper',
+      text: `t ≈ ${t.toFixed(2)}`, showarrow: false,
+      font: {size: 11, color: PLT.lsh2}, bgcolor: 'rgba(255,255,255,0.8)',
+    }],
+    title: {text: `P = 1 − (1 − s^${r})^${b}`, font: {size: 12}},
+    legend: {x: 0.02, y: 0.95},
+    height: 340,
+  }), PLT.config);
+}
+
+// ── S3: Viz 4 — Pipeline ──────────────────────────────────────────────────
+const PIPE_STEPS = [
+  {
+    label: 'Step 1 of 5: The Problem',
+    html: `
+      <h3>The Problem: Finding Similar Documents</h3>
+      <p>Given millions of documents, which ones are similar to each other? Brute-force comparison of all pairs costs $O(N^2 \\cdot d)$ — infeasible at scale.</p>
+      <div class="pipe-docs">
+        <div class="pipe-doc">
+          <strong>Doc A</strong>
+          "the cat sat on the mat"
+        </div>
+        <div class="pipe-doc">
+          <strong>Doc B</strong>
+          "the cat sat on the hat"
+        </div>
+        <div class="pipe-doc">
+          <strong>Doc C</strong>
+          "the dog ran in the park"
+        </div>
+      </div>
+      <p>A and B are very similar (one word differs). C is dissimilar. Can we find A ↔ B automatically — without comparing every pair?</p>
+      <div class="info" style="margin-top:.5rem"><strong>Goal:</strong> Query time $O(n^\\rho \\cdot d)$ with $\\rho < 1$, returning A and B as candidate similar pairs.</div>
+    `
+  },
+  {
+    label: 'Step 2 of 5: Shingling',
+    html: `
+      <h3>Phase 1: Shingling (Set Representation)</h3>
+      <p>Convert each document to a set of $k$-shingles (character or word $k$-grams). This turns text into a set that Jaccard similarity can operate on.</p>
+      <div class="pipe-docs">
+        <div class="pipe-doc highlight">
+          <strong>Doc A → 3-word shingles</strong>
+          {the cat sat, cat sat on, sat on the, on the mat}
+        </div>
+        <div class="pipe-doc highlight">
+          <strong>Doc B → 3-word shingles</strong>
+          {the cat sat, cat sat on, sat on the, on the hat}
+        </div>
+        <div class="pipe-doc">
+          <strong>Doc C → 3-word shingles</strong>
+          {the dog ran, dog ran in, ran in the, in the park}
+        </div>
+      </div>
+      <p>Jaccard(A, B) = |A ∩ B| / |A ∪ B| = 3 / 5 = <strong>0.60</strong> &nbsp;(similar!)</p>
+      <p>Jaccard(A, C) = 0 / 8 = <strong>0.00</strong> &nbsp;(no overlap)</p>
+      <div class="warn">For large corpora, the full shingle set is huge. We need to compress it — that's what MinHash does.</div>
+    `
+  },
+  {
+    label: 'Step 3 of 5: MinHash Signatures',
+    html: `
+      <h3>Phase 2: MinHash Signatures (Compression)</h3>
+      <p>Apply $k = 6$ independent MinHash functions to compress each shingle set into a 6-element integer vector (signature). Jaccard similarity is preserved: $\\Pr[h_i(A) = h_i(B)] = J(A,B)$.</p>
+      <div class="sig-row"><strong style="min-width:60px">Doc A:</strong>
+        <div class="sig-cell sig-band-1">h₁=3</div>
+        <div class="sig-cell sig-band-1">h₂=7</div>
+        <div class="sig-cell sig-band-2">h₃=1</div>
+        <div class="sig-cell sig-band-2">h₄=5</div>
+        <div class="sig-cell sig-band-3">h₅=9</div>
+        <div class="sig-cell sig-band-3">h₆=2</div>
+      </div>
+      <div class="sig-row"><strong style="min-width:60px">Doc B:</strong>
+        <div class="sig-cell sig-band-1">h₁=3</div>
+        <div class="sig-cell sig-band-1">h₂=7</div>
+        <div class="sig-cell sig-band-2">h₃=1</div>
+        <div class="sig-cell sig-band-2">h₄=8</div>
+        <div class="sig-cell sig-band-3">h₅=9</div>
+        <div class="sig-cell sig-band-3">h₆=2</div>
+      </div>
+      <div class="sig-row"><strong style="min-width:60px">Doc C:</strong>
+        <div class="sig-cell sig-band-1">h₁=6</div>
+        <div class="sig-cell sig-band-1">h₂=2</div>
+        <div class="sig-cell sig-band-2">h₃=8</div>
+        <div class="sig-cell sig-band-2">h₄=3</div>
+        <div class="sig-cell sig-band-3">h₅=4</div>
+        <div class="sig-cell sig-band-3">h₆=7</div>
+      </div>
+      <p style="margin-top:.8rem">Colors show band groupings ($b=3$ bands, $r=2$ rows each). A and B agree on 5 of 6 values — their estimated Jaccard is $5/6 \\approx 0.83$ (true = 0.60, close enough).</p>
+    `
+  },
+  {
+    label: 'Step 4 of 5: Banding',
+    html: `
+      <h3>Phase 3: Banding — Creating Candidate Pairs</h3>
+      <p>Split each 6-element signature into $b=3$ bands of $r=2$ rows. For each band, hash the 2-element sub-vector into a bucket. Two docs become <em>candidates</em> if they collide in <em>any</em> band.</p>
+      <table style="font-size:.85rem;margin:.7rem 0">
+        <tr><th>Band</th><th>Doc A sub-sig</th><th>Doc B sub-sig</th><th>Doc C sub-sig</th><th>A–B match?</th></tr>
+        <tr>
+          <td><span style="background:#d1f3ef;padding:.1rem .4rem;border-radius:3px">Band 1</span></td>
+          <td>[3, 7]</td><td>[3, 7]</td><td>[6, 2]</td>
+          <td><strong style="color:#28a745">✓ MATCH → Candidates!</strong></td>
+        </tr>
+        <tr>
+          <td><span style="background:#fde8d8;padding:.1rem .4rem;border-radius:3px">Band 2</span></td>
+          <td>[1, 5]</td><td>[1, 8]</td><td>[8, 3]</td>
+          <td style="color:#aaa">✗ No match</td>
+        </tr>
+        <tr>
+          <td><span style="background:#dce8f8;padding:.1rem .4rem;border-radius:3px">Band 3</span></td>
+          <td>[9, 2]</td><td>[9, 2]</td><td>[4, 7]</td>
+          <td><strong style="color:#28a745">✓ MATCH</strong></td>
+        </tr>
+      </table>
+      <p>A and B collide in Bands 1 and 3 → flagged as a candidate pair. C never collides with A or B → correctly filtered out.</p>
+      <div class="info">$P(\\text{candidate} \\mid J=0.60) = 1 - (1 - 0.60^2)^3 = 1 - (1 - 0.36)^3 \\approx 73.8\\%$. Using more bands (larger $b$) would increase this recall.</div>
+    `
+  },
+  {
+    label: 'Step 5 of 5: Query Retrieval',
+    html: `
+      <h3>Phase 4: Query — Retrieving Candidates</h3>
+      <p>For a new query document $q$, compute its signature, hash each band, look up each band's hash table. The union of all matching buckets forms the candidate set.</p>
+      <div class="pipe-docs">
+        <div class="pipe-doc highlight">
+          <strong>Query $q$: "the cat sat on the rug"</strong>
+          Shingles: {the cat sat, cat sat on, sat on the, on the rug}
+          Signature: [3, 7, 1, 6, 9, 2]
+        </div>
+      </div>
+      <p style="margin-top:.8rem"><strong>Band lookup results:</strong></p>
+      <p><span style="background:#d1f3ef;padding:.1rem .5rem;border-radius:3px">Band 1: [3,7]</span> → bucket contains <strong>Doc A, Doc B</strong></p>
+      <p><span style="background:#fde8d8;padding:.1rem .5rem;border-radius:3px">Band 2: [1,6]</span> → bucket is empty</p>
+      <p><span style="background:#dce8f8;padding:.1rem .5rem;border-radius:3px">Band 3: [9,2]</span> → bucket contains <strong>Doc A, Doc B</strong></p>
+      <p style="margin-top:.7rem"><strong>Candidates:</strong> {Doc A, Doc B}</p>
+      <p>Compute exact Jaccard with candidates: J(q, A) = 3/5 = 0.60 ✓, J(q, B) = 2/5 = 0.40. Return Doc A as the nearest neighbor.</p>
+      <div class="success" style="margin-top:.5rem">Only 2 exact comparisons needed instead of $N$. At scale, this is the difference between milliseconds and seconds.</div>
+    `
+  }
+];
+
+let v4Current = 0;
+
+function initViz4() {
+  v4Current = 0;
+  renderPipeStep();
+}
+
+function pipeStep(dir) {
+  v4Current = Math.max(0, Math.min(PIPE_STEPS.length - 1, v4Current + dir));
+  renderPipeStep();
+}
+
+function renderPipeStep() {
+  document.getElementById('pipe-step-display').innerHTML = PIPE_STEPS[v4Current].html;
+  document.getElementById('pipe-step-label').textContent = PIPE_STEPS[v4Current].label;
+  document.getElementById('pipe-prev').classList.toggle('btn-dis', v4Current === 0);
+  document.getElementById('pipe-next').classList.toggle('btn-dis', v4Current === PIPE_STEPS.length - 1);
+  if (window.MathJax) MathJax.typesetPromise([document.getElementById('pipe-step-display')]);
+}
+
+function initViz() {
+  initViz1();
+  initViz2();
+  initViz3();
+  initViz4();
+}
+
+// ── S4: Apps charts ───────────────────────────────────────────────────────
+function initApps() {
+  // ANN scaling chart
+  const ns = Array.from({length: 150}, (_, i) => Math.pow(10, 2 + i * 4 / 149));
+  Plotly.newPlot('ann-chart', [
+    {x: ns, y: ns.map(n => n), mode: 'lines', name: 'Brute force: O(n)',
+     line: {color: PLT.lsh2, width: 2.5}},
+    {x: ns, y: ns.map(n => Math.pow(n, 0.5)), mode: 'lines', name: 'LSH: O(n^0.5)  [ρ=0.5]',
+     line: {color: PLT.lsh, width: 2.5}},
+    {x: ns, y: ns.map(n => Math.pow(n, 0.33)), mode: 'lines', name: 'LSH: O(n^0.33) [ρ=1/3]',
+     line: {color: PLT.lsh3, width: 2.5}},
+    {x: ns, y: ns.map(n => Math.log2(n) * Math.log2(n)), mode: 'lines', name: 'HNSW: ~O(log²n)',
+     line: {color: '#6a4c93', width: 2, dash: 'dash'}},
+  ], PLT.layout({
+    xaxis: {type: 'log', title: 'Dataset size n', gridcolor: '#eee'},
+    yaxis: {type: 'log', title: 'Operations', gridcolor: '#eee'},
+    title: {text: 'Query cost scaling (ignoring constant factors)', font: {size: 12}},
+    legend: {x: 0.02, y: 0.98},
+    height: 300,
+  }), PLT.config);
+
+  // Reformer chart
+  const ls = Array.from({length: 100}, (_, i) => Math.pow(10, 2 + i * 3 / 99));
+  Plotly.newPlot('reformer-chart', [
+    {x: ls, y: ls.map(l => l * l), mode: 'lines', name: 'Standard attention: O(L²)',
+     line: {color: PLT.lsh2, width: 2.5}},
+    {x: ls, y: ls.map(l => l * Math.log2(l)), mode: 'lines', name: 'LSH attention: O(L log L)',
+     line: {color: PLT.lsh, width: 2.5}},
+  ], PLT.layout({
+    xaxis: {type: 'log', title: 'Sequence length L (tokens)', gridcolor: '#eee'},
+    yaxis: {type: 'log', title: 'Attention operations', gridcolor: '#eee'},
+    title: {text: 'Reformer: LSH attention complexity', font: {size: 12}},
+    legend: {x: 0.02, y: 0.98},
+    shapes: [{type:'line', x0:64000, x1:64000, y0:0, y1:1, xref:'x', yref:'paper',
+              line:{color:'#bbb', dash:'dot', width:1}}],
+    annotations: [{x:Math.log10(90000), y:0.2, xref:'x', yref:'paper',
+                   text:'L=64k', showarrow:false, font:{size:10, color:'#888'}}],
+    height: 260,
+  }), PLT.config);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  initialized.add('s0');
+  if (window.MathJax) MathJax.typesetPromise();
+});
+</script>
+</body>
+</html>
