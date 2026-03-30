@@ -1,0 +1,1393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contextual Bandits — Interactive Explainer</title>
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cb:#3a86ff;--cb2:#e76f51;--cb3:#2a9d8f;
+  --sw:248px;--sbg:#1a1a2e;--stext:#c8d0e7;
+  --bg:#f5f6fa;--card:#fff;--border:#dee2e6;
+  --r:6px;--text:#212529;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:15px;line-height:1.65}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);
+  background:var(--sbg);overflow-y:auto;z-index:100;padding:1.4rem 0}
+.sb-logo{padding:0 1.2rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem}
+.sb-logo h2{color:#fff;font-size:1rem;font-weight:700}
+.sb-logo p{color:var(--stext);font-size:.75rem;margin-top:.2rem}
+.home-btn{display:inline-block;margin-top:.6rem;font-size:.75rem;color:var(--stext);
+  text-decoration:none;opacity:.7;transition:opacity .15s}
+.home-btn:hover{opacity:1;color:#fff}
+.nav-btn{display:block;padding:.45rem 1.2rem;color:var(--stext);font-size:.82rem;
+  cursor:pointer;border-left:3px solid transparent;transition:all .15s;
+  background:none;border-top:none;border-right:none;border-bottom:none;
+  text-align:left;width:100%}
+.nav-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-btn.active{border-left-color:var(--cb);color:#fff;background:rgba(58,134,255,.2)}
+
+/* ── Main ─────────────────────────────────────────────────── */
+#main{margin-left:var(--sw);padding:2rem 2.5rem 5rem;max-width:1150px;width:100%}
+.section{display:none}.section.active{display:block}
+
+h1{font-size:1.85rem;font-weight:700;color:#1a1a2e;margin-bottom:.3rem}
+h2{font-size:1.25rem;font-weight:600;color:#1a1a2e;margin:1.6rem 0 .5rem}
+h3{font-size:1rem;font-weight:600;color:#333;margin:1.1rem 0 .4rem}
+p{margin-bottom:.75rem}
+hr{border:none;border-top:1px solid var(--border);margin:1.4rem 0}
+a{color:var(--cb)}
+ul,ol{padding-left:1.3rem;margin-bottom:.75rem}
+li{margin-bottom:.2rem}
+
+/* ── Boxes ────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.4rem;margin:1rem 0}
+.info{background:#eaf1ff;border-left:4px solid var(--cb);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.info2{background:#fef0ec;border-left:4px solid var(--cb2);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.info3{background:#e8f6f5;border-left:4px solid var(--cb3);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.success{background:#d4edda;border-left:4px solid #28a745;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.warn{background:#fff8e1;border-left:4px solid #ffc107;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+
+/* ── Tables ───────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;margin:.9rem 0;font-size:.87rem}
+th{background:#f0f4f8;padding:.5rem .75rem;text-align:left;font-weight:600;border-bottom:2px solid var(--border)}
+td{padding:.45rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+.tab-bar{display:flex;border-bottom:2px solid var(--border);gap:0;margin-top:.5rem;flex-wrap:wrap}
+.tab-btn{padding:.45rem .95rem;border:none;background:none;cursor:pointer;
+  color:#666;font-size:.87rem;font-weight:500;border-bottom:2px solid transparent;
+  margin-bottom:-2px;transition:all .15s}
+.tab-btn:hover{color:var(--cb)}
+.tab-btn.active{color:var(--cb);border-bottom-color:var(--cb)}
+.tab-pane{display:none;padding-top:.9rem}.tab-pane.active{display:block}
+
+/* ── Controls ─────────────────────────────────────────────── */
+.ctrl{display:flex;align-items:center;gap:.7rem;margin:.5rem 0;flex-wrap:wrap}
+.ctrl label{font-size:.84rem;font-weight:500;min-width:160px}
+.ctrl input[type=range]{width:180px;accent-color:var(--cb)}
+.val{font-size:.84rem;font-weight:600;color:var(--cb);min-width:45px}
+.btn{padding:.35rem .9rem;border:1px solid var(--cb);border-radius:var(--r);
+  background:var(--cb);color:#fff;cursor:pointer;font-size:.84rem;font-weight:500;margin:.3rem .3rem 0 0}
+.btn:hover{opacity:.85}
+.btn-sec{background:#fff;color:var(--cb);border-color:var(--cb)}
+.btn-sec:hover{background:#eaf1ff}
+.btn-dis{opacity:.35;pointer-events:none}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.cols{display:grid;gap:1.4rem;margin:.8rem 0}
+.c12{grid-template-columns:1fr 2fr}
+.c21{grid-template-columns:2fr 1fr}
+.c11{grid-template-columns:1fr 1fr}
+.c13{grid-template-columns:1fr 3fr}
+
+/* ── Code ─────────────────────────────────────────────────── */
+pre{background:#1e2235;color:#abb2bf;padding:.9rem 1.1rem;border-radius:var(--r);
+  overflow-x:auto;font-size:.8rem;line-height:1.55;margin:.7rem 0;font-family:'Fira Code',Consolas,monospace}
+
+/* ── Details ────────────────────────────────────────────── */
+details{border:1px solid var(--border);border-radius:var(--r);margin:.7rem 0}
+summary{padding:.55rem 1rem;cursor:pointer;font-weight:500;font-size:.88rem;
+  background:#f8f9fa;border-radius:var(--r);list-style:none;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▶ ';font-size:.68rem;color:#888}
+details[open] summary::before{content:'▼ '}
+details[open] summary{border-radius:var(--r) var(--r) 0 0}
+.det-body{padding:.9rem 1.1rem;border-top:1px solid var(--border)}
+
+/* ── Misc ───────────────────────────────────────────────── */
+.caption{font-size:.81rem;color:#666;font-style:italic;margin-top:.35rem}
+.metric{display:inline-block;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:.7rem 1.1rem;min-width:140px;margin:.3rem .4rem .3rem 0}
+.metric-label{font-size:.76rem;color:#666}
+.metric-value{font-size:1.35rem;font-weight:700;color:#1a1a2e}
+.pill{display:inline-block;padding:.18rem .55rem;border-radius:20px;font-size:.78rem;font-weight:600;margin:.12rem .1rem}
+.pill-best{background:#d1e8ff;color:#1a4fa8}
+.pill-mid{background:#e8f4fd;color:#1a5276}
+.pill-bad{background:#fde8ea;color:#c42b3a}
+.pill-ok{background:#fff3cd;color:#856404}
+.step-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin:1rem 0}
+.step-box{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:.5rem .85rem;font-size:.84rem;font-weight:600;text-align:center;min-width:90px}
+.step-arrow{font-size:1.1rem;color:#aaa}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+#menu-toggle{display:none;position:fixed;top:.7rem;right:.7rem;z-index:200;
+  background:var(--sbg);color:#fff;border:none;border-radius:6px;
+  padding:.5rem .7rem;cursor:pointer;font-size:1.15rem;line-height:1}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
+@media(max-width:767px){
+  #menu-toggle{display:block}
+  #sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.open{transform:translateX(0)}
+  #sidebar-overlay.open{display:block}
+  #main{margin-left:0;padding:3.5rem 1rem 4rem}
+  .cols.c12,.cols.c21,.cols.c11,.cols.c13{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<button id="menu-toggle" aria-label="Toggle menu" onclick="toggleSidebar()">☰</button>
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<nav id="sidebar">
+  <div class="sb-logo">
+    <h2>🎯 Contextual Bandits</h2>
+    <p>LinUCB, Thompson Sampling &amp; Beyond</p>
+    <a class="home-btn" href="../../index.html">← Home</a>
+  </div>
+  <button class="nav-btn active" onclick="nav('s0')">Overview</button>
+  <button class="nav-btn" onclick="nav('s1')">📐 LinUCB: Full Derivation</button>
+  <button class="nav-btn" onclick="nav('s2')">🎲 Thompson Sampling</button>
+  <button class="nav-btn" onclick="nav('s3')">🔭 Viz: Confidence Ellipsoid</button>
+  <button class="nav-btn" onclick="nav('s4')">📉 Viz: Live Simulation</button>
+  <button class="nav-btn" onclick="nav('s5')">🗺️ Viz: Policy Landscape</button>
+  <button class="nav-btn" onclick="nav('s6')">🌍 Applications &amp; Tooling</button>
+  <button class="nav-btn" onclick="nav('s7')">📚 Sources</button>
+</nav>
+
+<main id="main">
+
+<!-- ── S0: Overview ───────────────────────────────────────── -->
+<div id="s0" class="section active">
+  <h1>Contextual Bandits</h1>
+  <p style="color:#555;font-size:1rem">An interactive deep-dive &mdash; from LinUCB (Li et al. 2010) to Thompson Sampling and neural extensions</p>
+  <p style="font-size:.85rem;color:#888">Extends: <a href="../20260329_multi_armed_and_contextual_bandits/index.html">← Multi-Armed &amp; Contextual Bandits</a></p>
+  <hr>
+
+  <div class="cols c21">
+    <div>
+      <p>In the standard <strong>multi-armed bandit</strong>, you pick arms and learn which one has the highest average reward. Every round is identical — there's no side information. In the real world, this almost never holds: you know something about the user, the situation, the item.</p>
+
+      <div class="info">
+        <strong>The contextual bandit adds one thing:</strong> before each pull, you observe a <em>context</em> $x_t \in \mathbb{R}^d$ that describes the current situation. The best arm now <em>depends on</em> $x_t$.
+        <p style="margin:.5rem 0 0">Examples: "this user likes sports" → show a sports article. "tumor size is large" → recommend aggressive treatment. "it's Friday evening" → suggest a comedy show.</p>
+      </div>
+
+      <p>The formal protocol at each round $t$:</p>
+      <div class="step-row">
+        <div class="step-box">Observe<br><strong>context $x_t$</strong></div>
+        <div class="step-arrow">→</div>
+        <div class="step-box">Choose<br><strong>arm $A_t$</strong></div>
+        <div class="step-arrow">→</div>
+        <div class="step-box">Receive<br><strong>reward $r_t$</strong></div>
+        <div class="step-arrow">→</div>
+        <div class="step-box">Update<br><strong>model</strong></div>
+      </div>
+
+      <p>The <strong>contextual regret</strong> measures loss against the best <em>context-dependent</em> policy:</p>
+      $$\text{Regret}(T) = \sum_{t=1}^{T} \Bigl(\max_a\, x_t^\top\theta_a^* \;-\; x_t^\top\theta_{A_t}^*\Bigr)$$
+      <p>Unlike standard MAB regret, the oracle changes every round — it's the arm that's best <em>for this specific context</em>.</p>
+
+      <div class="warn">⚠️ <strong>Not full RL.</strong> The context $x_t$ is observed but not <em>affected</em> by your action. There is no state transition — no credit assignment across time. This tractability is what makes contextual bandits viable for real-time production systems.</div>
+    </div>
+
+    <div>
+      <h3>How It Fits: MAB → Contextual Bandit → RL</h3>
+      <table>
+        <tr><th></th><th>Multi-Armed Bandit</th><th>Contextual Bandit</th><th>Full RL</th></tr>
+        <tr><td><strong>Context / State</strong></td><td>None</td><td>$x_t$ observed, stateless</td><td>$s_t$, transitions on action</td></tr>
+        <tr><td><strong>Best arm</strong></td><td>Fixed global $a^*$</td><td>$a^*(x_t)$ varies by context</td><td>$\pi^*(s_t)$ varies by state</td></tr>
+        <tr><td><strong>Feedback</strong></td><td>Reward of chosen arm</td><td>Reward of chosen arm</td><td>Reward + next state</td></tr>
+        <tr><td><strong>Regret bound</strong></td><td>$O(\sqrt{KT\log T})$</td><td>$O(d\sqrt{T\log T})$</td><td>Problem-dependent</td></tr>
+        <tr><td><strong>Policy type</strong></td><td>Single arm index</td><td>$\pi: \mathcal{X} \to [K]$</td><td>$\pi: \mathcal{S} \to \mathcal{A}$</td></tr>
+        <tr><td><strong>When to use</strong></td><td>No side information</td><td>Rich context, instant reward</td><td>Sequential decisions, delayed reward</td></tr>
+      </table>
+
+      <h3>Brief History</h3>
+      <table>
+        <tr><th>Year</th><th>Milestone</th></tr>
+        <tr><td>2007</td><td>Langford &amp; Zhang: Epoch-Greedy, first formal CB treatment, $O(T^{2/3})$ regret</td></tr>
+        <tr><td>2010</td><td>Li, Chu, Langford, Schapire: <strong>LinUCB</strong> — deployed at Yahoo! News, 12.5% CTR lift</td></tr>
+        <tr><td>2011</td><td>Abbasi-Yadkori et al.: tight confidence ellipsoid via self-normalized bounds</td></tr>
+        <tr><td>2013</td><td>Agrawal &amp; Goyal: <strong>Linear Thompson Sampling</strong>, $\tilde{O}(d\sqrt{T})$ regret</td></tr>
+        <tr><td>2020</td><td>Zhou, Gu, Szepesvári: <strong>NeuralUCB</strong> — UCB via neural tangent kernel</td></tr>
+        <tr><td>2022+</td><td>LLM-powered bandits: in-context learning as implicit posterior inference</td></tr>
+      </table>
+
+      <div class="info3">
+        <strong>Key result:</strong> The lower bound for any contextual bandit algorithm is $\Omega(d\sqrt{T})$. Both LinUCB and Linear TS are <em>minimax optimal</em> up to logarithmic factors.
+      </div>
+    </div>
+  </div>
+
+  <hr>
+  <h2>The Linearity Assumption</h2>
+  <p>Most tractable contextual bandit algorithms assume the expected reward is <em>linear</em> in the context:</p>
+  $$\mathbb{E}[r_t \mid x_t, a] = x_t^\top \theta_a^* \quad \text{for some unknown } \theta_a^* \in \mathbb{R}^d$$
+
+  <div class="cols c11">
+    <div class="card">
+      <strong>What this buys you:</strong>
+      <ul style="margin-top:.4rem">
+        <li>Closed-form posterior updates (conjugate Gaussian)</li>
+        <li>Efficient $O(d^2)$ per-round computation</li>
+        <li>Provable $O(d\sqrt{T})$ regret bounds</li>
+        <li>The $d$ arms share no parameters — each arm $a$ has its own $\theta_a^*$</li>
+      </ul>
+    </div>
+    <div class="card">
+      <strong>What can go wrong:</strong>
+      <ul style="margin-top:.4rem">
+        <li>True reward is nonlinear → confidence bounds miscalibrated</li>
+        <li>Model bias doesn't vanish — can cause linear regret</li>
+        <li>Fix: use richer features (polynomial, kernel, neural embeddings)</li>
+        <li>NeuralUCB/NeuralTS handle nonlinearity at higher compute cost</li>
+      </ul>
+    </div>
+  </div>
+</div><!-- /s0 -->
+
+<!-- ── S1: LinUCB Full Derivation ─────────────────────────── -->
+<div id="s1" class="section">
+  <h1>LinUCB: Full Derivation</h1>
+  <p style="color:#555;font-size:1rem">From ridge regression to the confidence ellipsoid</p>
+  <hr>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('linucb','setup')">1. Problem Setup</button>
+    <button class="tab-btn" onclick="tab('linucb','ridge')">2. Ridge Regression</button>
+    <button class="tab-btn" onclick="tab('linucb','online')">3. Online Updates</button>
+    <button class="tab-btn" onclick="tab('linucb','ellipsoid')">4. Confidence Ellipsoid</button>
+    <button class="tab-btn" onclick="tab('linucb','ucbscore')">5. The UCB Score</button>
+    <button class="tab-btn" onclick="tab('linucb','variants')">6. Disjoint vs Hybrid</button>
+  </div>
+
+  <!-- Tab 1: Problem Setup -->
+  <div id="linucb-setup" class="tab-pane active">
+    <p>We have $K$ arms and $T$ rounds. At round $t$, the agent observes context $x_t \in \mathbb{R}^d$ and must choose arm $A_t \in \{1,\ldots,K\}$. The reward is:</p>
+    $$r_t = x_t^\top \theta_{A_t}^* + \eta_t$$
+    <p>where $\theta_a^* \in \mathbb{R}^d$ is the <em>unknown</em> true parameter for arm $a$, and $\eta_t$ is $R$-sub-Gaussian noise (zero-mean, e.g. bounded rewards $r \in [0,1]$ with $R=1/2$).</p>
+
+    <div class="info">
+      <strong>Intuition:</strong> Each arm has a "preference vector" $\theta_a^*$ that defines which users/contexts it's good for. A news article about sports has high $\theta_{\text{sports}}$ in the "user likes sports" direction. LinUCB learns these preference vectors online.
+    </div>
+
+    <p><strong>Assumptions:</strong></p>
+    <ul>
+      <li><strong>Realizability:</strong> $\mathbb{E}[r_t \mid x_t, A_t] = x_t^\top \theta_{A_t}^*$ exactly</li>
+      <li><strong>Bounded parameters:</strong> $\|\theta_a^*\|_2 \leq S$ for all $a$</li>
+      <li><strong>Bounded contexts:</strong> $\|x_t\|_2 \leq L$ for all $t$ (typically normalize to $L=1$)</li>
+      <li><strong>Sub-Gaussian noise:</strong> $\mathbb{E}[e^{\lambda\eta_t}|\mathcal{F}_{t-1}] \leq e^{\lambda^2 R^2/2}$ for all $\lambda$</li>
+    </ul>
+
+    <p>The goal is to minimize the cumulative contextual regret:</p>
+    $$\text{Regret}(T) = \sum_{t=1}^T \left(\max_a x_t^\top\theta_a^* - x_t^\top\theta_{A_t}^*\right)$$
+  </div>
+
+  <!-- Tab 2: Ridge Regression -->
+  <div id="linucb-ridge" class="tab-pane">
+    <p>For a fixed arm $a$, suppose we've collected observations $\{(x_s, r_s)\}_{s \in \mathcal{T}_a}$ where $\mathcal{T}_a$ is the set of rounds where arm $a$ was pulled. We need to estimate $\theta_a^*$.</p>
+
+    <h3>L2-Regularized Least Squares (Ridge Regression)</h3>
+    <p>Minimize the regularized squared loss:</p>
+    $$\hat{\theta}_a = \arg\min_{\theta} \sum_{s \in \mathcal{T}_a}(r_s - x_s^\top\theta)^2 + \lambda\|\theta\|_2^2$$
+    <p>Taking the gradient and setting to zero:</p>
+    $$\frac{\partial}{\partial\theta}\Bigl[\sum_s(r_s - x_s^\top\theta)^2 + \lambda\|\theta\|^2\Bigr] = -2\sum_s x_s(r_s - x_s^\top\theta) + 2\lambda\theta = 0$$
+    $$\underbrace{\Bigl(\sum_s x_s x_s^\top + \lambda I\Bigr)}_{A_a}\,\theta = \underbrace{\sum_s r_s x_s}_{b_a}$$
+
+    <div class="info">
+      <strong>Closed form:</strong> Define the key quantities for arm $a$:
+      $$A_a = \lambda I + \sum_{s \in \mathcal{T}_a} x_s x_s^\top \in \mathbb{R}^{d \times d}, \qquad b_a = \sum_{s \in \mathcal{T}_a} r_s x_s \in \mathbb{R}^d$$
+      $$\boxed{\hat{\theta}_a = A_a^{-1} b_a}$$
+    </div>
+
+    <p><strong>Why $\lambda I$?</strong> The regularization term serves three purposes:</p>
+    <ul>
+      <li><strong>Invertibility:</strong> $A_a$ is always positive definite ($A_a \succeq \lambda I$), even with zero observations</li>
+      <li><strong>Bayesian prior:</strong> Equivalent to a Gaussian prior $\theta_a \sim \mathcal{N}(0, \lambda^{-1}I)$ — at $\lambda=1$ this assumes unit-norm parameters</li>
+      <li><strong>Calibration:</strong> The confidence ellipsoid's radius (see Tab 4) depends on $\lambda$ — it must match the prior strength used</li>
+    </ul>
+
+    <p><strong>Starting state:</strong> Before any pulls, $A_a = \lambda I$ and $b_a = \mathbf{0}$, giving $\hat\theta_a = \mathbf{0}$. This is the maximum-uncertainty state.</p>
+  </div>
+
+  <!-- Tab 3: Online Updates -->
+  <div id="linucb-online" class="tab-pane">
+    <p>In the online setting, we update $A_a$ and $b_a$ one observation at a time. When round $t$ selects arm $A_t = a$ and receives reward $r_t$:</p>
+    $$A_a \leftarrow A_a + x_t x_t^\top, \qquad b_a \leftarrow b_a + r_t x_t$$
+    <p>This is a <strong>rank-1 update</strong> to $A_a$. We then need $A_a^{-1}$ for the UCB score.</p>
+
+    <h3>Sherman-Morrison Formula for $O(d^2)$ Updates</h3>
+    <p>Recomputing $A_a^{-1}$ from scratch each round costs $O(d^3)$ (matrix inversion). The Sherman-Morrison formula provides a $O(d^2)$ rank-1 inverse update:</p>
+    $$(A + uv^\top)^{-1} = A^{-1} - \frac{A^{-1}uv^\top A^{-1}}{1 + v^\top A^{-1}u}$$
+
+    <p>Applied with $u = v = x_t$:</p>
+    $$\boxed{(A_a + x_t x_t^\top)^{-1} = A_a^{-1} - \frac{A_a^{-1} x_t x_t^\top A_a^{-1}}{1 + x_t^\top A_a^{-1} x_t}}$$
+
+    <div class="info">
+      <strong>Cost breakdown per round:</strong>
+      <ul style="margin-top:.4rem">
+        <li>Compute $A_a^{-1} x_t$: one matrix-vector multiply, $O(d^2)$</li>
+        <li>Compute $x_t^\top (A_a^{-1} x_t)$: one dot product, $O(d)$</li>
+        <li>Outer product update to $A_a^{-1}$: $O(d^2)$</li>
+        <li><strong>Total: $O(d^2)$ per round</strong> vs $O(d^3)$ for full inversion</li>
+      </ul>
+      At $d=100$: $100^2 = 10{,}000$ vs $100^3 = 1{,}000{,}000$ operations — 100× speedup.
+    </div>
+
+    <details>
+      <summary>Proof of Sherman-Morrison</summary>
+      <div class="det-body">
+        <p>Let $B = A + uv^\top$. We claim $B^{-1} = A^{-1} - \frac{A^{-1}uv^\top A^{-1}}{1 + v^\top A^{-1}u}$. Verify by multiplying:</p>
+        $$B \cdot B^{-1} = (A + uv^\top)\left(A^{-1} - \frac{A^{-1}uv^\top A^{-1}}{1+v^\top A^{-1}u}\right)$$
+        $$= I - \frac{uv^\top A^{-1}}{1+v^\top A^{-1}u} + \frac{uv^\top A^{-1}}{1+v^\top A^{-1}u} - \frac{u(v^\top A^{-1}u)(v^\top A^{-1})}{1+v^\top A^{-1}u}$$
+        $$= I + u v^\top A^{-1}\left(\frac{-1}{1+v^\top A^{-1}u} + \frac{1}{1+v^\top A^{-1}u} - \frac{v^\top A^{-1}u}{1+v^\top A^{-1}u}\right) = I \;\checkmark$$
+      </div>
+    </details>
+
+    <p><strong>Full algorithm state per arm $a$:</strong> Store $A_a^{-1}$ (updating via Sherman-Morrison) and $b_a$ (direct vector update). Compute $\hat\theta_a = A_a^{-1}b_a$ lazily at evaluation time.</p>
+  </div>
+
+  <!-- Tab 4: Confidence Ellipsoid -->
+  <div id="linucb-ellipsoid" class="tab-pane">
+    <p>The key question: <em>how wrong could $\hat\theta_a$ be?</em> The answer is an <strong>ellipsoidal confidence set</strong> in parameter space.</p>
+
+    <h3>Self-Normalized Concentration (Abbasi-Yadkori et al., 2011)</h3>
+    <p>Define the <em>weighted norm</em> $\|v\|_M = \sqrt{v^\top M v}$ for a positive definite matrix $M$. Then with probability $\geq 1-\delta$, for <em>all</em> $t \geq 0$ simultaneously:</p>
+    $$\boxed{\|\hat\theta_a - \theta_a^*\|_{A_t} \leq \beta_t(\delta)}$$
+    where:
+    $$\beta_t(\delta) = R\sqrt{d\ln\!\left(\frac{1+t/\lambda}{\delta}\right)} + \sqrt{\lambda}\,S$$
+
+    <p>Here $R$ is the sub-Gaussian constant of the noise, $S = \|\theta_a^*\|_2$, and $t$ is the number of pulls of arm $a$.</p>
+
+    <div class="info">
+      <strong>What this means geometrically:</strong> The confidence set
+      $$\mathcal{C}_t = \bigl\{\theta \in \mathbb{R}^d : \|\theta - \hat\theta_a\|_{A_t} \leq \beta_t(\delta)\bigr\}$$
+      is an <em>ellipsoid</em> in parameter space, centered at $\hat\theta_a$, with shape determined by $A_t$. It contains $\theta_a^*$ with probability $\geq 1-\delta$.
+    </div>
+
+    <p><strong>Shape of the ellipsoid:</strong> The set $\{v : v^\top A_t v \leq c^2\}$ is elongated in directions where $A_t$ has small eigenvalues — precisely the directions of $\mathbb{R}^d$ where we have seen <em>few context vectors</em>. In directions richly covered by data, $A_t$ is large, the ellipsoid is narrow, and we are confident.</p>
+
+    <h3>From Parameter Uncertainty to Prediction Uncertainty</h3>
+    <p>We care about <em>prediction</em> uncertainty: how uncertain is $x_t^\top\hat\theta_a$ as an estimate of $x_t^\top\theta_a^*$? By Cauchy-Schwarz applied to the weighted inner product:</p>
+    $$|x_t^\top(\hat\theta_a - \theta_a^*)| = |\langle x_t, \hat\theta_a - \theta_a^*\rangle| \leq \|x_t\|_{A_t^{-1}} \cdot \|\hat\theta_a - \theta_a^*\|_{A_t}$$
+    <p>where we used the identity $|\langle u,v\rangle| \leq \|u\|_{M^{-1}} \|v\|_M$ (dual norms). Combining with the confidence bound:</p>
+    $$\boxed{|x_t^\top\hat\theta_a - x_t^\top\theta_a^*| \leq \beta_t(\delta)\cdot\sqrt{x_t^\top A_t^{-1} x_t}}$$
+    <p>The term $\sqrt{x_t^\top A_t^{-1} x_t}$ is the <strong>half-width of the prediction confidence interval</strong> at context $x_t$. It is:</p>
+    <ul>
+      <li><strong>Large</strong> when $x_t$ points in a direction not covered by past contexts (unexplored territory)</li>
+      <li><strong>Small</strong> when $x_t$ is similar to many past contexts (well-explored)</li>
+    </ul>
+  </div>
+
+  <!-- Tab 5: UCB Score -->
+  <div id="linucb-ucbscore" class="tab-pane">
+    <p>The UCB principle: always be optimistic — pull the arm whose <em>upper confidence bound</em> on its expected reward is highest.</p>
+
+    <h3>LinUCB Score</h3>
+    <p>For arm $a$ at round $t$ with context $x_t$:</p>
+    $$\boxed{\text{UCB}(a,t) = \underbrace{x_t^\top\hat\theta_a}_{\text{estimated reward}} + \;\alpha\underbrace{\sqrt{x_t^\top A_a^{-1}x_t}}_{\text{uncertainty / exploration bonus}}}$$
+
+    <p><strong>Why does this achieve low regret?</strong> If we set $\alpha = \beta_t(\delta)$, then by the confidence bound from Tab 4:</p>
+    $$x_t^\top\theta_a^* \leq x_t^\top\hat\theta_a + \beta_t(\delta)\sqrt{x_t^\top A_a^{-1}x_t} = \text{UCB}(a,t)$$
+    <p>So UCB is an <em>upper bound</em> on the true reward. The algorithm therefore selects $A_t = \arg\max_a \text{UCB}(a,t)$.</p>
+
+    <h3>Where Does $\alpha$ Come From?</h3>
+    <p>Theoretically, $\alpha = \beta_t(\delta)$ from Abbasi-Yadkori et al. (2011):</p>
+    $$\alpha_{\text{theory}} = R\sqrt{d\ln\!\left(\tfrac{1+t/\lambda}{\delta}\right)} + \sqrt{\lambda}\,S$$
+    <p>In the original Li et al. (2010) paper, $\alpha$ is derived from Hoeffding's inequality for bounded rewards:</p>
+    $$\alpha_{\text{Li}} = 1 + \sqrt{\tfrac{\ln(2/\delta)}{2}} \approx 1.41 \text{ at } \delta=0.05$$
+    <p>In practice, $\theta_a^*$ is unknown so $S$ can't be computed. $\alpha$ is <strong>treated as a hyperparameter</strong>, tuned via cross-validation on logged data. Values in $[0.1, 1.0]$ typically work well.</p>
+
+    <div class="info">
+      <strong>Interpreting $\alpha$:</strong>
+      <ul style="margin-top:.4rem">
+        <li>$\alpha \to 0$: pure exploitation — always pick the arm with highest estimated reward</li>
+        <li>$\alpha \to \infty$: pure exploration — pick the arm with highest uncertainty</li>
+        <li>Optimal $\alpha$ balances these, and scales as $\sqrt{d\log T}$ with dimension and time horizon</li>
+      </ul>
+    </div>
+
+    <h3>Regret Bound</h3>
+    <p>With $\alpha = \beta_t(\delta)$, the cumulative regret satisfies with probability $\geq 1-\delta$:</p>
+    $$\text{Regret}(T) \leq 2\beta_T(\delta)\sqrt{T \cdot d\ln(1+T/\lambda)}$$
+    <p>This gives $\text{Regret}(T) = \tilde{O}(d\sqrt{T})$, where $\tilde{O}$ hides logarithmic factors. This matches the lower bound $\Omega(d\sqrt{T})$ — LinUCB is <strong>minimax optimal</strong>.</p>
+
+    <h3>Complete LinUCB Algorithm (Disjoint)</h3>
+    <pre>Initialize: For each arm a = 1,...,K:
+  A_a = λI ∈ ℝ^{d×d}         # Regularized covariance
+  b_a = 0  ∈ ℝ^d              # Reward-weighted contexts
+
+For t = 1, 2, ..., T:
+  Observe context x_t ∈ ℝ^d
+
+  For each arm a:
+    θ̂_a     = A_a⁻¹ b_a               # Ridge regression estimate
+    p_a(t)  = x_t^T θ̂_a               # Estimated reward
+    cb_a(t) = α √(x_t^T A_a⁻¹ x_t)   # Confidence bound (exploration bonus)
+
+  Pull arm A_t = argmax_a  [p_a(t) + cb_a(t)]
+  Observe reward r_t
+
+  # Update chosen arm only:
+  A_{A_t} ← A_{A_t} + x_t x_t^T      # Rank-1 update (use Sherman-Morrison for A⁻¹)
+  b_{A_t} ← b_{A_t} + r_t x_t</pre>
+  </div>
+
+  <!-- Tab 6: Disjoint vs Hybrid -->
+  <div id="linucb-variants" class="tab-pane">
+    <h3>Disjoint LinUCB</h3>
+    <p>Each arm $a$ has its own independent parameter vector $\theta_a \in \mathbb{R}^d$. Data for arm 1 says nothing about arm 2. The reward model is:</p>
+    $$\mathbb{E}[r \mid x, a] = x^\top \theta_a^*$$
+    <p><strong>Best when:</strong> Arms are fundamentally different (different content types, different products). $K$ is small enough that each arm accumulates sufficient data. $d$ is moderate.</p>
+
+    <h3>Hybrid LinUCB</h3>
+    <p>Decomposes features into shared ($z \in \mathbb{R}^k$, e.g. user features) and arm-specific ($x \in \mathbb{R}^d$):</p>
+    $$\mathbb{E}[r \mid x, z, a] = z^\top \beta^* + x^\top \theta_a^*$$
+    <p>where $\beta^* \in \mathbb{R}^k$ is a <em>global shared parameter</em> estimated from all arms' data jointly. Maintain:</p>
+    <ul>
+      <li>One global matrix $A_0 \in \mathbb{R}^{k\times k}$ and vector $b_0 \in \mathbb{R}^k$ for $\beta^*$</li>
+      <li>Per-arm matrices $A_a$ and vectors $B_a$ (cross-terms) for $\theta_a^*$</li>
+    </ul>
+    <p>The UCB score becomes (more complex, involving cross-covariance):</p>
+    $$\text{UCB}_{\text{hybrid}}(a,t) = z_t^\top\hat\beta + x_t^\top\hat\theta_a + \alpha\sqrt{s_{a,t}}$$
+    <p>where $s_{a,t}$ accounts for uncertainty in both $\hat\beta$ and $\hat\theta_a$.</p>
+    <p><strong>Best when:</strong> Many arms ($K$ large), per-arm data is sparse (cold-start), arms share structure (e.g. all articles have user-article interaction features).</p>
+
+    <div class="cols c11">
+      <div class="card">
+        <strong>Disjoint LinUCB</strong>
+        <ul style="margin-top:.4rem">
+          <li>$K \times d \times d$ matrices stored</li>
+          <li>No cross-arm information sharing</li>
+          <li>Simpler update equations</li>
+          <li>Better when arms are truly independent</li>
+        </ul>
+      </div>
+      <div class="card">
+        <strong>Hybrid LinUCB</strong>
+        <ul style="margin-top:.4rem">
+          <li>$1$ global + $K$ arm-specific matrices</li>
+          <li>User features improve all arms</li>
+          <li>More complex update (cross-terms)</li>
+          <li>Better for large $K$, cold-start arms</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div><!-- /s1 -->
+
+<!-- ── S2: Thompson Sampling ───────────────────────────────── -->
+<div id="s2" class="section">
+  <h1>Thompson Sampling for Contextual Bandits</h1>
+  <p style="color:#555;font-size:1rem">Bayesian linear regression meets bandit exploration</p>
+  <hr>
+
+  <div class="info">
+    <strong>Key insight:</strong> LinUCB uses a deterministic UCB score for exploration. Thompson Sampling (TS) achieves exploration <em>implicitly</em> — by sampling from the posterior over $\theta_a$ and acting greedily on the sample. Wide posteriors (high uncertainty) naturally produce varied samples, driving exploration. No $\alpha$ to tune.
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('ts','bayes')">1. Bayesian Setup</button>
+    <button class="tab-btn" onclick="tab('ts','posterior')">2. Posterior Updates</button>
+    <button class="tab-btn" onclick="tab('ts','sampling')">3. Sampling &amp; Arm Selection</button>
+    <button class="tab-btn" onclick="tab('ts','compare')">4. TS vs LinUCB</button>
+  </div>
+
+  <div id="ts-bayes" class="tab-pane active">
+    <p>We adopt the full Bayesian perspective on the same linear reward model. Place a Gaussian prior on each arm's parameter:</p>
+    $$\theta_a \sim \mathcal{N}(0,\, \lambda^{-1}I)$$
+    <p>This encodes the belief that $\theta_a^*$ has entries of magnitude $\sim 1/\sqrt\lambda$ before any data.</p>
+
+    <p>With a Gaussian likelihood (conditional on $\theta_a$):</p>
+    $$r \mid x, \theta_a \sim \mathcal{N}(x^\top\theta_a,\, \sigma^2)$$
+    <p>The prior and likelihood are <strong>conjugate</strong> — the posterior is also Gaussian. This enables closed-form Bayesian updates with no Monte Carlo needed.</p>
+
+    <div class="info3">
+      <strong>Conjugacy:</strong> Gaussian prior + Gaussian likelihood = Gaussian posterior. This is the key computational advantage of the linear bandit model. The posterior mean is exactly the ridge regression estimate, and the posterior covariance is exactly $A_a^{-1}$.
+    </div>
+  </div>
+
+  <div id="ts-posterior" class="tab-pane">
+    <p>After observing pulls $\{(x_s, r_s)\}_{s \in \mathcal{T}_a}$ for arm $a$, the posterior is:</p>
+    $$\theta_a \mid \mathcal{D}_t \sim \mathcal{N}(\mu_a,\, \Sigma_a)$$
+    <p>Computing $\Sigma_a^{-1}$ by combining prior precision and likelihood precision:</p>
+    $$\Sigma_a^{-1} = \underbrace{\lambda I}_{\text{prior precision}} + \underbrace{\frac{1}{\sigma^2}\sum_{s \in \mathcal{T}_a} x_s x_s^\top}_{\text{likelihood precision}} = \frac{1}{\sigma^2}\underbrace{\Bigl(\lambda\sigma^2 I + \sum_s x_s x_s^\top\Bigr)}_{A_a \text{ (if } \lambda_{\text{eff}} = \lambda\sigma^2\text{)}}$$
+
+    <p>Setting $\sigma^2 = 1$ (absorbing into $\lambda$), we get:</p>
+    $$\boxed{\Sigma_a = A_a^{-1}, \qquad \mu_a = A_a^{-1}b_a = \hat\theta_a}$$
+
+    <div class="info">
+      <strong>Remarkable fact:</strong> The TS posterior mean is <em>identical</em> to the LinUCB point estimate $\hat\theta_a$, and the posterior covariance is $A_a^{-1}$ — the same matrix used in the LinUCB exploration bonus. Both algorithms share the same sufficient statistics $(A_a, b_a)$. They differ only in how they <em>use</em> them.
+    </div>
+
+    <p><strong>Incremental update:</strong> On new observation $(x_t, r_t)$ for arm $a$:</p>
+    $$A_a \leftarrow A_a + x_tx_t^\top, \quad b_a \leftarrow b_a + r_tx_t$$
+    $$\Sigma_a \leftarrow A_a^{-1} \text{ (via Sherman-Morrison)}, \quad \mu_a \leftarrow A_a^{-1}b_a$$
+
+    <p>The posterior narrows (covariance shrinks) in directions where many contexts have been observed, reflecting decreased uncertainty.</p>
+  </div>
+
+  <div id="ts-sampling" class="tab-pane">
+    <h3>The Thompson Sampling Algorithm</h3>
+    <p>At each round $t$ with context $x_t$:</p>
+
+    <div class="step-row">
+      <div class="step-box">Sample<br>$\tilde\theta_a \sim \mathcal{N}(\mu_a, \nu^2\Sigma_a)$<br>for each arm $a$</div>
+      <div class="step-arrow">→</div>
+      <div class="step-box">Select arm<br>$A_t = \arg\max_a x_t^\top\tilde\theta_a$</div>
+      <div class="step-arrow">→</div>
+      <div class="step-box">Observe $r_t$,<br>update $A_{A_t}$, $b_{A_t}$</div>
+    </div>
+
+    <p>The scaling $\nu^2$ plays the role of $\alpha$ in LinUCB. Agrawal &amp; Goyal (2013) show $\nu = R\sqrt{9d\ln(T/\delta)}$ achieves $\tilde{O}(d\sqrt{T})$ regret, but $\nu = 1$ often works well in practice.</p>
+
+    <h3>Intuition: Why Does Sampling Achieve Exploration?</h3>
+    <p>Consider arm $a$ that has been pulled infrequently. Its posterior $\mathcal{N}(\mu_a, \Sigma_a)$ has high variance — samples $\tilde\theta_a$ will be spread far from $\mu_a$, occasionally yielding an <em>optimistic</em> sample where $x_t^\top\tilde\theta_a$ is large, causing arm $a$ to be selected. This is exploration: the algorithm tries arms proportionally to how often they <em>could</em> be the best arm under the posterior.</p>
+
+    <p>As data accumulates, $\Sigma_a \to 0$, samples concentrate near $\mu_a \approx \theta_a^*$, and the algorithm increasingly exploits.</p>
+
+    <h3>Computational Note</h3>
+    <p>Sampling from $\mathcal{N}(\mu_a, \nu^2 A_a^{-1})$ requires the Cholesky decomposition $L L^\top = A_a^{-1}$:</p>
+    $$\tilde\theta_a = \mu_a + \nu\, L\, z, \quad z \sim \mathcal{N}(0, I)$$
+    <p>This costs $O(d^3)$ per arm per round in general. For large $d$, approximations are used: <strong>last-layer only</strong> (treat lower layers as fixed feature extractor), <strong>diagonal $\Sigma_a$</strong> (ignores correlations), or <strong>ensemble/bootstrap</strong> methods that avoid explicit covariance.</p>
+  </div>
+
+  <div id="ts-compare" class="tab-pane">
+    <table>
+      <tr><th>Dimension</th><th>LinUCB</th><th>Linear Thompson Sampling</th></tr>
+      <tr><td><strong>Exploration</strong></td><td>Explicit UCB bonus $\alpha\sqrt{x^\top A^{-1}x}$</td><td>Implicit: variance of posterior sample</td></tr>
+      <tr><td><strong>Determinism</strong></td><td>Deterministic given same history</td><td>Stochastic — different runs differ</td></tr>
+      <tr><td><strong>Tuning</strong></td><td>$\alpha$ must be set (or tuned)</td><td>$\nu$ less sensitive; often $\nu=1$ works</td></tr>
+      <tr><td><strong>Theory (regret)</strong></td><td>$\tilde{O}(d\sqrt{T\log T})$</td><td>$\tilde{O}(d\sqrt{T})$ — slightly better</td></tr>
+      <tr><td><strong>Empirical</strong></td><td>Good</td><td>Slightly better in most benchmarks</td></tr>
+      <tr><td><strong>Sufficient stats</strong></td><td>$A_a$, $b_a$ (same as TS)</td><td>$A_a$, $b_a$ (same as LinUCB)</td></tr>
+      <tr><td><strong>Correlated arms</strong></td><td>Harder (disjoint = no sharing)</td><td>Easier (coupled priors possible)</td></tr>
+      <tr><td><strong>Interpretability</strong></td><td>UCB score is explicit</td><td>Exploration implicit in sampling</td></tr>
+    </table>
+
+    <div class="info2">
+      <strong>Why TS often wins empirically:</strong> LinUCB's exploration bonus $\alpha\sqrt{x^\top A^{-1}x}$ scales identically across all arms with the same uncertainty — it doesn't differentiate based on <em>what's plausible</em> for the reward. TS naturally selects arms in proportion to the probability they are optimal, which is more efficient. It also handles multi-modality in the posterior better.
+    </div>
+
+    <h3>Neural Extensions</h3>
+    <p>Both algorithms generalize naturally to nonlinear reward models:</p>
+    <ul>
+      <li><strong>NeuralUCB</strong>: Replace $x$ with the gradient of a neural net $\nabla_\theta f(x;\theta) \in \mathbb{R}^p$. Maintain $Z_t = \lambda I + \sum_s g_s g_s^\top$ in gradient space. UCB = $f(x;\theta) + \beta\sqrt{g(x)^\top Z_t^{-1}g(x)}$. Justified via neural tangent kernel theory.</li>
+      <li><strong>NeuralTS</strong>: Sample from posterior in NTK-induced RKHS. Same $\tilde{O}(\sqrt{T})$ regret. Outperforms NeuralUCB empirically.</li>
+      <li><strong>Bootstrapped bandits</strong>: Train $M$ networks on bootstrap resamples; use variance across heads as uncertainty. Compatible with any architecture.</li>
+    </ul>
+  </div>
+</div><!-- /s2 -->
+
+<!-- ── S3: Viz — Confidence Ellipsoid ─────────────────────── -->
+<div id="s3" class="section">
+  <h1>Visualisation: Confidence Ellipsoid</h1>
+  <p style="color:#555;font-size:1rem">How uncertainty shrinks as we observe contexts — and what drives the LinUCB exploration bonus</p>
+  <hr>
+
+  <div class="info">
+    <strong>What you're seeing:</strong> We work in 2D ($d=2$) context space. Each arm has an unknown true parameter $\theta_a^* \in \mathbb{R}^2$. We accumulate context observations and update $A_a$. The <strong>ellipse</strong> shows the set $\{x : x^\top A_a^{-1}x = 1\}$ — the "uncertainty unit ball" in context space. Points outside the ellipse have uncertainty $> 1$; inside, $< 1$. The ellipse <em>shrinks</em> in directions covered by data. The <span style="color:var(--cb2);font-weight:600">orange dot</span> is a query point; the bonus shown is $\sqrt{q^\top A^{-1}q}$.
+  </div>
+
+  <div class="cols c11">
+    <div>
+      <div class="ctrl"><label>Arm to inspect</label>
+        <select id="ell-arm" onchange="updateEllipsoid()" style="font-size:.84rem;padding:.25rem .5rem;border:1px solid var(--border);border-radius:4px">
+          <option value="0">Arm A (θ*=[0.8, 0.1])</option>
+          <option value="1">Arm B (θ*=[0.1, 0.8])</option>
+          <option value="2">Arm C (θ*=[0.5, -0.5])</option>
+        </select>
+      </div>
+      <div class="ctrl">
+        <label>Observations (n)</label>
+        <input type="range" id="ell-n" min="0" max="300" value="0" oninput="this.nextElementSibling.textContent=this.value;updateEllipsoid()">
+        <span class="val">0</span>
+      </div>
+      <div class="ctrl">
+        <label>Query $q_1$</label>
+        <input type="range" id="ell-q1" min="-150" max="150" value="80" oninput="this.nextElementSibling.textContent=(this.value/100).toFixed(2);updateEllipsoid()">
+        <span class="val">0.80</span>
+      </div>
+      <div class="ctrl">
+        <label>Query $q_2$</label>
+        <input type="range" id="ell-q2" min="-150" max="150" value="40" oninput="this.nextElementSibling.textContent=(this.value/100).toFixed(2);updateEllipsoid()">
+        <span class="val">0.40</span>
+      </div>
+      <div id="ell-stats" class="card" style="margin-top:.8rem;font-size:.85rem"></div>
+    </div>
+    <div>
+      <div id="ell-chart" style="height:400px"></div>
+      <p class="caption">Dots = observed contexts; ellipse = {x : x⊤A⁻¹x = 1}; orange = query point. Watch how the ellipse shrinks in directions covered by data.</p>
+    </div>
+  </div>
+</div><!-- /s3 -->
+
+<!-- ── S4: Viz — Live Simulation ───────────────────────────── -->
+<div id="s4" class="section">
+  <h1>Visualisation: Live Simulation</h1>
+  <p style="color:#555;font-size:1rem">LinUCB vs Thompson Sampling vs ε-greedy in a 2D context world</p>
+  <hr>
+
+  <div class="info">
+    <strong>Setup:</strong> Three arms with true parameters $\theta_A^* = [0.8, 0.1]$, $\theta_B^* = [0.1, 0.8]$, $\theta_C^* = [0.5, -0.5]$. Contexts $x_t$ are drawn uniformly from the unit disk. Expected reward: $x_t^\top\theta_a^*$; noise $\sim\mathcal{N}(0, 0.3^2)$. The oracle always picks $\arg\max_a x_t^\top\theta_a^*$. Regret = oracle expected reward $-$ chosen arm's expected reward.
+  </div>
+
+  <div class="cols c11">
+    <div>
+      <div class="ctrl"><label>Rounds T</label>
+        <input type="range" id="sim-T" min="200" max="2000" step="100" value="800"
+          oninput="this.nextElementSibling.textContent=this.value">
+        <span class="val">800</span>
+      </div>
+      <div class="ctrl"><label>LinUCB α</label>
+        <input type="range" id="sim-alpha" min="1" max="40" value="10"
+          oninput="this.nextElementSibling.textContent=(this.value/10).toFixed(1)">
+        <span class="val">1.0</span>
+      </div>
+      <div class="ctrl"><label>ε-greedy ε</label>
+        <input type="range" id="sim-eps" min="1" max="30" value="10"
+          oninput="this.nextElementSibling.textContent=(this.value/100).toFixed(2)">
+        <span class="val">0.10</span>
+      </div>
+      <div class="ctrl"><label>TS scale ν</label>
+        <input type="range" id="sim-nu" min="1" max="30" value="10"
+          oninput="this.nextElementSibling.textContent=(this.value/10).toFixed(1)">
+        <span class="val">1.0</span>
+      </div>
+      <button class="btn" onclick="runSimulation()">▶ Run</button>
+      <div id="sim-stats" style="margin-top:.8rem"></div>
+    </div>
+    <div>
+      <div id="sim-chart" style="height:400px"></div>
+      <p class="caption">Cumulative regret vs rounds. Lower is better. LinUCB and TS should both achieve sub-linear growth while ε-greedy grows linearly. Try increasing α — more exploration hurts early but helps long-term.</p>
+    </div>
+  </div>
+
+  <h2>Arm Pull Distribution</h2>
+  <div id="sim-pulls" style="height:280px"></div>
+  <p class="caption">Fraction of pulls per arm per algorithm. The contextual structure means the "best arm" varies by context — a balanced distribution here is actually correct (each arm dominates in some region of context space).</p>
+</div><!-- /s4 -->
+
+<!-- ── S5: Viz — Policy Landscape ─────────────────────────── -->
+<div id="s5" class="section">
+  <h1>Visualisation: Policy Landscape</h1>
+  <p style="color:#555;font-size:1rem">Which arm does LinUCB select in each region of context space?</p>
+  <hr>
+
+  <div class="info">
+    <strong>What you're seeing:</strong> The 2D context space $[{-1.5}, 1.5]^2$ is colored by which arm LinUCB selects (after learning from $n$ rounds of experience). The dashed/solid lines show the <em>true optimal boundaries</em> — where $x^\top\theta_a^* = x^\top\theta_b^*$ for pairs of arms. As $n$ grows, the learned policy converges to the oracle. High $\alpha$ keeps regions fuzzy (exploration); low $\alpha$ gives sharp boundaries (exploitation).
+  </div>
+
+  <div class="cols c11">
+    <div>
+      <div class="ctrl"><label>Training rounds n</label>
+        <input type="range" id="land-n" min="0" max="600" step="20" value="0"
+          oninput="this.nextElementSibling.textContent=this.value;updateLandscape()">
+        <span class="val">0</span>
+      </div>
+      <div class="ctrl"><label>LinUCB α</label>
+        <input type="range" id="land-alpha" min="0" max="40" value="8"
+          oninput="this.nextElementSibling.textContent=(this.value/10).toFixed(1);updateLandscape()">
+        <span class="val">0.8</span>
+      </div>
+      <div id="land-info" class="card" style="margin-top:.8rem;font-size:.85rem"></div>
+    </div>
+    <div>
+      <div id="land-chart" style="height:420px"></div>
+      <p class="caption">Colors: <span style="background:#b3d4ff;padding:.1rem .4rem;border-radius:3px">blue=Arm A</span>, <span style="background:#ffd6b3;padding:.1rem .4rem;border-radius:3px">orange=Arm B</span>, <span style="background:#b3f0e0;padding:.1rem .4rem;border-radius:3px">teal=Arm C</span>. Lines are oracle boundaries. At n=0, policy is nearly uniform (α dominates). At n=600, the learned regions approach ground truth.</p>
+    </div>
+  </div>
+</div><!-- /s5 -->
+
+<!-- ── S6: Applications & Tooling ─────────────────────────── -->
+<div id="s6" class="section">
+  <h1>Applications &amp; Tooling</h1>
+  <hr>
+
+  <h2>Yahoo! News — The LinUCB Deployment</h2>
+  <p>Li et al. (2010) deployed LinUCB on the Yahoo! Front Page "Today Module" — selecting which article to show from ~20 candidates to maximize click-through rate (CTR). Each page load: observe a 6-dim user feature vector, select an article (arm). The article has a 6-dim feature vector. Hybrid LinUCB forms a 36-dim user-article interaction feature.</p>
+  <p>Result: <strong>+12.5% CTR improvement</strong> over a random policy in live A/B tests on ~4.7M events. The paper also introduced the importance-weighted offline evaluation methodology that is now standard.</p>
+
+  <h2>Offline Evaluation: You Only See What You Chose</h2>
+  <p>A core practical challenge: you have logged data from an old policy $\pi_b$ and want to evaluate a new policy $\pi_e$ offline. The problem: $\pi_e$ might choose arm 3, but your logs only have reward observations for whichever arm $\pi_b$ chose. Counterfactual rewards are missing.</p>
+
+  <table>
+    <tr><th>Method</th><th>Formula</th><th>Bias</th><th>Variance</th><th>Requires</th></tr>
+    <tr>
+      <td><strong>Direct Method (DM)</strong></td>
+      <td>$\frac{1}{n}\sum_t \hat r(x_t, \pi_e(x_t))$</td>
+      <td>High if $\hat r$ wrong</td><td>Low</td><td>Reward model $\hat r$</td>
+    </tr>
+    <tr>
+      <td><strong>IPS</strong></td>
+      <td>$\frac{1}{n}\sum_t r_t \frac{\mathbf{1}[a_t=\pi_e(x_t)]}{\pi_b(a_t|x_t)}$</td>
+      <td>Zero (unbiased)</td><td>High (clips at $M$)</td><td>Logging propensities $\pi_b$</td>
+    </tr>
+    <tr>
+      <td><strong>Doubly Robust (DR)</strong></td>
+      <td>DM + IPS $\cdot$ (residual)</td>
+      <td>Low (consistent if either model correct)</td><td>Medium</td><td>Both $\hat r$ and $\pi_b$</td>
+    </tr>
+  </table>
+  <p>The <strong>Doubly Robust estimator</strong> (Dudík et al., 2011) combines both:</p>
+  $$\hat V_{DR}(\pi_e) = \hat V_{DM}(\pi_e) + \frac{1}{n}\sum_t \frac{\mathbf{1}[a_t=\pi_e(x_t)]}{\pi_b(a_t|x_t)}\bigl(r_t - \hat r(x_t, a_t)\bigr)$$
+  <p>DR is consistent if <em>either</em> the reward model $\hat r$ or the logging propensity $\pi_b$ is correctly specified — it's doubly robust to misspecification of one of the two.</p>
+
+  <h2>Algorithm Comparison</h2>
+  <table>
+    <tr><th>Algorithm</th><th>Regret</th><th>Cost/round</th><th>Exploration</th><th>Best for</th></tr>
+    <tr>
+      <td>ε-Greedy (contextual)</td>
+      <td><span class="pill pill-bad">$O(T^{2/3})$</span></td>
+      <td>$O(d)$</td>
+      <td>Random, prob $\varepsilon$</td>
+      <td>Baseline, any base learner</td>
+    </tr>
+    <tr>
+      <td><strong>LinUCB</strong></td>
+      <td><span class="pill pill-mid">$\tilde O(d\sqrt{T})$</span></td>
+      <td>$O(d^2)$</td>
+      <td>Directed (ellipsoidal UCB)</td>
+      <td>Linear rewards, moderate $d$</td>
+    </tr>
+    <tr>
+      <td><strong>Linear TS</strong></td>
+      <td><span class="pill pill-best">$\tilde O(d\sqrt{T})$</span></td>
+      <td>$O(d^2)$–$O(d^3)$</td>
+      <td>Implicit (posterior sampling)</td>
+      <td>Best empirically, linear rewards</td>
+    </tr>
+    <tr>
+      <td>Epoch-Greedy</td>
+      <td><span class="pill pill-bad">$O(T^{2/3})$</span></td>
+      <td>Depends on learner</td>
+      <td>Forced exploration epochs</td>
+      <td>Nonlinear rewards, any learner</td>
+    </tr>
+    <tr>
+      <td>EXP4</td>
+      <td><span class="pill pill-mid">$O(\sqrt{TK\log N})$</span></td>
+      <td>$O(N)$</td>
+      <td>Exp. weights over policies</td>
+      <td>Adversarial contexts</td>
+    </tr>
+    <tr>
+      <td>NeuralUCB/NeuralTS</td>
+      <td><span class="pill pill-best">$\tilde O(\sqrt{T})$</span></td>
+      <td>$O(p^2)$ — expensive</td>
+      <td>UCB/sampling in NTK space</td>
+      <td>Nonlinear, large-scale</td>
+    </tr>
+  </table>
+
+  <h2>Bandits vs. Full RL — Decision Guide</h2>
+  <div class="cols c11">
+    <div class="info3">
+      <strong>Use contextual bandits when:</strong>
+      <ul style="margin-top:.3rem">
+        <li>Reward is immediate and directly observable</li>
+        <li>Your action does not meaningfully change future contexts</li>
+        <li>You need sub-millisecond inference ($K$ small, $d$ moderate)</li>
+        <li>Rich context, instant feedback: ads, recommendations, pricing</li>
+      </ul>
+    </div>
+    <div class="info2">
+      <strong>Use full RL when:</strong>
+      <ul style="margin-top:.3rem">
+        <li>Actions change state (chatbots, tutoring, robotics)</li>
+        <li>Delayed or sparse rewards (drug trials, games)</li>
+        <li>Long-horizon planning required</li>
+        <li>Session-level optimization (total watch time, not per-click CTR)</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Industry Tooling</h2>
+  <table>
+    <tr><th>Tool</th><th>Description</th><th>LinUCB/TS support</th></tr>
+    <tr><td><strong>Vowpal Wabbit</strong></td><td>Production-grade online CB (Microsoft); powers Azure Personalizer</td><td>Yes — <code>--cb_explore</code>, <code>--cb_adf</code></td></tr>
+    <tr><td><strong>contextualbandits</strong> (Python)</td><td>Most complete Python CB library; bootstrap, OffsetTree, LinUCB, LinTS</td><td>Yes — <code>LinUCB</code>, <code>LinTS</code></td></tr>
+    <tr><td><strong>Azure Personalizer</strong></td><td>Managed CB service (VW under the hood); REST API</td><td>Yes (managed)</td></tr>
+    <tr><td><strong>mabwiser</strong> (IBM)</td><td>Pure-Python MAB/CB; good for prototyping</td><td>LinGreedy, LinThompson, LinUCB</td></tr>
+  </table>
+</div><!-- /s6 -->
+
+<!-- ── S7: Sources ─────────────────────────────────────────── -->
+<div id="s7" class="section">
+  <h1>Sources &amp; Further Reading</h1>
+  <hr>
+  <table>
+    <tr><th>Paper</th><th>Contribution</th></tr>
+    <tr><td>Langford &amp; Zhang (2007). <em>The Epoch-Greedy Algorithm for Contextual Multi-armed Bandits.</em> NIPS.</td><td>First formal CB treatment, $O(T^{2/3})$ via reduction to supervised learning</td></tr>
+    <tr><td>Li, Chu, Langford, Schapire (2010). <em>A Contextual-Bandit Approach to Personalized News Article Recommendation.</em> WWW.</td><td><strong>LinUCB</strong> — disjoint and hybrid variants, Yahoo! deployment</td></tr>
+    <tr><td>Abbasi-Yadkori, Pál, Szepesvári (2011). <em>Improved Algorithms for Linear Stochastic Bandits.</em> NIPS.</td><td>Tight confidence ellipsoid via self-normalized concentration; $\tilde O(d\sqrt T)$ regret</td></tr>
+    <tr><td>Agrawal &amp; Goyal (2013). <em>Thompson Sampling for Contextual Bandits with Linear Payoffs.</em> ICML.</td><td><strong>Linear TS</strong> — Bayesian linear bandit, $\tilde O(d\sqrt T)$ regret</td></tr>
+    <tr><td>Dudík, Langford, Li (2011). <em>Doubly Robust Policy Evaluation and Learning.</em> ICML.</td><td>Doubly robust offline evaluation estimator</td></tr>
+    <tr><td>Zhou, Gu, Szepesvári (2020). <em>Neural Contextual Bandits with UCB-based Exploration.</em> ICML.</td><td><strong>NeuralUCB</strong> — UCB via neural tangent kernel</td></tr>
+    <tr><td>Zhang et al. (2020). <em>Neural Thompson Sampling.</em> ICLR 2021.</td><td><strong>NeuralTS</strong> — posterior sampling in NTK space</td></tr>
+  </table>
+
+  <h2>Related Pages on This Site</h2>
+  <ul>
+    <li><a href="../20260329_multi_armed_and_contextual_bandits/index.html">Multi-Armed &amp; Contextual Bandits</a> — UCB1, Thompson Sampling for Bernoulli bandits, overview of contextual bandits</li>
+    <li><a href="../20260327_random_fourier_features/index.html">Random Fourier Features</a> — kernel approximations useful for nonlinear bandit contexts</li>
+    <li><a href="../20260330_locality_sensitive_hashing/index.html">Locality Sensitive Hashing</a> — fast approximate nearest-neighbor for large-scale action spaces</li>
+  </ul>
+</div><!-- /s7 -->
+
+</main>
+
+<script>
+/* ── Mulberry32 PRNG ──────────────────────────────────────── */
+function mkRng(seed) {
+  let s = seed | 0;
+  function rand() {
+    s += 0x6D2B79F5;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  function randn() {
+    const u = rand() || 1e-10, v = rand();
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+  }
+  function arr(n, fn) { return Array.from({length: n}, fn); }
+  return { rand, randn, arr };
+}
+
+/* ── Plotly shared config ─────────────────────────────────── */
+const PLT = {
+  cb: '#3a86ff', cb2: '#e76f51', cb3: '#2a9d8f',
+  layout(extra) {
+    return Object.assign({
+      margin: {l:50, r:20, t:40, b:50},
+      paper_bgcolor: 'white', plot_bgcolor: '#fafafa',
+      font: {family: '-apple-system, sans-serif', size: 12},
+    }, extra);
+  },
+  config: {responsive: true, displayModeBar: false},
+};
+
+/* ── 2D Matrix Utilities ──────────────────────────────────── */
+function inv2x2(A) {
+  const det = A[0][0]*A[1][1] - A[0][1]*A[1][0];
+  if (Math.abs(det) < 1e-12) return [[1e6,0],[0,1e6]];
+  return [[A[1][1]/det, -A[0][1]/det], [-A[1][0]/det, A[0][0]/det]];
+}
+function matvec2(A, v) {
+  return [A[0][0]*v[0]+A[0][1]*v[1], A[1][0]*v[0]+A[1][1]*v[1]];
+}
+function quadForm2(M, v) {
+  const Mv = matvec2(M, v);
+  return v[0]*Mv[0] + v[1]*Mv[1];
+}
+function outerAdd2(A, x) {
+  return [[A[0][0]+x[0]*x[0], A[0][1]+x[0]*x[1]],
+          [A[1][0]+x[1]*x[0], A[1][1]+x[1]*x[1]]];
+}
+function dot2(a,b){return a[0]*b[0]+a[1]*b[1];}
+function addVec2(a,b){return [a[0]+b[0],a[1]+b[1]];}
+function scaleVec2(s,v){return [s*v[0],s*v[1]];}
+function norm2vec(v){const n=Math.hypot(v[0],v[1]);return n>1e-10?[v[0]/n,v[1]/n]:[1,0];}
+
+/* Draw the level set {x : x^T M x = c^2} as an ellipse.
+   M is positive definite 2x2, c > 0. Returns {ex, ey}. */
+function uncertaintyEllipse(M, c, N) {
+  N = N || 64;
+  const a=M[0][0], b=M[0][1], d=M[1][1];
+  const tr=a+d, det=a*d-b*b;
+  const disc=Math.sqrt(Math.max(0, tr*tr/4-det));
+  const lam1=tr/2+disc, lam2=Math.max(1e-10, tr/2-disc);
+  let e1, e2;
+  if(Math.abs(b)>1e-9){ e1=norm2vec([b,lam1-a]); e2=norm2vec([b,lam2-a]); }
+  else { e1=a>=d?[1,0]:[0,1]; e2=a>=d?[0,1]:[1,0]; }
+  const r1=c/Math.sqrt(lam1), r2=c/Math.sqrt(lam2);
+  const ex=[], ey=[];
+  for(let i=0;i<=N;i++){
+    const t=2*Math.PI*i/N, ct=Math.cos(t), st=Math.sin(t);
+    ex.push(r1*ct*e1[0]+r2*st*e2[0]);
+    ey.push(r1*ct*e1[1]+r2*st*e2[1]);
+  }
+  return {ex,ey};
+}
+
+/* Sample from N(mu, nu^2 * A^{-1}) via Cholesky of invA */
+function samplePosterior(mu, invA, nu, rng) {
+  const a=invA[0][0], b=invA[0][1], d=invA[1][1];
+  const L00=Math.sqrt(Math.max(0,a));
+  const L10=L00>1e-10?b/L00:0;
+  const L11=Math.sqrt(Math.max(0,d-L10*L10));
+  const z0=rng.randn(), z1=rng.randn();
+  return [mu[0]+nu*(L00*z0), mu[1]+nu*(L10*z0+L11*z1)];
+}
+
+/* ── Navigation ───────────────────────────────────────────── */
+const initialized = new Set();
+
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (!initialized.has(id)) { initialized.add(id); initSection(id); }
+  if (window.MathJax) MathJax.typesetPromise([document.getElementById(id)]);
+  if (window.innerWidth < 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  }
+}
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+function tab(group, id) {
+  const bar = event.currentTarget.closest('.tab-bar');
+  bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(p => p.classList.remove('active'));
+  document.getElementById(`${group}-${id}`).classList.add('active');
+  if (window.MathJax) MathJax.typesetPromise([document.getElementById(`${group}-${id}`)]);
+}
+function initSection(id) {
+  const fns = {s3: initEllipsoid, s4: initSim, s5: initLandscape};
+  if (fns[id]) fns[id]();
+}
+
+/* ══════════════════════════════════════════════════════════
+   S3: CONFIDENCE ELLIPSOID
+══════════════════════════════════════════════════════════ */
+const ELL_LAMBDA = 1.0;
+const ELL_TRUE_THETA = [[0.8,0.1],[0.1,0.8],[0.5,-0.5]];
+const ELL_COLORS = [PLT.cb, PLT.cb2, PLT.cb3];
+const ELL_LABELS = ['A','B','C'];
+
+function initEllipsoid() {
+  updateEllipsoid();
+}
+
+function updateEllipsoid() {
+  const armIdx = +document.getElementById('ell-arm').value;
+  const nObs   = +document.getElementById('ell-n').value;
+  const q1     = +document.getElementById('ell-q1').value / 100;
+  const q2     = +document.getElementById('ell-q2').value / 100;
+
+  const rng = mkRng(42 + armIdx * 100);
+  const theta = ELL_TRUE_THETA[armIdx];
+  const color = ELL_COLORS[armIdx];
+
+  // Accumulate A and b from nObs contexts
+  let A = [[ELL_LAMBDA,0],[0,ELL_LAMBDA]];
+  let b = [0,0];
+  const ctxX = [], ctxY = [];
+  for (let i = 0; i < nObs; i++) {
+    // Sample context from unit circle
+    const angle = rng.rand() * 2 * Math.PI;
+    const r = Math.sqrt(rng.rand());
+    const x = [r * Math.cos(angle), r * Math.sin(angle)];
+    const noise = 0.3 * rng.randn();
+    const reward = dot2(x, theta) + noise;
+    A = outerAdd2(A, x);
+    b = addVec2(b, scaleVec2(reward, x));
+    ctxX.push(x[0]); ctxY.push(x[1]);
+  }
+  const invA = inv2x2(A);
+  const thetaHat = matvec2(invA, b);
+
+  // Ellipse contours at c=0.5, 1.0, 2.0
+  const q = [q1, q2];
+  const bonus = Math.sqrt(Math.max(0, quadForm2(invA, q)));
+  const estReward = dot2(q, thetaHat);
+  const trueReward = dot2(q, theta);
+
+  const traces = [];
+
+  // Context scatter
+  if (ctxX.length > 0) {
+    traces.push({ x: ctxX, y: ctxY, mode: 'markers', type: 'scatter',
+      name: 'Observed contexts', marker: {color: color+'44', size: 5, line:{color: color+'88', width:0.5}},
+      hovertemplate: '(%{x:.2f}, %{y:.2f})<extra></extra>' });
+  }
+
+  // Three ellipse levels
+  [0.5, 1.0, 2.0].forEach((c, ci) => {
+    const {ex, ey} = uncertaintyEllipse(invA, c);
+    traces.push({ x: ex, y: ey, mode: 'lines', type: 'scatter', name: `bonus=${c}`,
+      line: {color: color, width: ci===1?2.5:1.2, dash: ci===1?'solid':ci===0?'dot':'dash'},
+      hoverinfo: 'skip' });
+  });
+
+  // Query point
+  traces.push({ x: [q1], y: [q2], mode: 'markers', type: 'scatter', name: 'Query q',
+    marker: {color: PLT.cb2, size: 14, symbol: 'circle', line:{color:'#fff',width:2}},
+    hovertemplate: `q=(${q1.toFixed(2)},${q2.toFixed(2)})<br>bonus=${bonus.toFixed(3)}<extra></extra>` });
+
+  // True theta
+  traces.push({ x: [theta[0]], y: [theta[1]], mode: 'markers', type: 'scatter', name: 'True θ*',
+    marker: {color: '#ffd700', size: 12, symbol: 'star', line:{color:'#888',width:1}},
+    hovertemplate: `True θ*=(${theta[0]},${theta[1]})<extra></extra>` });
+
+  // Estimated theta
+  if (nObs > 0) {
+    traces.push({ x: [thetaHat[0]], y: [thetaHat[1]], mode: 'markers', type: 'scatter', name: 'θ̂ (estimate)',
+      marker: {color: color, size: 10, symbol: 'diamond', line:{color:'#fff',width:2}},
+      hovertemplate: `θ̂=(${thetaHat[0].toFixed(3)},${thetaHat[1].toFixed(3)})<extra></extra>` });
+  }
+
+  Plotly.react('ell-chart', traces, PLT.layout({
+    xaxis: {title: 'x₁ (context dim 1)', range: [-2.2, 2.2], zeroline:true, zerolinecolor:'#ddd', gridcolor:'#eee'},
+    yaxis: {title: 'x₂ (context dim 2)', range: [-2.2, 2.2], zeroline:true, zerolinecolor:'#ddd', gridcolor:'#eee'},
+    legend: {x:0.01, y:0.99, bgcolor:'rgba(255,255,255,0.85)', font:{size:11}},
+    height: 400,
+    title: {text: `Uncertainty Ellipses — Arm ${ELL_LABELS[armIdx]} (n=${nObs})`, font:{size:13}},
+  }), PLT.config);
+
+  // Stats box
+  const errNorm = nObs > 0 ? Math.sqrt(Math.pow(thetaHat[0]-theta[0],2)+Math.pow(thetaHat[1]-theta[1],2)) : null;
+  document.getElementById('ell-stats').innerHTML = `
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <div class="metric"><div class="metric-label">Bonus √(q⊤A⁻¹q)</div><div class="metric-value" style="color:var(--cb2)">${bonus.toFixed(4)}</div></div>
+      <div class="metric"><div class="metric-label">Est. reward q⊤θ̂</div><div class="metric-value" style="color:var(--cb)">${nObs>0?estReward.toFixed(4):'—'}</div></div>
+      <div class="metric"><div class="metric-label">True reward q⊤θ*</div><div class="metric-value">${trueReward.toFixed(4)}</div></div>
+      ${nObs>0?`<div class="metric"><div class="metric-label">‖θ̂ − θ*‖</div><div class="metric-value">${errNorm.toFixed(4)}</div></div>`:''}
+    </div>
+    <p style="margin-top:.5rem;font-size:.8rem;color:#666">
+      LinUCB score for query q: <strong>${nObs>0?(estReward+1.0*bonus).toFixed(4):'need observations'}</strong> (α=1.0).<br>
+      As n → ∞, bonus → 0 (pure exploitation). At n=0, A=λI, so bonus = ‖q‖/√λ = ${(Math.hypot(q1,q2)/Math.sqrt(ELL_LAMBDA)).toFixed(4)}.
+    </p>`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   S4: LIVE SIMULATION
+══════════════════════════════════════════════════════════ */
+const SIM_THETA = [[0.8,0.1],[0.1,0.8],[0.5,-0.5]];
+const SIM_LAMBDA = 1.0;
+const SIM_NOISE = 0.3;
+const SIM_ARM_COLORS = [PLT.cb, PLT.cb2, PLT.cb3];
+const SIM_ARM_NAMES = ['Arm A','Arm B','Arm C'];
+
+function initSim() {
+  runSimulation();
+}
+
+function runSimulation() {
+  const T     = +document.getElementById('sim-T').value;
+  const alpha = +document.getElementById('sim-alpha').value / 10;
+  const eps   = +document.getElementById('sim-eps').value / 100;
+  const nu    = +document.getElementById('sim-nu').value / 10;
+  const K     = SIM_THETA.length;
+
+  // Run LinUCB, TS, ε-greedy, oracle
+  const rng = mkRng(1337);
+  const contexts = Array.from({length:T}, () => {
+    const a = rng.rand()*2*Math.PI, r = Math.sqrt(rng.rand());
+    return [r*Math.cos(a), r*Math.sin(a)];
+  });
+  const noises = Array.from({length:T}, () => SIM_NOISE * rng.randn());
+
+  function runLinUCB() {
+    let A = Array.from({length:K}, () => [[SIM_LAMBDA,0],[0,SIM_LAMBDA]]);
+    let invA = Array.from({length:K}, () => [[1/SIM_LAMBDA,0],[0,1/SIM_LAMBDA]]);
+    let b = Array.from({length:K}, () => [0,0]);
+    const regret=[]; const pulls=new Array(K).fill(0);
+    for(let t=0;t<T;t++){
+      const x=contexts[t];
+      let bestArm=0, bestScore=-Infinity;
+      for(let a=0;a<K;a++){
+        const thetaHat=matvec2(invA[a],b[a]);
+        const score=dot2(x,thetaHat)+alpha*Math.sqrt(Math.max(0,quadForm2(invA[a],x)));
+        if(score>bestScore){bestScore=score;bestArm=a;}
+      }
+      const reward=dot2(x,SIM_THETA[bestArm])+noises[t];
+      const oracle=Math.max(...SIM_THETA.map(th=>dot2(x,th)));
+      regret.push(oracle-dot2(x,SIM_THETA[bestArm]));
+      pulls[bestArm]++;
+      // Sherman-Morrison update
+      const xi=invA[bestArm], xv=x;
+      const Ax=[xi[0][0]*xv[0]+xi[0][1]*xv[1], xi[1][0]*xv[0]+xi[1][1]*xv[1]];
+      const denom=1+dot2(xv,Ax);
+      invA[bestArm]=[[xi[0][0]-Ax[0]*Ax[0]/denom, xi[0][1]-Ax[0]*Ax[1]/denom],
+                     [xi[1][0]-Ax[1]*Ax[0]/denom, xi[1][1]-Ax[1]*Ax[1]/denom]];
+      b[bestArm]=addVec2(b[bestArm],scaleVec2(reward,x));
+    }
+    return {regret, pulls};
+  }
+
+  function runTS() {
+    let A = Array.from({length:K}, () => [[SIM_LAMBDA,0],[0,SIM_LAMBDA]]);
+    let invA = Array.from({length:K}, () => [[1/SIM_LAMBDA,0],[0,1/SIM_LAMBDA]]);
+    let b = Array.from({length:K}, () => [0,0]);
+    const regret=[]; const pulls=new Array(K).fill(0);
+    const rng2=mkRng(9999);
+    for(let t=0;t<T;t++){
+      const x=contexts[t];
+      let bestArm=0, bestScore=-Infinity;
+      for(let a=0;a<K;a++){
+        const mu=matvec2(invA[a],b[a]);
+        const sample=samplePosterior(mu,invA[a],nu,rng2);
+        const score=dot2(x,sample);
+        if(score>bestScore){bestScore=score;bestArm=a;}
+      }
+      const reward=dot2(x,SIM_THETA[bestArm])+noises[t];
+      const oracle=Math.max(...SIM_THETA.map(th=>dot2(x,th)));
+      regret.push(oracle-dot2(x,SIM_THETA[bestArm]));
+      pulls[bestArm]++;
+      const xi=invA[bestArm], xv=x;
+      const Ax=[xi[0][0]*xv[0]+xi[0][1]*xv[1], xi[1][0]*xv[0]+xi[1][1]*xv[1]];
+      const denom=1+dot2(xv,Ax);
+      invA[bestArm]=[[xi[0][0]-Ax[0]*Ax[0]/denom, xi[0][1]-Ax[0]*Ax[1]/denom],
+                     [xi[1][0]-Ax[1]*Ax[0]/denom, xi[1][1]-Ax[1]*Ax[1]/denom]];
+      b[bestArm]=addVec2(b[bestArm],scaleVec2(reward,x));
+    }
+    return {regret, pulls};
+  }
+
+  function runEpsGreedy() {
+    let A = Array.from({length:K}, () => [[SIM_LAMBDA,0],[0,SIM_LAMBDA]]);
+    let invA = Array.from({length:K}, () => [[1/SIM_LAMBDA,0],[0,1/SIM_LAMBDA]]);
+    let b = Array.from({length:K}, () => [0,0]);
+    const regret=[]; const pulls=new Array(K).fill(0);
+    const rng3=mkRng(5555);
+    for(let t=0;t<T;t++){
+      const x=contexts[t];
+      let bestArm;
+      if(rng3.rand()<eps){ bestArm=Math.floor(rng3.rand()*K); }
+      else {
+        let best=-Infinity;
+        for(let a=0;a<K;a++){
+          const score=dot2(x,matvec2(invA[a],b[a]));
+          if(score>best){best=score;bestArm=a;}
+        }
+      }
+      const reward=dot2(x,SIM_THETA[bestArm])+noises[t];
+      const oracle=Math.max(...SIM_THETA.map(th=>dot2(x,th)));
+      regret.push(oracle-dot2(x,SIM_THETA[bestArm]));
+      pulls[bestArm]++;
+      const xi=invA[bestArm], xv=x;
+      const Ax=[xi[0][0]*xv[0]+xi[0][1]*xv[1], xi[1][0]*xv[0]+xi[1][1]*xv[1]];
+      const denom=1+dot2(xv,Ax);
+      invA[bestArm]=[[xi[0][0]-Ax[0]*Ax[0]/denom, xi[0][1]-Ax[0]*Ax[1]/denom],
+                     [xi[1][0]-Ax[1]*Ax[0]/denom, xi[1][1]-Ax[1]*Ax[1]/denom]];
+      b[bestArm]=addVec2(b[bestArm],scaleVec2(reward,x));
+    }
+    return {regret, pulls};
+  }
+
+  const ucbRes = runLinUCB();
+  const tsRes  = runTS();
+  const egRes  = runEpsGreedy();
+
+  // Cumulative regret
+  const xs = Array.from({length:T}, (_,i)=>i+1);
+  function cumSum(arr){ let s=0; return arr.map(v=>(s+=v)); }
+
+  const ucbCumReg = cumSum(ucbRes.regret);
+  const tsCumReg  = cumSum(tsRes.regret);
+  const egCumReg  = cumSum(egRes.regret);
+
+  Plotly.react('sim-chart', [
+    {x:xs, y:egCumReg,  name:`ε-Greedy (ε=${eps.toFixed(2)})`, line:{color:'#e63946', width:2}},
+    {x:xs, y:ucbCumReg, name:`LinUCB (α=${alpha.toFixed(1)})`,  line:{color:PLT.cb,   width:2.5}},
+    {x:xs, y:tsCumReg,  name:`Lin-TS (ν=${nu.toFixed(1)})`,     line:{color:PLT.cb3,  width:2.5}},
+  ], PLT.layout({
+    xaxis:{title:'Round t', gridcolor:'#eee'},
+    yaxis:{title:'Cumulative Regret', gridcolor:'#eee'},
+    legend:{orientation:'h', y:-0.22, font:{size:11}},
+    height:400,
+    title:{text:'Cumulative Regret vs Rounds', font:{size:13}},
+  }), PLT.config);
+
+  // Pull distribution (grouped bar)
+  const armNames = SIM_ARM_NAMES;
+  Plotly.react('sim-pulls', [
+    {x:armNames, y:ucbRes.pulls.map(p=>p/T), name:`LinUCB`, type:'bar', marker:{color:PLT.cb}},
+    {x:armNames, y:tsRes.pulls.map(p=>p/T),  name:'Lin-TS', type:'bar', marker:{color:PLT.cb3}},
+    {x:armNames, y:egRes.pulls.map(p=>p/T),  name:'ε-Greedy', type:'bar', marker:{color:'#e63946'}},
+  ], PLT.layout({
+    barmode:'group',
+    xaxis:{title:'Arm', gridcolor:'#eee'},
+    yaxis:{title:'Pull fraction', range:[0,1], gridcolor:'#eee'},
+    legend:{orientation:'h', y:-0.25, font:{size:11}},
+    height:280,
+    title:{text:'Arm Pull Fractions', font:{size:13}},
+  }), PLT.config);
+
+  // Stats
+  const ucbFinal = ucbCumReg[T-1], tsFinal = tsCumReg[T-1], egFinal = egCumReg[T-1];
+  document.getElementById('sim-stats').innerHTML = `
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem">
+      <div class="metric"><div class="metric-label">LinUCB final regret</div><div class="metric-value" style="color:var(--cb)">${ucbFinal.toFixed(1)}</div></div>
+      <div class="metric"><div class="metric-label">Lin-TS final regret</div><div class="metric-value" style="color:var(--cb3)">${tsFinal.toFixed(1)}</div></div>
+      <div class="metric"><div class="metric-label">ε-Greedy final regret</div><div class="metric-value" style="color:#e63946">${egFinal.toFixed(1)}</div></div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════════════════
+   S5: POLICY LANDSCAPE
+══════════════════════════════════════════════════════════ */
+const LAND_THETA = [[0.8,0.1],[0.1,0.8],[0.5,-0.5]];
+const LAND_LAMBDA = 1.0;
+
+// Pre-generate training data at max n
+const LAND_MAX_N = 600;
+const LAND_CONTEXTS = (() => {
+  const rng = mkRng(2024);
+  return Array.from({length: LAND_MAX_N}, () => {
+    const angle = rng.rand()*2*Math.PI, r = Math.sqrt(rng.rand());
+    return [r*Math.cos(angle), r*Math.sin(angle)];
+  });
+})();
+const LAND_REWARDS = (() => {
+  const rng = mkRng(3035);
+  return Array.from({length: LAND_MAX_N}, (_, t) => {
+    // Oracle arm for this context (to simulate a decent behavior policy)
+    const x = LAND_CONTEXTS[t];
+    const scores = LAND_THETA.map(th => dot2(x, th));
+    const bestArm = scores.indexOf(Math.max(...scores));
+    return {arm: bestArm, reward: scores[bestArm] + 0.3*rng.randn()};
+  });
+})();
+
+function initLandscape() {
+  updateLandscape();
+}
+
+function updateLandscape() {
+  const nRounds = +document.getElementById('land-n').value;
+  const alpha   = +document.getElementById('land-alpha').value / 10;
+  const K = LAND_THETA.length;
+  const GRID = 50;
+  const RANGE = 1.5;
+
+  // Build LinUCB state from first nRounds data points
+  let invA = Array.from({length:K}, () => [[1/LAND_LAMBDA,0],[0,1/LAND_LAMBDA]]);
+  let b    = Array.from({length:K}, () => [0,0]);
+
+  for (let t = 0; t < nRounds; t++) {
+    const x = LAND_CONTEXTS[t];
+    const a = LAND_REWARDS[t].arm;
+    const r = LAND_REWARDS[t].reward;
+    const xi=invA[a], xv=x;
+    const Ax=[xi[0][0]*xv[0]+xi[0][1]*xv[1], xi[1][0]*xv[0]+xi[1][1]*xv[1]];
+    const denom=1+dot2(xv,Ax);
+    invA[a]=[[xi[0][0]-Ax[0]*Ax[0]/denom, xi[0][1]-Ax[0]*Ax[1]/denom],
+             [xi[1][0]-Ax[1]*Ax[0]/denom, xi[1][1]-Ax[1]*Ax[1]/denom]];
+    b[a]=addVec2(b[a],scaleVec2(r,xv));
+  }
+
+  // Evaluate policy on grid
+  const step = 2*RANGE/(GRID-1);
+  const zLearned = [], zOracle = [];
+  const xs1 = [], ys1 = [];
+  for (let i = 0; i < GRID; i++) {
+    const x2 = -RANGE + i*step;
+    const rowL=[], rowO=[];
+    for (let j = 0; j < GRID; j++) {
+      const x1 = -RANGE + j*step;
+      const xv = [x1, x2];
+      // Learned LinUCB score
+      let bestL=0, bestScoreL=-Infinity;
+      for(let a=0;a<K;a++){
+        const th=matvec2(invA[a],b[a]);
+        const s=dot2(xv,th)+alpha*Math.sqrt(Math.max(0,quadForm2(invA[a],xv)));
+        if(s>bestScoreL){bestScoreL=s;bestL=a;}
+      }
+      // Oracle (true expected reward)
+      const oracleScores = LAND_THETA.map(th=>dot2(xv,th));
+      const bestO = oracleScores.indexOf(Math.max(...oracleScores));
+      rowL.push(bestL); rowO.push(bestO);
+    }
+    zLearned.push(rowL); zOracle.push(rowO);
+    xs1.push(-RANGE + 0*step); ys1.push(x2);
+  }
+
+  const gridX = Array.from({length:GRID}, (_,j) => -RANGE+j*step);
+  const gridY = Array.from({length:GRID}, (_,i) => -RANGE+i*step);
+
+  // Colorscale: arm 0 = blue, 1 = orange, 2 = teal
+  const CS_LEARNED = [[0,'#c8dcff'],[0.45,'#c8dcff'],[0.5,'#ffd4b3'],[0.95,'#ffd4b3'],[1,'#b3f0e0']];
+  const CS_ORACLE  = [[0,'rgba(58,134,255,0.15)'],[0.45,'rgba(58,134,255,0.15)'],
+                      [0.5,'rgba(231,111,81,0.15)'],[0.95,'rgba(231,111,81,0.15)'],
+                      [1,'rgba(42,157,143,0.15)']];
+
+  // Oracle boundary lines (where arms tie)
+  const boundaryTraces = [];
+  for (let i=0; i<K; i++) {
+    for (let j=i+1; j<K; j++) {
+      // Line where x^T theta_i = x^T theta_j  =>  x^T (theta_i - theta_j) = 0
+      // This is a line through origin with normal (theta_i - theta_j)
+      const diff = [LAND_THETA[i][0]-LAND_THETA[j][0], LAND_THETA[i][1]-LAND_THETA[j][1]];
+      // Line: diff[0]*x1 + diff[1]*x2 = 0  =>  x2 = -(diff[0]/diff[1]) * x1
+      if (Math.abs(diff[1]) > 1e-10) {
+        const slope = -diff[0]/diff[1];
+        const lx = [-RANGE, RANGE], ly = [slope*(-RANGE), slope*RANGE];
+        boundaryTraces.push({x:lx, y:ly, mode:'lines', type:'scatter',
+          name:`A${i+1}=A${j+1} boundary`, line:{color:'#333', width:2, dash:'dash'}, showlegend:false});
+      } else {
+        // Vertical line x1=0
+        boundaryTraces.push({x:[0,0], y:[-RANGE,RANGE], mode:'lines', type:'scatter',
+          name:`A${i+1}=A${j+1} boundary`, line:{color:'#333', width:2, dash:'dash'}, showlegend:false});
+      }
+    }
+  }
+
+  // Observed context scatter (first nRounds)
+  const obsByArm = [[], [], []];
+  for (let t=0; t<nRounds; t++) {
+    obsByArm[LAND_REWARDS[t].arm].push(LAND_CONTEXTS[t]);
+  }
+  const obsTraces = obsByArm.map((pts, a) => ({
+    x: pts.map(p=>p[0]), y: pts.map(p=>p[1]),
+    mode:'markers', type:'scatter', name:SIM_ARM_NAMES[a],
+    marker:{color:SIM_ARM_COLORS[a], size:5, opacity:0.6, line:{color:'#fff', width:0.5}},
+    showlegend: nRounds > 0,
+  }));
+
+  const traces = [
+    {z: zLearned, x: gridX, y: gridY, type:'heatmap', showscale:false,
+     colorscale: CS_LEARNED, zmin:0, zmax:2, hoverinfo:'skip'},
+    ...boundaryTraces,
+    ...obsTraces,
+  ];
+
+  Plotly.react('land-chart', traces, PLT.layout({
+    xaxis:{title:'x₁', range:[-RANGE,RANGE], zeroline:true, zerolinecolor:'#bbb', gridcolor:'#eee'},
+    yaxis:{title:'x₂', range:[-RANGE,RANGE], zeroline:true, zerolinecolor:'#bbb', gridcolor:'#eee'},
+    legend:{x:0.01, y:0.99, bgcolor:'rgba(255,255,255,0.85)', font:{size:10}},
+    height:420,
+    title:{text:`Policy Landscape — LinUCB after ${nRounds} rounds (α=${alpha.toFixed(1)})`, font:{size:13}},
+  }), PLT.config);
+
+  // Compute agreement with oracle across grid
+  let agree=0, total=0;
+  for(let i=0;i<GRID;i++) for(let j=0;j<GRID;j++){
+    if(zLearned[i][j]===zOracle[i][j]) agree++;
+    total++;
+  }
+  document.getElementById('land-info').innerHTML = `
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <div class="metric"><div class="metric-label">Grid agreement with oracle</div>
+        <div class="metric-value" style="color:var(--cb)">${(100*agree/total).toFixed(1)}%</div></div>
+      <div class="metric"><div class="metric-label">Training rounds</div>
+        <div class="metric-value">${nRounds}</div></div>
+    </div>
+    <p style="font-size:.8rem;color:#666;margin-top:.4rem">
+      At n=0 (no data), the policy is driven entirely by the exploration bonus —
+      high-α → roughly uniform; low-α → greedy on prior (all zeros → random).<br>
+      At n=600, policy regions closely match the oracle's true decision boundaries (dashed lines).
+    </p>`;
+}
+
+/* ── Boot ─────────────────────────────────────────────────── */
+window.addEventListener('load', () => {
+  initialized.add('s0');
+  if (window.MathJax) MathJax.typesetPromise();
+});
+</script>
+</body>
+</html>
