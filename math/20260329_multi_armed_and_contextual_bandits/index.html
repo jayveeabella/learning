@@ -409,6 +409,28 @@ for t in range(K, T):
         <div class="info">
           By <strong>Hoeffding's inequality</strong>, the true mean $\mu_i$ lies below $\hat{\mu}_i + \sqrt{2\ln t / N_i}$ with probability at least $1 - 1/t^4$. Choosing the highest UCB is equivalent to asking: <em>"Which arm could plausibly be optimal right now?"</em> — and committing to it. Uncertainty naturally collapses as $N_i \to \infty$.
         </div>
+        <h3>Where does the bonus term come from?</h3>
+        <div class="info">
+          <strong>Step 1 — Hoeffding's inequality.</strong> Let $r_1, \ldots, r_{N_i}$ be i.i.d. rewards from arm $i$, each bounded in $[0,1]$. The full form of Hoeffding's inequality is:
+          $$P\!\left(\hat{\mu}_i - \mu_i \geq \varepsilon\right) \leq \exp\!\left(-\frac{2N_i^2\varepsilon^2}{\sum_{j=1}^{N_i}(b_j-a_j)^2}\right)$$
+          Since each reward is in $[0,1]$, every $(b_j - a_j)^2 = 1$, so the denominator sum equals $N_i$:
+          $$\leq \exp\!\left(-\frac{2N_i^2\varepsilon^2}{N_i}\right) = e^{-2N_i\varepsilon^2}$$
+          <strong>Why is $N_i$ in the numerator of the exponent?</strong> A more negative exponent means a smaller probability — a tighter bound. As $N_i$ grows, $-2N_i\varepsilon^2$ becomes more negative, so the failure probability shrinks toward zero. More samples → more confident → less chance of being wrong by $\varepsilon$. If $N_i$ were in the denominator of the exponent, the bound would get <em>looser</em> with more data, which would be backwards.
+          <br><br>
+          The $N_i$ in the denominator of the final bonus term $\sqrt{2\ln t / N_i}$ is a separate consequence of solving for $\varepsilon$ in Step 3 — the same $N_i$ before and after rearranging.
+          <br><br>
+          <strong>Step 2 — Choose a target failure probability.</strong> We want the confidence interval to tighten as $t$ grows, so we set the failure probability to $1/t^4$:
+          $$e^{-2N_i\varepsilon^2} = \frac{1}{t^4}$$
+          <strong>Step 3 — Solve for $\varepsilon$.</strong> Take the natural log of both sides:
+          $$-2N_i\varepsilon^2 = -4\ln t \implies \varepsilon^2 = \frac{2\ln t}{N_i} \implies \varepsilon = \sqrt{\frac{2\ln t}{N_i}}$$
+          This $\varepsilon$ is the bonus term. Adding it to $\hat{\mu}_i$ gives an upper confidence bound that holds with probability at least $1 - 1/t^4$.
+          <br><br>
+          <strong>Why $1/t^4$ specifically?</strong> It needs to be small enough that the failure events across all $K$ arms and all $T$ rounds stay negligible in total (union bound gives $K \cdot T \cdot 1/t^4 \to 0$), yet decay slowly enough that $\sum_t \varepsilon_t$ remains finite — which is what keeps regret $O(\log T)$ rather than $O(\sqrt{T})$ or worse. The exponent $4$ is the standard choice in the UCB1 analysis; any exponent $> 2$ would also work.
+        </div>
+        <h3>Why $N_i(t-1)$ in the formula but just $N_i$ in the explanation?</h3>
+        <div class="info">
+          They refer to the same quantity written with different precision. At round $t$, when you are <em>about to</em> choose an arm, you have completed $t-1$ rounds — so $N_i(t-1)$ is the count of pulls for arm $i$ <em>entering</em> this round, before anything is pulled. The prose and pseudocode drop the time subscript for readability, but always use the count you have <em>before</em> the current pull, not after.
+        </div>
       </div>
     </div>
   </div>
