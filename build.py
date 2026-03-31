@@ -22,7 +22,8 @@ HOMEPAGE = """<!DOCTYPE html>
 body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
   background:var(--sbg);color:var(--stext);min-height:100vh;padding:2rem 1.5rem}}
 h1{{font-size:1.6rem;font-weight:700;margin-bottom:0.25rem;color:#fff}}
-.subtitle{{font-size:0.9rem;color:#8892b0;margin-bottom:2.5rem}}
+.subtitle{{font-size:0.9rem;color:#8892b0;margin-bottom:1.5rem}}
+.intro{{font-size:0.85rem;color:#8892b0;line-height:1.6;max-width:640px;margin-bottom:2.5rem;padding:1rem 1.25rem;background:#16213e;border:1px solid #2d2d4e;border-radius:var(--r)}}
 .field-section{{margin-bottom:2.5rem}}
 .field-title{{
   font-size:0.75rem;font-weight:600;letter-spacing:0.1em;
@@ -45,6 +46,7 @@ h1{{font-size:1.6rem;font-weight:700;margin-bottom:0.25rem;color:#fff}}
 <body>
 <h1>Learning Navigator</h1>
 <p class="subtitle">Interactive visualizations — sorted by date, newest first</p>
+<p class="intro">This page is a place for me, Jayvee Abella, to create content that helps me learn more about any given topic. My goal is to make one of these a day. All content is generated using AI, so accuracy may vary.</p>
 {sections}
 {empty_msg}
 </body>
