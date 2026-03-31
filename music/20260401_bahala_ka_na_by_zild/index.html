@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bahala Ka Na by Zild — Music Theory Explainer</title>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --mus:#c9a84c;--mus2:#e76f51;--mus3:#6d8b9e;
+  --sw:242px;--sbg:#1a1a2e;--stext:#c8d0e7;
+  --bg:#f5f6fa;--card:#fff;--border:#dee2e6;
+  --r:6px;--text:#212529;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:15px;line-height:1.65}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);
+  background:var(--sbg);overflow-y:auto;z-index:100;padding:1.4rem 0}
+.sb-logo{padding:0 1.2rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem}
+.sb-logo h2{color:#fff;font-size:1rem;font-weight:700}
+.sb-logo p{color:var(--stext);font-size:.75rem;margin-top:.2rem}
+.home-btn{display:inline-block;margin-top:.6rem;font-size:.75rem;color:var(--stext);
+  text-decoration:none;opacity:.7;transition:opacity .15s}
+.home-btn:hover{opacity:1;color:#fff}
+.nav-btn{display:block;padding:.45rem 1.2rem;color:var(--stext);font-size:.82rem;
+  cursor:pointer;border-left:3px solid transparent;transition:all .15s;
+  background:none;border-top:none;border-right:none;border-bottom:none;
+  text-align:left;width:100%}
+.nav-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-btn.active{border-left-color:var(--mus);color:#fff;background:rgba(201,168,76,.15)}
+
+/* ── Main ─────────────────────────────────────────────────── */
+#main{margin-left:var(--sw);padding:2rem 2.5rem 5rem;max-width:1000px;width:100%}
+.section{display:none}.section.active{display:block}
+
+h1{font-size:1.85rem;font-weight:700;color:#1a1a2e;margin-bottom:.3rem}
+h2{font-size:1.25rem;font-weight:600;color:#1a1a2e;margin:1.6rem 0 .5rem}
+h3{font-size:1rem;font-weight:600;color:#333;margin:1.1rem 0 .4rem}
+p{margin-bottom:.75rem}
+hr{border:none;border-top:1px solid var(--border);margin:1.4rem 0}
+a{color:var(--mus)}
+ul,ol{padding-left:1.3rem;margin-bottom:.75rem}
+li{margin-bottom:.2rem}
+
+/* ── Boxes ────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.4rem;margin:1rem 0}
+.info{background:#fdf6e3;border-left:4px solid var(--mus);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.info2{background:#fef0ec;border-left:4px solid var(--mus2);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.theory{background:#eaf4fb;border-left:4px solid var(--mus3);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.warn{background:#fff8e1;border-left:4px solid #ffc107;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+
+/* ── Tables ───────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;margin:.9rem 0;font-size:.87rem}
+th{background:#f0f4f8;padding:.5rem .75rem;text-align:left;font-weight:600;border-bottom:2px solid var(--border)}
+td{padding:.45rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+
+/* ── Code ─────────────────────────────────────────────────── */
+pre{background:#1e2235;color:#abb2bf;padding:.9rem 1.1rem;border-radius:var(--r);
+  overflow-x:auto;font-size:.82rem;line-height:1.65;margin:.7rem 0;font-family:'Fira Code',Consolas,monospace}
+code{font-family:'Fira Code',Consolas,monospace;font-size:.82rem;background:#f0f0f0;
+  padding:.1rem .3rem;border-radius:3px}
+pre code{background:none;padding:0;font-size:inherit}
+
+/* ── Scale degree display ─────────────────────────────────── */
+.scale-row{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0}
+.scale-box{display:flex;flex-direction:column;align-items:center;background:var(--card);
+  border:2px solid var(--border);border-radius:var(--r);padding:.5rem .75rem;min-width:52px}
+.scale-box.root{border-color:var(--mus);background:#fdf6e3}
+.scale-note{font-weight:700;font-size:1rem;color:#1a1a2e}
+.scale-deg{font-size:.72rem;color:#888;margin-top:.15rem}
+.scale-box.root .scale-note{color:var(--mus)}
+
+/* ── Chord display ────────────────────────────────────────── */
+.chord-row{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0}
+.chord-card{flex:1;min-width:160px;background:var(--card);border:2px solid var(--border);
+  border-radius:var(--r);padding:.9rem 1.1rem}
+.chord-card.vi{border-color:#c9a84c}
+.chord-card.iv{border-color:#6d8b9e}
+.chord-card.v{border-color:#e76f51}
+.chord-name{font-size:1.4rem;font-weight:700;color:#1a1a2e}
+.chord-roman{font-size:.78rem;font-weight:600;color:#888;margin:.1rem 0}
+.chord-notes{font-size:.82rem;color:#555;font-family:'Fira Code',Consolas,monospace;margin:.3rem 0}
+.chord-role{font-size:.8rem;color:#666;font-style:italic}
+
+/* ── Annotation cards ─────────────────────────────────────── */
+.annotation{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:.85rem 1.1rem;margin:.6rem 0;display:grid;grid-template-columns:auto 1fr;gap:.75rem;align-items:start}
+.ann-line{font-family:'Fira Code',Consolas,monospace;font-size:.8rem;color:#c9a84c;
+  background:#1e2235;padding:.3rem .6rem;border-radius:4px;white-space:nowrap}
+.ann-text{font-size:.86rem;color:#444}
+
+/* ── Live Editor ─────────────────────────────────────────── */
+.live-editor{margin:1.2rem 0;border-radius:var(--r);overflow:hidden;
+  border:1px solid #2a2f4a;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.editor-toolbar{display:flex;justify-content:space-between;align-items:center;
+  background:#252940;padding:.5rem .9rem;border-bottom:1px solid #2a2f4a;flex-wrap:wrap;gap:.4rem}
+.editor-shortcuts{font-size:.73rem;color:#6b7280;font-family:'Fira Code',Consolas,monospace}
+.editor-btns{display:flex;gap:.4rem}
+.editor-btn{padding:.28rem .75rem;border-radius:4px;border:1px solid;cursor:pointer;
+  font-size:.8rem;font-weight:600;font-family:inherit;transition:all .15s}
+.editor-btn-run{background:var(--mus);border-color:var(--mus);color:#1a1a2e}
+.editor-btn-run:hover{background:#b8943a;border-color:#b8943a}
+.editor-btn-stop,.editor-btn-reset{background:transparent;border-color:#555;color:#abb2bf}
+.editor-btn-stop:hover,.editor-btn-reset:hover{border-color:#abb2bf;color:#fff}
+#strudel-code{display:block;width:100%;min-height:190px;background:#1e2235;color:#abb2bf;
+  font-family:'Fira Code',Consolas,monospace;font-size:.82rem;line-height:1.65;
+  padding:.9rem 1.1rem;border:none;border-bottom:1px solid #2a2f4a;
+  resize:vertical;outline:none;tab-size:2;-moz-tab-size:2}
+.strudel-iframe-wrap iframe{display:block;width:100%;height:360px;border:none}
+.editor-status{font-size:.73rem;padding:.3rem .9rem;background:#1a1c2b;
+  color:#6b7280;font-family:'Fira Code',Consolas,monospace;border-top:1px solid #2a2f4a}
+.editor-status.running{color:var(--mus)}
+.editor-status.stopped{color:#6b7280}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.cols{display:grid;gap:1.4rem;margin:.8rem 0}
+.c12{grid-template-columns:1fr 2fr}
+.c11{grid-template-columns:1fr 1fr}
+
+/* ── Misc ───────────────────────────────────────────────── */
+.caption{font-size:.81rem;color:#666;font-style:italic;margin-top:.35rem}
+.pill{display:inline-block;padding:.18rem .55rem;border-radius:20px;font-size:.78rem;font-weight:600;margin:.12rem .1rem}
+.pill-gold{background:#fdf6e3;color:#7d5a00;border:1px solid #c9a84c}
+.pill-blue{background:#eaf4fb;color:#1a5276;border:1px solid #6d8b9e}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+#menu-toggle{display:none;position:fixed;top:.7rem;right:.7rem;z-index:200;
+  background:var(--sbg);color:#fff;border:none;border-radius:6px;
+  padding:.5rem .7rem;cursor:pointer;font-size:1.15rem;line-height:1}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
+@media(max-width:767px){
+  #menu-toggle{display:block}
+  #sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.open{transform:translateX(0)}
+  #sidebar-overlay.open{display:block}
+  #main{margin-left:0;padding:3.5rem 1rem 4rem}
+  .cols.c12,.cols.c11{grid-template-columns:1fr}
+  .annotation{grid-template-columns:1fr}
+  .chord-row{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<button id="menu-toggle" aria-label="Toggle menu" onclick="toggleSidebar()">☰</button>
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <h2>🎹 Bahala Ka Na</h2>
+    <p>Music Theory Explainer</p>
+    <a class="home-btn" href="../../">← Home</a>
+  </div>
+  <button class="nav-btn active" onclick="nav('s0')">🎵 The Song</button>
+  <button class="nav-btn" onclick="nav('s1')">🎼 Key &amp; Scale</button>
+  <button class="nav-btn" onclick="nav('s2')">🎸 The Chord Loop</button>
+  <button class="nav-btn" onclick="nav('s3')">✨ Why It Floats</button>
+  <button class="nav-btn" onclick="nav('s4')">💻 The Strudel Code</button>
+  <button class="nav-btn" onclick="nav('s5')">▶ Listen</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN
+═══════════════════════════════════════════════════════════════ -->
+<main id="main">
+
+<!-- ── S0: The Song ──────────────────────────────────────── -->
+<div id="s0" class="section active">
+  <h1>Bahala Ka Na</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">Zild Benitez &mdash; <em>Medisina</em> (2022) &mdash; a learn-by-doing music theory explainer</p>
+  <hr>
+
+  <div class="cols c12">
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--mus)">About the Song</h3>
+      <p><strong>Artist:</strong> Zild Benitez<br>
+      <strong>Album:</strong> <em>Medisina</em> (October 2022)<br>
+      <strong>Label:</strong> Island Records Philippines / UMG</p>
+      <p style="margin-bottom:0"><strong>Title meaning:</strong> &ldquo;Bahala Ka Na&rdquo; is a Filipino phrase meaning <em>&ldquo;it&rsquo;s up to you now&rdquo;</em> &mdash; an expression of resigned acceptance, of letting go and releasing control.</p>
+    </div>
+    <div>
+      <p>Zild (Daniel Zildjian Benitez) is a Filipino multi-instrumentalist, singer-songwriter, and self-producer from Quezon City. He rose to fame as the bassist of <strong>IV of Spades</strong>, a funk-rock band with a 1970s disco-soul aesthetic. His solo career took a sharp turn into introspective, piano-driven territory: <em>Medisina</em> draws on post-punk and new wave influences (Joy Division, Radiohead, The 1975) while keeping his instinct for melodic bass thinking.</p>
+      <p>&ldquo;Bahala Ka Na&rdquo; is a slow, piano-led breakup song. The lyrics address an ex-partner directly &mdash; asking one last thing, acknowledging the distance &mdash; with a tone of melancholy but resolve. It fits perfectly with its harmonic language: resigned, floating, never quite resolving.</p>
+    </div>
+  </div>
+
+  <hr>
+  <h2>What This Explainer Covers</h2>
+  <p>This page uses &ldquo;Bahala Ka Na&rdquo; as a gateway into three interconnected music theory ideas:</p>
+  <ol>
+    <li><strong>The Aeolian mode</strong> (natural minor) and what &ldquo;no leading tone&rdquo; feels like in practice</li>
+    <li><strong>A VI&ndash;iv&ndash;v chord loop</strong> and why the minor dominant (v) keeps the harmony floating</li>
+    <li><strong>Extended chords</strong> &mdash; specifically Amaj7, and how a major seventh chord can blur the line between major and minor</li>
+  </ol>
+  <p>Each concept is illustrated with the actual Strudel code from the song, which you can play and edit in the final section.</p>
+
+  <div class="info">
+    <strong>Learn by doing.</strong> The last section embeds a live Strudel editor. After reading the theory, you can modify the code &mdash; swap G#m for G# major, change Amaj7 to a plain A chord &mdash; and <em>hear</em> what the theory predicts.
+  </div>
+</div>
+
+<!-- ── S1: Key & Scale ───────────────────────────────────── -->
+<div id="s1" class="section">
+  <h1>Key &amp; Scale</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">C&sharp; Natural Minor (Aeolian Mode)</p>
+  <hr>
+
+  <p>Every note in &ldquo;Bahala Ka Na&rdquo; comes from a single seven-note pool. If you collect all the notes in the Strudel program &mdash; A, B, C&sharp;, D&sharp;, E, F&sharp;, G&sharp; &mdash; they spell out the <strong>C&sharp; natural minor scale</strong>, also called <strong>C&sharp; Aeolian</strong>.</p>
+
+  <h2>The Scale</h2>
+  <div class="scale-row">
+    <div class="scale-box root"><span class="scale-note">C&sharp;</span><span class="scale-deg">1 (root)</span></div>
+    <div class="scale-box"><span class="scale-note">D&sharp;</span><span class="scale-deg">2</span></div>
+    <div class="scale-box"><span class="scale-note">E</span><span class="scale-deg">&flat;3</span></div>
+    <div class="scale-box"><span class="scale-note">F&sharp;</span><span class="scale-deg">4</span></div>
+    <div class="scale-box"><span class="scale-note">G&sharp;</span><span class="scale-deg">5</span></div>
+    <div class="scale-box"><span class="scale-note">A</span><span class="scale-deg">&flat;6</span></div>
+    <div class="scale-box"><span class="scale-note">B</span><span class="scale-deg">&flat;7</span></div>
+  </div>
+  <p class="caption">Root highlighted in gold. The &flat; symbol means the interval is a minor (flatted) 3rd, 6th, or 7th relative to the major scale.</p>
+
+  <h2>What Is Aeolian?</h2>
+  <p>The <strong>Aeolian mode</strong> is simply the natural minor scale. &ldquo;Natural&rdquo; means it uses the scale degrees exactly as they appear &mdash; no sharps or flats added beyond the key signature. The most important consequence is what it <em>lacks</em>: a <strong>raised 7th degree</strong>.</p>
+
+  <div class="cols c11">
+    <div>
+      <h3>Harmonic Minor (not this song)</h3>
+      <div class="scale-row" style="margin-bottom:.3rem">
+        <div class="scale-box root"><span class="scale-note">C&sharp;</span><span class="scale-deg">1</span></div>
+        <div class="scale-box"><span class="scale-note">D&sharp;</span><span class="scale-deg">2</span></div>
+        <div class="scale-box"><span class="scale-note">E</span><span class="scale-deg">&flat;3</span></div>
+        <div class="scale-box"><span class="scale-note">F&sharp;</span><span class="scale-deg">4</span></div>
+        <div class="scale-box"><span class="scale-note">G&sharp;</span><span class="scale-deg">5</span></div>
+        <div class="scale-box"><span class="scale-note">A</span><span class="scale-deg">&flat;6</span></div>
+        <div class="scale-box" style="border-color:var(--mus2);background:#fef0ec"><span class="scale-note" style="color:var(--mus2)">B&sharp;</span><span class="scale-deg" style="color:var(--mus2)">7 ↑</span></div>
+      </div>
+      <p class="caption">The 7th is raised (B → B&sharp; = C&natural;), creating a leading tone with strong pull back to C&sharp;.</p>
+    </div>
+    <div>
+      <h3>Natural Minor / Aeolian (this song)</h3>
+      <div class="scale-row" style="margin-bottom:.3rem">
+        <div class="scale-box root"><span class="scale-note">C&sharp;</span><span class="scale-deg">1</span></div>
+        <div class="scale-box"><span class="scale-note">D&sharp;</span><span class="scale-deg">2</span></div>
+        <div class="scale-box"><span class="scale-note">E</span><span class="scale-deg">&flat;3</span></div>
+        <div class="scale-box"><span class="scale-note">F&sharp;</span><span class="scale-deg">4</span></div>
+        <div class="scale-box"><span class="scale-note">G&sharp;</span><span class="scale-deg">5</span></div>
+        <div class="scale-box"><span class="scale-note">A</span><span class="scale-deg">&flat;6</span></div>
+        <div class="scale-box"><span class="scale-note">B</span><span class="scale-deg">&flat;7</span></div>
+      </div>
+      <p class="caption">The 7th stays flat (B&natural;). No leading tone &mdash; no urgency. The harmony floats.</p>
+    </div>
+  </div>
+
+  <div class="info">
+    <strong>The leading tone is what makes music &ldquo;want to resolve.&rdquo;</strong> When the 7th is raised a half step (B&sharp;/C&natural; in C&sharp; minor), it sits one semitone below the tonic and creates strong upward pull. Aeolian keeps it at B&natural; &mdash; a whole step away &mdash; so there&rsquo;s no magnetic pull home. The progression can loop forever without feeling incomplete.
+  </div>
+
+  <h2>Relative Major: E Major</h2>
+  <p>C&sharp; natural minor is the <strong>relative minor</strong> of E major &mdash; they share the same seven notes. The difference is only which note functions as &ldquo;home.&rdquo; In &ldquo;Bahala Ka Na,&rdquo; the chord progression confirms C&sharp; minor as the tonal center, not E major &mdash; the song opens and returns to C&sharp; minor-flavored harmony.</p>
+
+  <div class="theory">
+    <strong>In Strudel:</strong> You could rewrite the melody using scale degrees instead of raw note names:<br>
+    <code>n("5 0 5 4@2 2 0 2").scale("C#4:minor").sound("piano")</code><br>
+    <span style="font-size:.84rem;color:#555">Here 0 = C&sharp;, 2 = E, 4 = G&sharp;, 5 = A &mdash; the same Amaj7 arpeggio pattern.</span>
+  </div>
+</div>
+
+<!-- ── S2: The Chord Loop ─────────────────────────────────── -->
+<div id="s2" class="section">
+  <h1>The Chord Loop</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">Amaj7 &ndash; F&sharp;m &ndash; G&sharp;m, repeated through every section</p>
+  <hr>
+
+  <p>&ldquo;Bahala Ka Na&rdquo; is built on a single three-chord progression that repeats <em>unchanged</em> through the intro, verse, pre-chorus, chorus, and outro. There is no bridge with contrasting harmony, no key change, no moment of harmonic surprise. The emotional arc of the song lives entirely in the <strong>melody, dynamics, and production</strong> &mdash; not in chord movement.</p>
+
+  <h2>The Three Chords</h2>
+  <div class="chord-row">
+    <div class="chord-card vi">
+      <div class="chord-name">Amaj7</div>
+      <div class="chord-roman">VI &mdash; major seventh on the flat-sixth</div>
+      <div class="chord-notes">A &nbsp; C&sharp; &nbsp; E &nbsp; G&sharp;</div>
+      <div class="chord-role">Warm, shimmering &ldquo;home base&rdquo; &mdash; but it&rsquo;s major, not minor</div>
+    </div>
+    <div class="chord-card iv">
+      <div class="chord-name">F&sharp;m</div>
+      <div class="chord-roman">iv &mdash; minor subdominant</div>
+      <div class="chord-notes">F&sharp; &nbsp; A &nbsp; C&sharp;</div>
+      <div class="chord-role">Darker, slightly unsettled &mdash; pulls toward resolution</div>
+    </div>
+    <div class="chord-card v">
+      <div class="chord-name">G&sharp;m</div>
+      <div class="chord-roman">v &mdash; minor dominant</div>
+      <div class="chord-notes">G&sharp; &nbsp; B &nbsp; D&sharp;</div>
+      <div class="chord-role">Should feel like tension &mdash; but stays minor, so it doesn&rsquo;t resolve</div>
+    </div>
+  </div>
+
+  <h2>Roman Numerals in C&sharp; Minor</h2>
+  <table>
+    <thead>
+      <tr><th>Chord</th><th>Symbol</th><th>Notes</th><th>Function</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Amaj7</strong></td><td>VI (flat-sixth major)</td><td>A C&sharp; E G&sharp;</td><td>Submediant — creates warmth, ambiguity</td></tr>
+      <tr><td><strong>F&sharp;m</strong></td><td>iv (minor subdominant)</td><td>F&sharp; A C&sharp;</td><td>Subdominant — slight pull toward resolution</td></tr>
+      <tr><td><strong>G&sharp;m</strong></td><td>v (minor dominant)</td><td>G&sharp; B D&sharp;</td><td>Dominant — but <em>minor</em>, so no strong pull home</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info">
+    <strong>One loop, the whole song.</strong> In standard pop/rock songwriting, the chorus usually has a different or heightened chord progression. Here, every section uses VI&ndash;iv&ndash;v. The meaning lives in the words and the voice &mdash; the chords just sustain a single emotional atmosphere.
+  </div>
+
+  <h2>How the Loop Appears in the Strudel Program</h2>
+  <p>The lower piano voice has four lines, each lasting one cycle. They map directly to the chord loop:</p>
+  <table>
+    <thead>
+      <tr><th>Line</th><th>Chord</th><th>Notes played</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Line 1</td><td>Amaj7 (VI)</td><td>A3 C&sharp;4 A3 G&sharp;4 E4 C&sharp;4 E4</td></tr>
+      <tr><td>Line 2</td><td>F&sharp;m (iv)</td><td>F&sharp;3 A3 C&sharp;4 G&sharp;4 E4 C&sharp;4 E4</td></tr>
+      <tr><td>Line 3</td><td>G&sharp;m (v)</td><td>G&sharp;3 B3 D&sharp;4 F&sharp;4 D&sharp;4 B3 D&sharp;4</td></tr>
+      <tr><td>Line 4</td><td>G&sharp;m (v) variant</td><td>G&sharp;3 C4 D&sharp;4 F&sharp;4 D&sharp;4 C4 D&sharp;4</td></tr>
+    </tbody>
+  </table>
+  <p>Lines 3 and 4 both represent G&sharp;m but differ slightly: line 4 uses C4 (= B&sharp; enharmonically) as a chromatic color note instead of B3. This is one of the few moments of micro-variation in an otherwise static loop.</p>
+
+  <div class="theory">
+    <strong>In Strudel:</strong> You could write the same progression using chord names:<br>
+    <code>chord("&lt;Amaj7 F#m G#m G#m&gt;").voicing().sound("piano")</code><br>
+    <span style="font-size:.84rem;color:#555">Strudel&rsquo;s <code>.voicing()</code> function handles voice leading automatically.</span>
+  </div>
+</div>
+
+<!-- ── S3: Why It Floats ──────────────────────────────────── -->
+<div id="s3" class="section">
+  <h1>Why It Floats</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">Two harmonic details that create the song&rsquo;s bittersweet, unresolved quality</p>
+  <hr>
+
+  <p>You now know the key (C&sharp; Aeolian) and the chords (Amaj7&ndash;F&sharp;m&ndash;G&sharp;m). Two specific harmonic choices make this progression feel the way it does: resigned, floating, neither fully dark nor fully bright. Both are deliberate consequences of staying in natural minor.</p>
+
+  <hr>
+
+  <h2>1. The Minor Dominant: G&sharp;m Instead of G&sharp; Major</h2>
+
+  <p>In most minor-key music, the chord built on the 5th scale degree &mdash; the <strong>dominant</strong> &mdash; is <em>major</em>. This requires raising the 7th of the scale (a technique called <strong>harmonic minor</strong>). The result is a major V chord with a leading tone that strongly pulls back to the tonic.</p>
+
+  <div class="cols c11">
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--mus2)">G&sharp; major (V) &mdash; harmonic minor</h3>
+      <p style="font-family:'Fira Code',Consolas,monospace;font-size:.9rem">G&sharp; &nbsp; B&sharp; &nbsp; D&sharp;</p>
+      <p>B&sharp; (= C&natural;) is one semitone below C&sharp;. It <em>wants</em> to resolve upward to the tonic. Strong cadential pull. Sounds like: &ldquo;and we&rsquo;re home.&rdquo;</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--mus)">G&sharp;m (v) &mdash; natural minor / Aeolian</h3>
+      <p style="font-family:'Fira Code',Consolas,monospace;font-size:.9rem">G&sharp; &nbsp; B&natural; &nbsp; D&sharp;</p>
+      <p>B&natural; is a whole step below C&sharp;. No leading tone, no urgency. The chord lands and &hellip; just rests there. Sounds like: &ldquo;oh well.&rdquo;</p>
+    </div>
+  </div>
+
+  <div class="info2">
+    <strong>This is the harmonic signature of the song.</strong> Every time the progression reaches G&sharp;m, it should feel like a moment of potential resolution &mdash; but it stays minor, and the loop begins again. This perfectly mirrors &ldquo;bahala ka na&rdquo;: the moment of letting go that never quite arrives as closure.
+  </div>
+
+  <p>You can test this directly in Strudel. In the Listen section, try replacing <code>G#3 B3 D#4</code> with <code>G#3 B#3 D#4</code> (B&sharp; = C&natural;) in both G&sharp;m lines and hear how it changes from floating to resolving.</p>
+
+  <hr>
+
+  <h2>2. Amaj7: The Chord That Blurs Major and Minor</h2>
+
+  <p>The progression opens &mdash; and keeps returning to &mdash; <strong>Amaj7</strong>. Let&rsquo;s look at its notes:</p>
+
+  <div class="card">
+    <p style="font-size:1.1rem;font-family:'Fira Code',Consolas,monospace;letter-spacing:.05em;margin-bottom:.5rem">
+      A &nbsp;&nbsp; C&sharp; &nbsp;&nbsp; E &nbsp;&nbsp; G&sharp;
+    </p>
+    <ul style="margin-bottom:0">
+      <li><strong>A</strong> &mdash; root of the chord; also the &flat;6 of C&sharp; minor</li>
+      <li><strong>C&sharp;</strong> &mdash; the <em>tonic</em> of the key, embedded inside a major chord</li>
+      <li><strong>E</strong> &mdash; the &flat;3 of C&sharp; minor; the note that makes the key minor</li>
+      <li><strong>G&sharp;</strong> &mdash; the <em>5th</em> of C&sharp; minor; and the major 7th of Amaj7</li>
+    </ul>
+  </div>
+
+  <p>Notice: C&sharp; (the tonic) and G&sharp; (the 5th of the tonic) are both present inside Amaj7. When you hear this chord, the two most important notes of C&sharp; minor are sounding &mdash; but they&rsquo;re housed inside a <em>major</em> chord. The result is a sound that simultaneously evokes C&sharp; minor <em>and</em> A major. The chord feels warm and bright (major quality) while being harmonically rooted in a minor key.</p>
+
+  <div class="info">
+    <strong>The maj7 color.</strong> The major-seventh interval (G&sharp; above A) is what distinguishes Amaj7 from a plain A major chord. It adds a shimmer, a slightly dreamy quality. Without it, A major is bright and direct. With the G&sharp;, it becomes bittersweet &mdash; which is exactly the emotional register of &ldquo;Bahala Ka Na.&rdquo;
+  </div>
+
+  <h2>Together: The Full Emotional Picture</h2>
+  <p>Put the two details together:</p>
+  <ul>
+    <li><strong>Amaj7</strong> &mdash; bittersweet, blurs major/minor, warm but ungrounded</li>
+    <li><strong>F&sharp;m</strong> &mdash; clearly minor, a moment of darker color</li>
+    <li><strong>G&sharp;m</strong> &mdash; should resolve but doesn&rsquo;t, the loop restarts</li>
+  </ul>
+  <p>The progression creates a mood of suspended acceptance &mdash; not grief, not happiness, just the sustained emotional state of having let go of something. It matches the Filipino idiom &ldquo;bahala na&rdquo; at the level of harmony: leave it to fate, stop holding on, let the cycle repeat.</p>
+</div>
+
+<!-- ── S4: The Strudel Code ───────────────────────────────── -->
+<div id="s4" class="section">
+  <h1>The Strudel Code</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">Line-by-line: what each part does and why</p>
+  <hr>
+
+  <p><a href="https://strudel.cc" target="_blank">Strudel</a> is a browser-based live coding music tool &mdash; a JavaScript port of TidalCycles. Music is organized around <strong>cycles</strong> (repeating time loops) rather than bars. The code below creates three simultaneous patterns that run in sync.</p>
+
+  <pre><code>setcpm(5)
+$: sound("[bd sd]*8")
+$: note(`
+A3 C#4 A3 G#4@2 E4 C#4 E4
+F#3 A3 C#4 G#4@2 E4 C#4 E4
+G#3 B3 D#4 F#4@2 D#4 B3 D#4
+G#3 C4 D#4 F#4@2 D#4 C4 D#4
+`).sound("piano")
+
+$: note(`
+C#5 A4 E4 - -!4
+-!8
+B4 G#4 D#4 - -!4
+-!8
+`).sound("piano").gain(3)</code></pre>
+
+  <h2>Annotation</h2>
+
+  <div class="annotation">
+    <span class="ann-line">setcpm(5)</span>
+    <div class="ann-text">
+      <strong>Tempo: 5 cycles per minute.</strong> Strudel measures time in <em>cycles</em> (one full loop of a pattern). At 5 CPM, each cycle lasts 12 seconds. The drum pattern has 16 hits per cycle &mdash; so the effective pulse is about <strong>80 BPM</strong>, which matches the song&rsquo;s slow, contemplative pace.
+    </div>
+  </div>
+
+  <div class="annotation">
+    <span class="ann-line">$: sound("[bd sd]*8")</span>
+    <div class="ann-text">
+      <strong>Drums: alternating kick and snare, 8 times per cycle.</strong>
+      <ul style="margin-top:.4rem;margin-bottom:0">
+        <li><code>$:</code> marks this as one of several simultaneous patterns</li>
+        <li><code>[bd sd]</code> &mdash; a two-step sequence: bass drum, then snare</li>
+        <li><code>*8</code> &mdash; repeat the sequence 8 times per cycle</li>
+        <li>Result: 16 total hits per cycle in a steady kick-snare-kick-snare pulse</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="annotation">
+    <span class="ann-line">note(`…`).sound("piano")</span>
+    <div class="ann-text">
+      <strong>Chord arpeggiation: the harmonic backbone.</strong> The four lines inside the backtick string each last one cycle, so the complete pattern takes 4 cycles before looping. Each line outlines a chord from the progression:
+      <table style="margin-top:.5rem;font-size:.83rem">
+        <thead><tr><th>Line</th><th>Pattern</th><th>Chord it outlines</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code>A3 C#4 A3 G#4@2 E4 C#4 E4</code></td><td>Amaj7 &mdash; A, C&sharp;, E, G&sharp;</td></tr>
+          <tr><td>2</td><td><code>F#3 A3 C#4 G#4@2 E4 C#4 E4</code></td><td>F&sharp;m &mdash; F&sharp;, A, C&sharp;</td></tr>
+          <tr><td>3</td><td><code>G#3 B3 D#4 F#4@2 D#4 B3 D#4</code></td><td>G&sharp;m &mdash; G&sharp;, B, D&sharp;</td></tr>
+          <tr><td>4</td><td><code>G#3 C4 D#4 F#4@2 D#4 C4 D#4</code></td><td>G&sharp;m variant (C4 = chromatic color)</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:.4rem;margin-bottom:0">The <code>@2</code> on G&sharp;4 means it lasts twice as long as the surrounding notes &mdash; creating a sustained mid-pattern emphasis.</p>
+    </div>
+  </div>
+
+  <div class="annotation">
+    <span class="ann-line">note(`…`).sound("piano").gain(3)</span>
+    <div class="ann-text">
+      <strong>Melody: sparse chord tones at a higher register.</strong> This layer is mostly rests, with brief chordal stabs at the top:
+      <ul style="margin-top:.4rem;margin-bottom:0">
+        <li><code>C#5 A4 E4</code> &mdash; C&sharp; minor triad in the upper register (C&sharp; E A)</li>
+        <li><code>-</code> &mdash; a single rest step</li>
+        <li><code>-!4</code> &mdash; four rest steps (&ldquo;!&rdquo; = replicate: four silent slots)</li>
+        <li><code>-!8</code> &mdash; eight rests = a full silent cycle</li>
+        <li><code>B4 G#4 D#4</code> &mdash; G&sharp;m/B voicing (B at the bottom)</li>
+        <li><code>.gain(3)</code> &mdash; amplifies this voice 3× so the melody sits above the arpeggiation</li>
+      </ul>
+      <p style="margin-top:.4rem;margin-bottom:0">The silences give the pattern breathing room. Each chord stab rings briefly, then the arpeggiation carries the harmony forward alone.</p>
+    </div>
+  </div>
+
+  <h2>Key Strudel Syntax</h2>
+  <table>
+    <thead>
+      <tr><th>Syntax</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>$:</code></td><td>Label this as a simultaneous pattern (layers stack)</td></tr>
+      <tr><td><code>[bd sd]*8</code></td><td>Repeat the sequence <code>[bd sd]</code> eight times in one cycle</td></tr>
+      <tr><td><code>@2</code></td><td>Give this event twice the time weight (lasts 2 &ldquo;beats&rdquo;)</td></tr>
+      <tr><td><code>-</code></td><td>Rest (silence for one step)</td></tr>
+      <tr><td><code>-!4</code></td><td>Four rest steps (replicate operator)</td></tr>
+      <tr><td>backtick string</td><td>Multi-line pattern &mdash; each line is one cycle</td></tr>
+      <tr><td><code>.gain(n)</code></td><td>Set volume (1.0 = normal, 3 = three times louder)</td></tr>
+      <tr><td><code>.sound("piano")</code></td><td>Use the piano sample bank</td></tr>
+    </tbody>
+  </table>
+
+  <div class="theory">
+    <strong>Try it yourself.</strong> In the Listen section, you can edit the code live. To hear the difference between Aeolian and harmonic minor, change <code>G#3 B3</code> to <code>G#3 B#3</code> on lines 3 and 4 &mdash; B&sharp; = C&natural;, which turns G&sharp;m into G&sharp; major and adds the leading tone.
+  </div>
+</div>
+
+<!-- ── S5: Listen ─────────────────────────────────────────── -->
+<div id="s5" class="section">
+  <h1>Listen</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">Edit and play the Strudel program live</p>
+  <hr>
+
+  <p>Edit the code in the box below, then press <strong>Ctrl+Enter</strong> (or the Run button) to hear your changes. The Strudel editor will load inside the frame &mdash; click <strong>▶</strong> there if audio doesn&rsquo;t start automatically.</p>
+
+  <div class="live-editor">
+    <div class="strudel-iframe-wrap">
+      <iframe id="strudel-iframe" allow="autoplay; microphone" title="Strudel live coding"></iframe>
+    </div>
+    <div class="editor-status stopped" id="editor-status">Ready &mdash; press ▶ Run or Ctrl+Enter to start</div>
+  </div>
+
+  <div class="warn">
+    <strong>If audio doesn&rsquo;t play:</strong> After pressing Run, click the ▶ button inside the Strudel frame. Browsers require a user gesture before starting audio. You may also need to serve this file from a local server: <code>python3 -m http.server</code>
+  </div>
+
+  <h2>Things to Try</h2>
+  <ul>
+    <li><strong>Minor v → major V:</strong> Change <code>B3</code> to <code>B#3</code> on the G&sharp;m lines. B&sharp; is C&natural; &mdash; the leading tone &mdash; which turns G&sharp;m into G&sharp; major. Hear how it resolves instead of floating.</li>
+    <li><strong>Remove the maj7:</strong> Change <code>G#4@2</code> on line 1 to <code>E4@2</code>. This drops the major 7th from Amaj7, making it a plainer A major chord.</li>
+    <li><strong>Speed up:</strong> Change <code>setcpm(5)</code> to <code>setcpm(15)</code> or <code>setcpm(30)</code>. Same chords, different energy.</li>
+    <li><strong>Add reverb:</strong> Add <code>.room(0.6)</code> before <code>.sound("piano")</code> on either note voice.</li>
+    <li><strong>Scale degrees:</strong> Replace the first note line with <code>n("5 0 5 4@2 2 0 2").scale("C#4:minor")</code> and drop the <code>.sound("piano")</code> onto that line.</li>
+  </ul>
+</div>
+
+</main>
+
+<script>
+// ── Navigation ───────────────────────────────────────────────
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const idx = ['s0','s1','s2','s3','s4','s5'].indexOf(id);
+  document.querySelectorAll('.nav-btn')[idx].classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+
+// ── Strudel Live Editor ──────────────────────────────────────
+var STRUDEL_DEFAULT = [
+  'setcpm(5)',
+  '$: sound("[bd sd]*8")',
+  '$: note(`',
+  'A3 C#4 A3 G#4@2 E4 C#4 E4',
+  'F#3 A3 C#4 G#4@2 E4 C#4 E4',
+  'G#3 B3 D#4 F#4@2 D#4 B3 D#4',
+  'G#3 C4 D#4 F#4@2 D#4 C4 D#4',
+  '`).sound("piano")',
+  '',
+  '$: note(`',
+  'C#5 A4 E4 - -!4',
+  '-!8',
+  'B4 G#4 D#4 - -!4',
+  '-!8',
+  '`).sound("piano").gain(3)'
+].join('\n');
+
+function setStatus(msg, cls) {
+  var el = document.getElementById('editor-status');
+  el.textContent = msg;
+  el.className = 'editor-status ' + cls;
+}
+
+function strudelRun() {
+  var encoded = LZString.compressToEncodedURIComponent(STRUDEL_DEFAULT);
+  document.getElementById('strudel-iframe').src = 'https://strudel.cc/#' + encoded;
+  setStatus('Running — click ▶ in the Strudel frame if audio doesn\'t start automatically', 'running');
+}
+
+function strudelStop() {
+  document.getElementById('strudel-iframe').src = 'about:blank';
+  setStatus('Stopped', 'stopped');
+}
+
+function strudelReset() {
+  strudelRun();
+}
+
+document.addEventListener('DOMContentLoaded', strudelRun);
+</script>
+</body>
+</html>
