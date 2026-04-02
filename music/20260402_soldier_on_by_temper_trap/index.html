@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soldier On by The Temper Trap — Music Theory Explainer</title>
+<script src="https://unpkg.com/@strudel/embed@latest"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --mus:#c9a84c;--mus2:#e76f51;--mus3:#6d8b9e;
+  --sw:242px;--sbg:#1a1a2e;--stext:#c8d0e7;
+  --bg:#f5f6fa;--card:#fff;--border:#dee2e6;
+  --r:6px;--text:#212529;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:15px;line-height:1.65}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);
+  background:var(--sbg);overflow-y:auto;z-index:100;padding:1.4rem 0}
+.sb-logo{padding:0 1.2rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem}
+.sb-logo h2{color:#fff;font-size:1rem;font-weight:700}
+.sb-logo p{color:var(--stext);font-size:.75rem;margin-top:.2rem}
+.home-btn{display:inline-block;margin-top:.6rem;font-size:.75rem;color:var(--stext);
+  text-decoration:none;opacity:.7;transition:opacity .15s}
+.home-btn:hover{opacity:1;color:#fff}
+.nav-btn{display:block;padding:.45rem 1.2rem;color:var(--stext);font-size:.82rem;
+  cursor:pointer;border-left:3px solid transparent;transition:all .15s;
+  background:none;border-top:none;border-right:none;border-bottom:none;
+  text-align:left;width:100%}
+.nav-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-btn.active{border-left-color:var(--mus);color:#fff;background:rgba(201,168,76,.15)}
+
+/* ── Main ─────────────────────────────────────────────────── */
+#main{margin-left:var(--sw);padding:2rem 2.5rem 5rem;max-width:1000px;width:100%}
+.section{display:none}.section.active{display:block}
+
+h1{font-size:1.85rem;font-weight:700;color:#1a1a2e;margin-bottom:.3rem}
+h2{font-size:1.25rem;font-weight:600;color:#1a1a2e;margin:1.6rem 0 .5rem}
+h3{font-size:1rem;font-weight:600;color:#333;margin:1.1rem 0 .4rem}
+p{margin-bottom:.75rem}
+hr{border:none;border-top:1px solid var(--border);margin:1.4rem 0}
+a{color:var(--mus)}
+ul,ol{padding-left:1.3rem;margin-bottom:.75rem}
+li{margin-bottom:.2rem}
+
+/* ── Boxes ────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.4rem;margin:1rem 0}
+.info{background:#fdf6e3;border-left:4px solid var(--mus);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.info2{background:#fef0ec;border-left:4px solid var(--mus2);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.theory{background:#eaf4fb;border-left:4px solid var(--mus3);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.warn{background:#fff8e1;border-left:4px solid #ffc107;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+
+/* ── Tables ───────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;margin:.9rem 0;font-size:.87rem}
+th{background:#f0f4f8;padding:.5rem .75rem;text-align:left;font-weight:600;border-bottom:2px solid var(--border)}
+td{padding:.45rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+
+/* ── Code ─────────────────────────────────────────────────── */
+pre{background:#1e2235;color:#abb2bf;padding:.9rem 1.1rem;border-radius:var(--r);
+  overflow-x:auto;font-size:.82rem;line-height:1.65;margin:.7rem 0;font-family:'Fira Code',Consolas,monospace}
+code{font-family:'Fira Code',Consolas,monospace;font-size:.82rem;background:#f0f0f0;
+  padding:.1rem .3rem;border-radius:3px}
+pre code{background:none;padding:0;font-size:inherit}
+
+/* ── Scale degree display ─────────────────────────────────── */
+.scale-row{display:flex;gap:.5rem;flex-wrap:wrap;margin:1rem 0}
+.scale-box{display:flex;flex-direction:column;align-items:center;background:var(--card);
+  border:2px solid var(--border);border-radius:var(--r);padding:.5rem .75rem;min-width:52px}
+.scale-box.root{border-color:var(--mus);background:#fdf6e3}
+.scale-note{font-weight:700;font-size:1rem;color:#1a1a2e}
+.scale-deg{font-size:.72rem;color:#888;margin-top:.15rem}
+.scale-box.root .scale-note{color:var(--mus)}
+.scale-box.outside{border-color:#9b59b6;background:#f5eefb}
+.scale-box.outside .scale-note{color:#7d3c98}
+
+/* ── Chord display ────────────────────────────────────────── */
+.chord-row{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0}
+.chord-card{flex:1;min-width:160px;background:var(--card);border:2px solid var(--border);
+  border-radius:var(--r);padding:.9rem 1.1rem}
+.chord-card.vi{border-color:#c9a84c}
+.chord-card.iv{border-color:#6d8b9e}
+.chord-card.i{border-color:#57a77a}
+.chord-card.flat2{border-color:#9b59b6}
+.chord-name{font-size:1.4rem;font-weight:700;color:#1a1a2e}
+.chord-roman{font-size:.78rem;font-weight:600;color:#888;margin:.1rem 0}
+.chord-notes{font-size:.82rem;color:#555;font-family:'Fira Code',Consolas,monospace;margin:.3rem 0}
+.chord-role{font-size:.8rem;color:#666;font-style:italic}
+
+/* ── Annotation cards ─────────────────────────────────────── */
+.annotation{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:.85rem 1.1rem;margin:.6rem 0;display:grid;grid-template-columns:auto 1fr;gap:.75rem;align-items:start}
+.ann-line{font-family:'Fira Code',Consolas,monospace;font-size:.8rem;color:#c9a84c;
+  background:#1e2235;padding:.3rem .6rem;border-radius:4px;white-space:nowrap}
+.ann-text{font-size:.86rem;color:#444}
+
+/* ── Live Editor ─────────────────────────────────────────── */
+.live-editor{margin:1.2rem 0;border-radius:var(--r);overflow:hidden;
+  border:1px solid #2a2f4a;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.editor-toolbar{display:flex;justify-content:space-between;align-items:center;
+  background:#252940;padding:.5rem .9rem;border-bottom:1px solid #2a2f4a;flex-wrap:wrap;gap:.4rem}
+.editor-shortcuts{font-size:.73rem;color:#6b7280;font-family:'Fira Code',Consolas,monospace}
+.editor-btns{display:flex;gap:.4rem}
+.editor-btn{padding:.28rem .75rem;border-radius:4px;border:1px solid;cursor:pointer;
+  font-size:.8rem;font-weight:600;font-family:inherit;transition:all .15s}
+.editor-btn-run{background:var(--mus);border-color:var(--mus);color:#1a1a2e}
+.editor-btn-run:hover{background:#b8943a;border-color:#b8943a}
+.editor-btn-stop,.editor-btn-reset{background:transparent;border-color:#555;color:#abb2bf}
+.editor-btn-stop:hover,.editor-btn-reset:hover{border-color:#abb2bf;color:#fff}
+#strudel-code{display:block;width:100%;min-height:190px;background:#1e2235;color:#abb2bf;
+  font-family:'Fira Code',Consolas,monospace;font-size:.82rem;line-height:1.65;
+  padding:.9rem 1.1rem;border:none;border-bottom:1px solid #2a2f4a;
+  resize:vertical;outline:none;tab-size:2;-moz-tab-size:2}
+.strudel-iframe-wrap iframe{display:block;width:100%;height:360px;border:none}
+strudel-repl{display:block;width:100%}
+strudel-repl iframe{width:100%!important}
+.editor-status{font-size:.73rem;padding:.3rem .9rem;background:#1a1c2b;
+  color:#6b7280;font-family:'Fira Code',Consolas,monospace;border-top:1px solid #2a2f4a}
+.editor-status.running{color:var(--mus)}
+.editor-status.stopped{color:#6b7280}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.cols{display:grid;gap:1.4rem;margin:.8rem 0}
+.c12{grid-template-columns:1fr 2fr}
+.c11{grid-template-columns:1fr 1fr}
+
+/* ── Misc ───────────────────────────────────────────────── */
+.caption{font-size:.81rem;color:#666;font-style:italic;margin-top:.35rem}
+.pill{display:inline-block;padding:.18rem .55rem;border-radius:20px;font-size:.78rem;font-weight:600;margin:.12rem .1rem}
+.pill-gold{background:#fdf6e3;color:#7d5a00;border:1px solid #c9a84c}
+.pill-blue{background:#eaf4fb;color:#1a5276;border:1px solid #6d8b9e}
+.pill-purple{background:#f5eefb;color:#6c3483;border:1px solid #9b59b6}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+#menu-toggle{display:none;position:fixed;top:.7rem;right:.7rem;z-index:200;
+  background:var(--sbg);color:#fff;border:none;border-radius:6px;
+  padding:.5rem .7rem;cursor:pointer;font-size:1.15rem;line-height:1}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
+@media(max-width:767px){
+  #menu-toggle{display:block}
+  #sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.open{transform:translateX(0)}
+  #sidebar-overlay.open{display:block}
+  #main{margin-left:0;padding:3.5rem 1rem 4rem}
+  .cols.c12,.cols.c11{grid-template-columns:1fr}
+  .annotation{grid-template-columns:1fr}
+  .chord-row{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<button id="menu-toggle" aria-label="Toggle menu" onclick="toggleSidebar()">☰</button>
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <h2>🎸 Soldier On</h2>
+    <p>Music Theory Explainer</p>
+    <a class="home-btn" href="../../index.html">← Home</a>
+  </div>
+  <button class="nav-btn active" onclick="nav('s0')">🎵 The Song</button>
+  <button class="nav-btn" onclick="nav('s1')">🎼 Key &amp; Scale</button>
+  <button class="nav-btn" onclick="nav('s2')">🎸 The Chord Loop</button>
+  <button class="nav-btn" onclick="nav('s3')">⬇ The Neapolitan</button>
+  <button class="nav-btn" onclick="nav('s4')">💻 The Strudel Code</button>
+  <button class="nav-btn" onclick="nav('s5')">▶ Listen</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN
+═══════════════════════════════════════════════════════════════ -->
+<main id="main">
+
+<!-- ── S0: The Song ──────────────────────────────────────── -->
+<div id="s0" class="section active">
+  <h1>Soldier On</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">The Temper Trap &mdash; <em>Conditions</em> (2009) &mdash; a learn-by-doing music theory explainer</p>
+  <hr>
+
+  <div class="cols c12">
+    <div class="card">
+      <h3 style="margin-top:0;color:var(--mus)">About the Song</h3>
+      <p><strong>Artist:</strong> The Temper Trap<br>
+      <strong>Album:</strong> <em>Conditions</em> (2009)<br>
+      <strong>Label:</strong> Mercury / Island Records<br>
+      <strong>Written by:</strong> Dougy Mandagi, Jonathon Aherne, Lorenzo Sillitto</p>
+      <p style="margin-bottom:0"><strong>Title meaning:</strong> &ldquo;Soldier On&rdquo; means to press forward despite hardship &mdash; to endure, push through pain, and keep moving. It captures a steely, aching perseverance.</p>
+    </div>
+    <div>
+      <p>The Temper Trap are an Australian indie rock band from Melbourne, formed around 2005. Their lineup: <strong>Dougy Mandagi</strong> (vocals, percussion), <strong>Lorenzo Sillitto</strong> (guitar), <strong>Jonathon Aherne</strong> (bass), and <strong>Toby Dundas</strong> (drums). Mandagi was born in Indonesia and moved to Melbourne, bringing an intensity and vulnerability to his voice that drives much of the band&rsquo;s emotional power.</p>
+      <p><em>Conditions</em> was their debut full-length album, and it broke through internationally on the back of &ldquo;Sweet Disposition.&rdquo; &ldquo;Soldier On&rdquo; is a slower, more introspective moment on the record &mdash; a patient, winding track built on acoustic guitar arpeggios that never quite resolves the tension it sets up.</p>
+    </div>
+  </div>
+
+  <hr>
+  <h2>What This Explainer Covers</h2>
+  <p>This page uses the intro of &ldquo;Soldier On&rdquo; as a gateway into three connected music theory ideas:</p>
+  <ol>
+    <li><strong>F&sharp; natural minor (Aeolian)</strong> &mdash; the governing scale and what it means for chord choices</li>
+    <li><strong>The iv&ndash;VI&ndash;i&ndash;&flat;II chord loop</strong> &mdash; an unusual progression with one chord that doesn&rsquo;t belong to the key</li>
+    <li><strong>The Neapolitan chord (&flat;II)</strong> &mdash; the G major chord sitting a half step above F&sharp;, borrowed from outside the scale, and what it does emotionally</li>
+  </ol>
+  <p>The Neapolitan is the heart of this explainer. It&rsquo;s the chord that makes the intro feel tense and slightly unsettled &mdash; like someone bracing themselves before the next step. Perfect for a song called &ldquo;Soldier On.&rdquo;</p>
+
+  <div class="info">
+    <strong>Learn by doing.</strong> The last section embeds a live Strudel editor. After reading the theory, you can modify the code &mdash; swap the Neapolitan for a more conventional chord, strip the &ldquo;add&rdquo; tones, change the tempo &mdash; and <em>hear</em> what the theory predicts.
+  </div>
+</div>
+
+<!-- ── S1: Key & Scale ───────────────────────────────────── -->
+<div id="s1" class="section">
+  <h1>Key &amp; Scale</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">F&sharp; Natural Minor (Aeolian Mode)</p>
+  <hr>
+
+  <p>The Strudel program uses <code>.scale("F#:minor")</code>, which locks every note to the <strong>F&sharp; natural minor scale</strong> &mdash; also called <strong>F&sharp; Aeolian</strong>. Seven notes, cycling through octaves:</p>
+
+  <h2>The Scale</h2>
+  <div class="scale-row">
+    <div class="scale-box root"><span class="scale-note">F&sharp;</span><span class="scale-deg">1 (root)</span></div>
+    <div class="scale-box"><span class="scale-note">G&sharp;</span><span class="scale-deg">2</span></div>
+    <div class="scale-box"><span class="scale-note">A</span><span class="scale-deg">&flat;3</span></div>
+    <div class="scale-box"><span class="scale-note">B</span><span class="scale-deg">4</span></div>
+    <div class="scale-box"><span class="scale-note">C&sharp;</span><span class="scale-deg">5</span></div>
+    <div class="scale-box"><span class="scale-note">D</span><span class="scale-deg">&flat;6</span></div>
+    <div class="scale-box"><span class="scale-note">E</span><span class="scale-deg">&flat;7</span></div>
+  </div>
+  <p class="caption">Root highlighted in gold. The &flat; symbols indicate minor (flattened) intervals relative to F&sharp; major.</p>
+
+  <div class="info">
+    <strong>Notice what&rsquo;s in the scale:</strong> G&sharp; (degree 2). The natural 2nd in F&sharp; minor is G&sharp;, not G&natural;. This matters: the chord progression borrows a G&natural; major chord &mdash; a note <em>outside</em> the scale. That&rsquo;s the Neapolitan, and it&rsquo;s the source of the intro&rsquo;s characteristic tension.
+  </div>
+
+  <h2>Relative Major: A Major</h2>
+  <p>F&sharp; natural minor is the <strong>relative minor</strong> of A major &mdash; they share the same seven notes (F&sharp;, G&sharp;, A, B, C&sharp;, D, E). The difference is which note acts as &ldquo;home.&rdquo; In &ldquo;Soldier On,&rdquo; the progression anchors on F&sharp;m (the i chord), making F&sharp; the tonal center.</p>
+
+  <h2>What Aeolian Means Here</h2>
+  <p>The Aeolian mode is natural minor &mdash; no alterations. The key consequence is that the chord on the 5th scale degree (C&sharp;) is <em>minor</em>, not major. There is no leading tone (no B&sharp; pulling up to C&sharp;), so the harmony doesn&rsquo;t have a strong cadential pull toward resolution. Things float, cycle, endure. This matches the song&rsquo;s theme of grinding persistence.</p>
+
+  <div class="theory">
+    <strong>In Strudel:</strong> Scale degrees in <code>.scale("F#:minor")</code>:<br>
+    <code>0=F&sharp; &nbsp; 1=G&sharp; &nbsp; 2=A &nbsp; 3=B &nbsp; 4=C&sharp; &nbsp; 5=D &nbsp; 6=E &nbsp; 7=F&sharp;(oct+)</code><br>
+    <span style="font-size:.84rem;color:#555">Negative degrees go below the register: <code>-1=E &nbsp; -2=D</code>. The suffix <code>b</code> flattens by one semitone: <code>1b</code> = G&sharp; &minus; 1 = G&natural;.</span>
+  </div>
+</div>
+
+<!-- ── S2: The Chord Loop ─────────────────────────────────── -->
+<div id="s2" class="section">
+  <h1>The Chord Loop</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">Bm &ndash; Dadd9 &ndash; F&sharp;m &ndash; Gadd6, cycling through the intro</p>
+  <hr>
+
+  <p>The intro of &ldquo;Soldier On&rdquo; loops a four-chord progression on arpeggiated acoustic guitar. Three of the four chords are diatonic to F&sharp; natural minor; the fourth &mdash; <strong>G major</strong> &mdash; is not. That borrowed chord is what gives the intro its slightly off-kilter, yearning character.</p>
+
+  <h2>The Four Chords</h2>
+  <div class="chord-row">
+    <div class="chord-card iv">
+      <div class="chord-name">Bm</div>
+      <div class="chord-roman">iv &mdash; minor subdominant</div>
+      <div class="chord-notes">B &nbsp; D &nbsp; F&sharp;</div>
+      <div class="chord-role">Dark, stable starting point — the loop begins here</div>
+    </div>
+    <div class="chord-card vi">
+      <div class="chord-name">Dadd9</div>
+      <div class="chord-roman">VI &mdash; major submediant, add9</div>
+      <div class="chord-notes">D &nbsp; F&sharp; &nbsp; A &nbsp; <span style="color:var(--mus)">E</span></div>
+      <div class="chord-role">Opens up to relative major territory; E adds shimmer</div>
+    </div>
+    <div class="chord-card i">
+      <div class="chord-name">F&sharp;m</div>
+      <div class="chord-roman">i &mdash; tonic minor</div>
+      <div class="chord-notes">F&sharp; &nbsp; A &nbsp; C&sharp;</div>
+      <div class="chord-role">Home — but fleeting, quickly displaced by the ♭II</div>
+    </div>
+    <div class="chord-card flat2">
+      <div class="chord-name">Gadd6</div>
+      <div class="chord-roman">&flat;II &mdash; Neapolitan, add6</div>
+      <div class="chord-notes">G &nbsp; B &nbsp; D &nbsp; <span style="color:#9b59b6">E</span></div>
+      <div class="chord-role">G♮ is outside the scale — creates a half-step pull back to F♯m</div>
+    </div>
+  </div>
+
+  <h2>Roman Numerals in F&sharp; Minor</h2>
+  <table>
+    <thead>
+      <tr><th>Chord</th><th>Symbol</th><th>Notes</th><th>Diatonic?</th><th>Function</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Bm</strong></td><td>iv (minor subdominant)</td><td>B D F&sharp;</td><td>Yes</td><td>Subdominant — anchored and dark</td></tr>
+      <tr><td><strong>Dadd9</strong></td><td>VI (major submediant)</td><td>D F&sharp; A E</td><td>Yes (+ add9 E)</td><td>Relative major area — warmer, open</td></tr>
+      <tr><td><strong>F&sharp;m</strong></td><td>i (tonic)</td><td>F&sharp; A C&sharp;</td><td>Yes</td><td>Home base — but doesn&rsquo;t linger</td></tr>
+      <tr><td><strong>Gadd6</strong></td><td><strong>&flat;II</strong> (Neapolitan)</td><td>G B D E</td><td><strong>No</strong> — G&natural; is borrowed</td><td>Intense pre-tonic tension; half-step pull to F&sharp;</td></tr>
+    </tbody>
+  </table>
+
+  <div class="info">
+    <strong>The shared note E.</strong> Both Dadd9 and Gadd6 include E &mdash; the &flat;7 of F&sharp; minor. This creates a thread of continuity across the two middle chords. Even as the bass moves D &rarr; F&sharp; &rarr; G, E keeps ringing as a color note, giving the progression a sense of hovering.
+  </div>
+
+  <h2>The Progression in Context</h2>
+  <p>The order <strong>iv &rarr; VI &rarr; i &rarr; &flat;II</strong> creates a specific arc: begin in darkness (Bm), open up toward the relative major (Dadd9), briefly arrive home (F&sharp;m), then be pulled sideways by the Neapolitan (Gadd6) before cycling back. The loop never fully settles &mdash; every arrival at F&sharp;m is immediately followed by the disruptive G&natural; chord. You reach home, and then something yanks at you again. <em>Soldier on.</em></p>
+
+  <div class="theory">
+    <strong>In Strudel:</strong> You could write the same progression as named chords:<br>
+    <code>chord("&lt;Bm Dadd9 F#m Gadd6&gt;").voicing().sound("piano")</code><br>
+    <span style="font-size:.84rem;color:#555">Strudel&rsquo;s <code>.voicing()</code> handles the inner voice leading automatically. Try it!</span>
+  </div>
+</div>
+
+<!-- ── S3: The Neapolitan ──────────────────────────────────── -->
+<div id="s3" class="section">
+  <h1>The Neapolitan</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">The chord that doesn&rsquo;t belong &mdash; and why it works</p>
+  <hr>
+
+  <p>The most interesting harmonic moment in this intro is the last chord of each loop: <strong>Gadd6</strong>. Let&rsquo;s understand why it&rsquo;s so striking.</p>
+
+  <hr>
+
+  <h2>1. Why G Major Doesn&rsquo;t Belong</h2>
+
+  <p>F&sharp; natural minor contains the note G&sharp;, not G&natural;. The chord naturally built on the 2nd scale degree is <strong>G&sharp; diminished</strong> (G&sharp;, B, D) &mdash; a tense, unstable chord. G major is a completely different chord using a <em>chromatic</em> note (G&natural;) that doesn&rsquo;t appear in the scale at all.</p>
+
+  <div class="cols c11">
+    <div class="card">
+      <h3 style="margin-top:0;color:#888">G&sharp;&deg; (ii&deg;) &mdash; diatonic</h3>
+      <div class="scale-row" style="margin:.4rem 0 .3rem">
+        <div class="scale-box outside"><span class="scale-note">G&sharp;</span><span class="scale-deg">2</span></div>
+        <div class="scale-box"><span class="scale-note">B</span><span class="scale-deg">4</span></div>
+        <div class="scale-box"><span class="scale-note">D</span><span class="scale-deg">&flat;6</span></div>
+      </div>
+      <p style="font-size:.84rem;color:#555;margin-bottom:0">The natural ii&deg;: diminished quality, unstable, dissonant. Rarely used as a resting point in rock.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0;color:#9b59b6">G major (&flat;II) &mdash; borrowed</h3>
+      <div class="scale-row" style="margin:.4rem 0 .3rem">
+        <div class="scale-box outside"><span class="scale-note">G&natural;</span><span class="scale-deg">&flat;2</span></div>
+        <div class="scale-box"><span class="scale-note">B</span><span class="scale-deg">4</span></div>
+        <div class="scale-box"><span class="scale-note">D</span><span class="scale-deg">&flat;6</span></div>
+      </div>
+      <p style="font-size:.84rem;color:#555;margin-bottom:0">G&natural; is one semitone above F&sharp;. The chord is major, stable, and sonically powerful as a result. Borrowed from outside the scale.</p>
+    </div>
+  </div>
+
+  <div class="info2">
+    <strong>The &flat;II chord is called the Neapolitan.</strong> In classical harmony, it&rsquo;s named after the Neapolitan school of opera, where this chromatic chord was used for emotional intensity before a cadence. In modern rock and pop, it&rsquo;s used more freely &mdash; not always as a pre-cadential device, but simply as a chromatic color that injects urgency.
+  </div>
+
+  <hr>
+
+  <h2>2. The Half-Step Pull</h2>
+
+  <p>The Neapolitan&rsquo;s power comes from a simple interval: the bass note G&natural; is exactly <strong>one semitone above F&sharp;</strong>. This is the closest two notes can be in Western music. When the harmony moves G&natural; &rarr; F&sharp; (which it does every time the loop cycles back to Bm), the ear hears a very tight, almost gravitational pull downward.</p>
+
+  <div class="card" style="text-align:center;padding:1.4rem">
+    <p style="font-size:1.2rem;font-family:'Fira Code',Consolas,monospace;letter-spacing:.08em;margin-bottom:.5rem">
+      G&natural; &nbsp;&rarr;&nbsp; F&sharp;
+    </p>
+    <p style="font-size:.88rem;color:#555;margin-bottom:0">One semitone downward &mdash; the smallest possible step. This is called the <strong>Phrygian half-step</strong>, and it&rsquo;s the signature sound of the Neapolitan chord resolving to the tonic.</p>
+  </div>
+
+  <p>Compare this to the normal 2nd-degree chord in major keys: there, the bass moves a <em>whole step</em> down (e.g., G to F in C major). The half-step pull of the Neapolitan is more intense &mdash; tighter, more insistent. It suits a song about forcing yourself to keep going.</p>
+
+  <div class="info">
+    <strong>The Phrygian connection.</strong> The Phrygian mode (1, &flat;2, &flat;3, 4, 5, &flat;6, &flat;7) has the same lowered second degree. Music in Phrygian mode &mdash; flamenco, metal, certain film scores &mdash; uses &flat;II as its central color chord. &ldquo;Soldier On&rdquo; isn&rsquo;t in Phrygian mode, but it borrows the &flat;II chord and with it that same flavor: dark, intense, slightly Spanish or epic. It&rsquo;s one chord, used once per loop, but it colors the entire progression.
+  </div>
+
+  <hr>
+
+  <h2>3. The &ldquo;Add&rdquo; Extensions: Shared Color</h2>
+
+  <p>Two of the four chords have <strong>added tones</strong>: Dadd9 and Gadd6. Both add the same note:</p>
+
+  <div class="card">
+    <p style="font-size:1rem;font-family:'Fira Code',Consolas,monospace;letter-spacing:.05em;margin-bottom:.6rem">
+      Dadd9: D &nbsp; F&sharp; &nbsp; A &nbsp; <strong style="color:var(--mus)">E</strong><br>
+      Gadd6: G &nbsp; B &nbsp; D &nbsp; <strong style="color:var(--mus)">E</strong>
+    </p>
+    <ul style="margin-bottom:0">
+      <li>In Dadd9, E is the <strong>9th</strong> (= 2nd above D, which is E). It&rsquo;s the &flat;7 of F&sharp; minor.</li>
+      <li>In Gadd6, E is the <strong>6th</strong> (= 6th above G). Same note E &mdash; same function as a linking color tone.</li>
+      <li>E is not in the root triad of either chord &mdash; it&rsquo;s an extra note added for texture.</li>
+    </ul>
+  </div>
+
+  <p>The recurring E creates timbral continuity across the loop: even as the bass and chord quality shift dramatically (D major &rarr; G major), the note E hangs in the harmony as a connective thread. It gives the progression a slightly open, unresolved shimmer even on the chords that would otherwise feel settled.</p>
+
+  <h2>Putting It All Together</h2>
+  <ul>
+    <li><strong>Bm (iv)</strong> &mdash; dark and stable; the song&rsquo;s emotional ground floor</li>
+    <li><strong>Dadd9 (VI)</strong> &mdash; brightens toward relative major; E adds shimmer</li>
+    <li><strong>F&sharp;m (i)</strong> &mdash; the tonic arrives, but doesn&rsquo;t stay</li>
+    <li><strong>Gadd6 (&flat;II)</strong> &mdash; the Neapolitan wrenches the harmony sideways; G&natural; creates half-step pull; E links back to Dadd9</li>
+  </ul>
+  <p>The loop never gets to rest. Every arrival at F&sharp;m is undercut by the Neapolitan. This harmonic restlessness is the music&rsquo;s way of enacting the title: there is no resolution, only the act of continuing.</p>
+</div>
+
+<!-- ── S4: The Strudel Code ───────────────────────────────── -->
+<div id="s4" class="section">
+  <h1>The Strudel Code</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">Five stacked voices modeling an acoustic guitar arpeggio</p>
+  <hr>
+
+  <p><a href="https://strudel.cc" target="_blank">Strudel</a> is a browser-based live coding tool where music is organized around <strong>cycles</strong> (repeating time loops). The code below stacks five simultaneous note patterns, all using the same <code>gm_acoustic_guitar_steel</code> sound, to recreate the layered arpeggiated guitar texture of the intro.</p>
+
+  <pre><code>setcpm(5)
+// -2 to get A:major
+$: stack(
+  note("3*4 -2*4 0*4 1b*4"),
+  note("5*4 7*4 2*4 3*4").late(1/32),
+  note("[&lt;[7, 10] [7, 10] [6, 9] [6, 9] [4, 7] [4, 7] [5, 6] [5, 6]&gt; -]*8").late(1/32),
+  note("[- &lt;7 10 6 9 4 7 5 6&gt;]*8").late(1/64),
+  note("[- &lt;10 7 9 6 7 4 6 5&gt;]*8").late(3/64),
+).sound("gm_acoustic_guitar_steel").scale("F#:minor")</code></pre>
+
+  <h2>Annotation</h2>
+
+  <div class="annotation">
+    <span class="ann-line">setcpm(5)</span>
+    <div class="ann-text">
+      <strong>Tempo: 5 cycles per minute.</strong> One cycle = 12 seconds. This is very slow, which suits the introspective, patient character of the intro. Each chord in voices 1 and 2 occupies one-quarter of a cycle (3 seconds), giving the arpeggios space to breathe.
+    </div>
+  </div>
+
+  <div class="annotation">
+    <span class="ann-line">note("3*4 -2*4 0*4 1b*4")</span>
+    <div class="ann-text">
+      <strong>Bass line: the root of each chord, held for 4 steps each.</strong>
+      <table style="margin-top:.5rem;font-size:.83rem">
+        <thead><tr><th>Degree</th><th>Note</th><th>Chord</th></tr></thead>
+        <tbody>
+          <tr><td><code>3</code></td><td>B</td><td>Bm (iv)</td></tr>
+          <tr><td><code>-2</code></td><td>D (below)</td><td>Dadd9 (VI)</td></tr>
+          <tr><td><code>0</code></td><td>F&sharp;</td><td>F&sharp;m (i)</td></tr>
+          <tr><td><code>1b</code></td><td>G&natural; (G&sharp; flattened)</td><td>Gadd6 (&flat;II)</td></tr>
+        </tbody>
+      </table>
+      The <code>b</code> suffix flattens degree 1 (G&sharp;) by one semitone, giving G&natural; &mdash; the Neapolitan bass note.
+    </div>
+  </div>
+
+  <div class="annotation">
+    <span class="ann-line">note("5*4 7*4 2*4 3*4").late(1/32)</span>
+    <div class="ann-text">
+      <strong>Upper harmony: a second note above each bass note, delayed slightly.</strong>
+      <table style="margin-top:.5rem;font-size:.83rem">
+        <thead><tr><th>Degree</th><th>Note</th><th>Over chord</th></tr></thead>
+        <tbody>
+          <tr><td><code>5</code></td><td>D</td><td>B+D = Bm (B D F&sharp;)</td></tr>
+          <tr><td><code>7</code></td><td>F&sharp; (high)</td><td>D+F&sharp; = D chord</td></tr>
+          <tr><td><code>2</code></td><td>A</td><td>F&sharp;+A = F&sharp;m (F&sharp; A C&sharp;)</td></tr>
+          <tr><td><code>3</code></td><td>B</td><td>G+B = G chord</td></tr>
+        </tbody>
+      </table>
+      The <code>.late(1/32)</code> delays this voice by 1/32 of a cycle, creating the rolling strum effect of a guitar: bass string first, then the upper strings follow.
+    </div>
+  </div>
+
+  <div class="annotation">
+    <span class="ann-line">note("[&lt;[7,10]…[5,6]&gt; -]*8").late(1/32)</span>
+    <div class="ann-text">
+      <strong>Inner chord tones: pairs of notes cycling over 8 passes per cycle.</strong> The <code>&lt;&gt;</code> syntax advances one step each cycle, so each chord pair plays for two full cycles before moving on. The pairs are:
+      <ul style="margin-top:.4rem;margin-bottom:0">
+        <li><code>[7, 10]</code> = F&sharp; + B (cycles 1&ndash;2) &rarr; completes the Bm triad</li>
+        <li><code>[6, 9]</code> = E + A (cycles 3&ndash;4) &rarr; the add9 (E) in Dadd9</li>
+        <li><code>[4, 7]</code> = C&sharp; + F&sharp; (cycles 5&ndash;6) &rarr; completes F&sharp;m</li>
+        <li><code>[5, 6]</code> = D + E (cycles 7&ndash;8) &rarr; the add6 (E) in Gadd6</li>
+      </ul>
+      The rest (<code>-</code>) between each pair gives the notes rhythmic breathing room.
+    </div>
+  </div>
+
+  <div class="annotation">
+    <span class="ann-line">note("[- &lt;7 10 6 9 4 7 5 6&gt;]*8").late(1/64)</span>
+    <div class="ann-text">
+      <strong>Upper arpeggiated voice, single notes.</strong> Plays one scale degree at a time, cycling through chord tones: F&sharp;, B (Bm) &rarr; E, A (Dadd9) &rarr; C&sharp;, F&sharp; (F&sharp;m) &rarr; E, D (Gadd6). Each note is preceded by a rest (<code>-</code>), so it&rsquo;s sparse and intermittent. Delayed by 1/64, it sits slightly behind the chord-tone pairs.
+    </div>
+  </div>
+
+  <div class="annotation">
+    <span class="ann-line">note("[- &lt;10 7 9 6 7 4 6 5&gt;]*8").late(3/64)</span>
+    <div class="ann-text">
+      <strong>Highest arpeggiated voice, offset further.</strong> The same chord tones as voice 4 but in reverse order (descending): B, F&sharp; (Bm) &rarr; A, E (Dadd9) &rarr; F&sharp;, C&sharp; (F&sharp;m) &rarr; E, D (Gadd6). The <code>3/64</code> delay places it last in the strum cascade, giving the impression of a guitar&rsquo;s top strings landing after the lower ones.
+    </div>
+  </div>
+
+  <div class="annotation">
+    <span class="ann-line">.sound("gm_acoustic_guitar_steel").scale("F#:minor")</span>
+    <div class="ann-text">
+      <strong>Timbre and scale context, shared by all five voices.</strong> <code>gm_acoustic_guitar_steel</code> uses the General MIDI acoustic steel-string guitar sample bank, giving a realistic plucked string texture. <code>.scale("F#:minor")</code> maps all integer degree values (0, 1, 2&hellip;) onto notes of the F&sharp; natural minor scale, so you write scale steps rather than raw note names.
+    </div>
+  </div>
+
+  <h2>Key Strudel Syntax</h2>
+  <table>
+    <thead>
+      <tr><th>Syntax</th><th>Meaning</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>$: stack(...)</code></td><td>Run all listed patterns simultaneously (one layer)</td></tr>
+      <tr><td><code>*4</code></td><td>Repeat the preceding event 4 times per cycle</td></tr>
+      <tr><td><code>1b</code></td><td>Scale degree 1, flattened (lowered one semitone)</td></tr>
+      <tr><td><code>-2</code></td><td>Scale degree 2 below the default octave</td></tr>
+      <tr><td><code>&lt;a b c&gt;</code></td><td>Alternate: play a on cycle 1, b on cycle 2, c on cycle 3&hellip;</td></tr>
+      <tr><td><code>[7, 10]</code></td><td>Play degrees 7 and 10 simultaneously (a two-note chord)</td></tr>
+      <tr><td><code>*8</code></td><td>Repeat the pattern 8 times per cycle</td></tr>
+      <tr><td><code>.late(1/32)</code></td><td>Delay by 1/32 of a cycle &mdash; creates the rolling strum effect</td></tr>
+    </tbody>
+  </table>
+
+  <div class="theory">
+    <strong>The staggered delays are doing the real work.</strong> Voices 1&ndash;5 are all the same sound, but they arrive at <code>0, 1/32, 1/32, 1/64, 3/64</code> of a cycle. This tiny cascade mimics the natural roll of a guitar chord: the low strings hit first, the high strings follow milliseconds later. Without the <code>.late()</code> calls, all five voices would sound simultaneously as a hard strum.
+  </div>
+</div>
+
+<!-- ── S5: Listen ─────────────────────────────────────────── -->
+<div id="s5" class="section">
+  <h1>Listen</h1>
+  <p style="color:#888;font-size:.95rem;margin-bottom:1.2rem">Edit and play the Strudel program live</p>
+  <hr>
+
+  <p>The Strudel editor will load below. Press <strong>▶</strong> inside the frame if audio doesn&rsquo;t start automatically. The code is editable &mdash; try the experiments below and listen to what changes.</p>
+
+  <div class="live-editor">
+    <strudel-repl>
+<!--
+setcpm(5)
+$: stack(
+  note("3*4 -2*4 0*4 1b*4"),
+  note("5*4 7*4 2*4 3*4").late(1/32),
+  note("[<[7, 10] [7, 10] [6, 9] [6, 9] [4, 7] [4, 7] [5, 6] [5, 6]> -]*8").late(1/32),
+  note("[- <7 10 6 9 4 7 5 6>]*8").late(1/64),
+  note("[- <10 7 9 6 7 4 6 5>]*8").late(3/64),
+).sound("gm_acoustic_guitar_steel").scale("F#:minor")
+-->
+    </strudel-repl>
+  </div>
+
+  <div class="warn">
+    <strong>If audio doesn&rsquo;t play:</strong> Click the ▶ button inside the Strudel frame after it loads. Browsers require a user gesture before starting audio. You may also need to serve this file from a local server: <code>python3 -m http.server</code>
+  </div>
+
+  <h2>Things to Try</h2>
+  <ul>
+    <li>
+      <strong>Remove the Neapolitan &mdash; swap &flat;II for &flat;VII:</strong>
+      Change <code>1b*4</code> to <code>6*4</code> in voice 1. The bass note shifts from G&natural; (&flat;II) to E (&flat;VII). The &flat;VII (E major) is a conventional rock choice in minor keys. Notice how the exotic, wrenching half-step pull disappears and the loop becomes smoother.
+    </li>
+    <li>
+      <strong>Hear the Phrygian half-step in isolation:</strong>
+      Change <code>note("3*4 -2*4 0*4 1b*4")</code> to <code>note("0*4 0*4 0*4 1b*4")</code> to repeat the tonic three times before hitting the Neapolitan. The contrast between F&sharp; and the G&natural; that follows becomes stark &mdash; you can really hear that half-step pull.
+    </li>
+    <li>
+      <strong>Strip the add9 from Dadd9:</strong>
+      In voice 3, change <code>[6, 9]</code> to <code>[5, 9]</code>. This replaces E with D in the inner chord, removing the add9 extension. Plain D major vs Dadd9 &mdash; hear the shimmer disappear.
+    </li>
+    <li>
+      <strong>Try piano instead of guitar:</strong>
+      Change <code>.sound("gm_acoustic_guitar_steel")</code> to <code>.sound("piano")</code>. Same notes, very different texture &mdash; and the staggered <code>.late()</code> delays feel different on a sustained instrument.
+    </li>
+    <li>
+      <strong>Speed it up:</strong>
+      Change <code>setcpm(5)</code> to <code>setcpm(15)</code>. Same harmonic content, but the increased pace shifts the feel from meditative to urgent.
+    </li>
+  </ul>
+</div>
+
+</main>
+
+<script>
+// ── Navigation ───────────────────────────────────────────────
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const idx = ['s0','s1','s2','s3','s4','s5'].indexOf(id);
+  document.querySelectorAll('.nav-btn')[idx].classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+</script>
+</body>
+</html>
