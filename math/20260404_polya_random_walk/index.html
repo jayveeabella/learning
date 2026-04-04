@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pólya's Random Walk Theorem — Interactive Explainer</title>
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --rw:#4a7c59;--rw2:#e76f51;--rw3:#457b9d;
+  --sw:242px;--sbg:#1a1a2e;--stext:#c8d0e7;
+  --bg:#f5f6fa;--card:#fff;--border:#dee2e6;
+  --r:6px;--text:#212529;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:15px;line-height:1.65}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);
+  background:var(--sbg);overflow-y:auto;z-index:100;padding:1.4rem 0}
+.sb-logo{padding:0 1.2rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem}
+.sb-logo h2{color:#fff;font-size:1rem;font-weight:700}
+.sb-logo p{color:var(--stext);font-size:.75rem;margin-top:.2rem}
+.home-btn{display:inline-block;margin-top:.6rem;font-size:.75rem;color:var(--stext);
+  text-decoration:none;opacity:.7;transition:opacity .15s}
+.home-btn:hover{opacity:1;color:#fff}
+.nav-btn{display:block;padding:.45rem 1.2rem;color:var(--stext);font-size:.82rem;
+  cursor:pointer;border-left:3px solid transparent;transition:all .15s;
+  background:none;border-top:none;border-right:none;border-bottom:none;
+  text-align:left;width:100%}
+.nav-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-btn.active{border-left-color:var(--rw);color:#fff;background:rgba(74,124,89,.2)}
+
+/* ── Main ─────────────────────────────────────────────────── */
+#main{margin-left:var(--sw);padding:2rem 2.5rem 5rem;max-width:1150px;width:100%}
+.section{display:none}.section.active{display:block}
+
+h1{font-size:1.85rem;font-weight:700;color:#1a1a2e;margin-bottom:.3rem}
+h2{font-size:1.25rem;font-weight:600;color:#1a1a2e;margin:1.6rem 0 .5rem}
+h3{font-size:1rem;font-weight:600;color:#333;margin:1.1rem 0 .4rem}
+p{margin-bottom:.75rem}
+hr{border:none;border-top:1px solid var(--border);margin:1.4rem 0}
+ul,ol{margin-left:1.3rem;margin-bottom:.75rem}
+li{margin-bottom:.35rem}
+a{color:var(--rw)}
+
+/* ── Boxes ────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.4rem;margin:1rem 0}
+.info{background:#e8f3ec;border-left:4px solid var(--rw);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.success{background:#d4edda;border-left:4px solid #28a745;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.warn{background:#fff8e1;border-left:4px solid #ffc107;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+
+/* ── Tables ───────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;margin:.9rem 0;font-size:.87rem}
+th{background:#f0f4f8;padding:.5rem .75rem;text-align:left;font-weight:600;border-bottom:2px solid var(--border)}
+td{padding:.45rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+.tab-bar{display:flex;border-bottom:2px solid var(--border);gap:0;margin-top:.5rem;flex-wrap:wrap}
+.tab-btn{padding:.45rem .95rem;border:none;background:none;cursor:pointer;
+  color:#666;font-size:.87rem;font-weight:500;border-bottom:2px solid transparent;
+  margin-bottom:-2px;transition:all .15s}
+.tab-btn:hover{color:var(--rw)}
+.tab-btn.active{color:var(--rw);border-bottom-color:var(--rw)}
+.tab-pane{display:none;padding-top:.9rem}.tab-pane.active{display:block}
+
+/* ── Sliders / Controls ───────────────────────────────────── */
+.ctrl{display:flex;align-items:center;gap:.7rem;margin:.5rem 0;flex-wrap:wrap}
+.ctrl label{font-size:.84rem;font-weight:500;min-width:100px}
+.ctrl input[type=range]{width:180px;accent-color:var(--rw)}
+.ctrl input[type=number]{width:70px;padding:.2rem .4rem;border:1px solid var(--border);border-radius:4px;font-size:.84rem}
+.ctrl select{padding:.28rem .4rem;border:1px solid var(--border);border-radius:4px;font-size:.84rem}
+.val{font-size:.84rem;font-weight:600;color:var(--rw);min-width:50px}
+.btn{display:inline-block;padding:.38rem .85rem;border:1px solid var(--rw);border-radius:var(--r);
+  background:var(--rw);color:#fff;font-size:.83rem;cursor:pointer;transition:all .15s}
+.btn:hover{opacity:.85}
+.btn-outline{background:#fff;color:var(--rw)}
+.btn-outline:hover{background:var(--rw);color:#fff}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.cols{display:grid;gap:1.4rem;margin:.8rem 0}
+.c12{grid-template-columns:1fr 2fr}
+.c21{grid-template-columns:2fr 1fr}
+.c11{grid-template-columns:1fr 1fr}
+.c23{grid-template-columns:2fr 3fr}
+.c13{grid-template-columns:1fr 3fr}
+
+/* ── Code ─────────────────────────────────────────────────── */
+pre{background:#1e2235;color:#abb2bf;padding:.9rem 1.1rem;border-radius:var(--r);
+  overflow-x:auto;font-size:.8rem;line-height:1.55;margin:.7rem 0;font-family:'Fira Code',Consolas,monospace}
+
+/* ── Details/Expander ─────────────────────────────────────── */
+details{border:1px solid var(--border);border-radius:var(--r);margin:.7rem 0}
+summary{padding:.55rem 1rem;cursor:pointer;font-weight:500;font-size:.88rem;
+  background:#f8f9fa;border-radius:var(--r);list-style:none;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▶ ';font-size:.68rem;color:#888}
+details[open] summary::before{content:'▼ '}
+details[open] summary{border-radius:var(--r) var(--r) 0 0}
+.det-body{padding:.9rem 1.1rem;border-top:1px solid var(--border)}
+
+/* ── Misc ─────────────────────────────────────────────────── */
+.caption{font-size:.81rem;color:#666;font-style:italic;margin-top:.35rem}
+.metric{display:inline-block;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:.7rem 1.1rem;min-width:140px;margin:.3rem .4rem .3rem 0;text-align:center}
+.metric-label{font-size:.76rem;color:#666}
+.metric-value{font-size:1.2rem;font-weight:700;color:#1a1a2e}
+.sim-stats{font-family:Consolas,monospace;font-size:.82rem;
+  background:#f8f9fa;border:1px solid var(--border);border-radius:var(--r);
+  padding:.45rem .8rem;margin:.5rem 0;color:#333}
+blockquote{border-left:4px solid var(--rw);padding:.6rem 1rem;margin:.8rem 0;
+  background:#f9f9f9;font-style:italic;border-radius:0 var(--r) var(--r) 0}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+#menu-toggle{display:none;position:fixed;top:.7rem;right:.7rem;z-index:200;
+  background:var(--sbg);color:#fff;border:none;border-radius:6px;
+  padding:.5rem .7rem;cursor:pointer;font-size:1.15rem;line-height:1}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
+@media(max-width:767px){
+  #menu-toggle{display:block}
+  #sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.open{transform:translateX(0)}
+  #sidebar-overlay.open{display:block}
+  #main{margin-left:0;padding:3.5rem 1rem 4rem}
+  .cols.c12,.cols.c21,.cols.c11,.cols.c23,.cols.c13{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<button id="menu-toggle" aria-label="Toggle menu" onclick="toggleSidebar()">☰</button>
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <h2>🚶 Pólya's Walk</h2>
+    <p>Recurrence Theorem (1921)</p>
+    <a class="home-btn" href="../../index.html">← Home</a>
+  </div>
+  <button class="nav-btn active" onclick="nav('s0')">Overview</button>
+  <button class="nav-btn" onclick="nav('s1')">The Theorem</button>
+  <button class="nav-btn" onclick="nav('s2')">Intuition</button>
+  <button class="nav-btn" onclick="nav('s3')">Visualizations</button>
+  <button class="nav-btn" onclick="nav('s4')">Applications</button>
+  <button class="nav-btn" onclick="nav('s5')">Sources</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════════════════════════════════ -->
+<main id="main">
+
+<!-- ── S0: Overview ──────────────────────────────────────────── -->
+<div id="s0" class="section active">
+  <h1>Pólya's Random Walk Theorem</h1>
+  <p style="color:#555;font-size:1rem">George Pólya, 1921 &mdash; <em>Über eine Aufgabe der Wahrscheinlichkeitsrechnung betreffend die Irrfahrt im Straßennetz</em></p>
+  <hr>
+
+  <div class="cols c21">
+    <div>
+      <h2>The Stadtwald Story</h2>
+      <p>Around 1919, George Pólya was a young professor at ETH Zürich who enjoyed long solitary walks through the <em>Stadtwald</em> — the city forest on the edge of Zürich. During one such walk, he ran into one of his students together with the student's fiancée. Then he ran into them again. And again.</p>
+      <p>Embarrassed, Pólya later wrote: <em>"I don't remember how many times, but certainly much too often and I felt embarrassed: It looked as if I was snooping around which was, I assure you, not the case."</em></p>
+      <p>To vindicate himself mathematically, he asked: if two people wander randomly on a 2D grid, how likely are they to keep meeting? This is equivalent to asking whether a <em>single</em> random walker — formed by their relative displacement — returns to the origin. His 1921 answer became one of probability theory's most beloved results.</p>
+
+      <div class="info">
+        <strong>Pólya's Recurrence Theorem (1921).</strong>
+        A simple symmetric random walk on $\mathbb{Z}^d$ returns to the origin with probability $1$ if and only if $d \leq 2$.
+        For $d \geq 3$, the walk is <em>transient</em> — it escapes to infinity with positive probability.
+      </div>
+
+      <p>Shizuo Kakutani later coined the perfect summary:</p>
+      <blockquote>"A drunk man will find his way home, but a drunk bird may get lost forever."</blockquote>
+
+      <h3>Key Numbers</h3>
+      <div>
+        <span class="metric"><div class="metric-label">d = 1 (line)</div><div class="metric-value" style="color:#4a7c59">P = 1</div></span>
+        <span class="metric"><div class="metric-label">d = 2 (plane)</div><div class="metric-value" style="color:#4a7c59">P = 1</div></span>
+        <span class="metric"><div class="metric-label">d = 3 (space)</div><div class="metric-value" style="color:#e76f51">≈ 34.05%</div></span>
+        <span class="metric"><div class="metric-label">d = 4</div><div class="metric-value" style="color:#e76f51">≈ 19.32%</div></span>
+        <span class="metric"><div class="metric-label">d → ∞</div><div class="metric-value" style="color:#e76f51">→ 0</div></span>
+      </div>
+    </div>
+
+    <div>
+      <h2>Return Probability by Dimension</h2>
+      <div id="s0-chart" style="height:340px"></div>
+      <div class="caption">$P(\text{return to origin})$ for a simple random walk on $\mathbb{Z}^d$. Green = recurrent (certain return); orange = transient. Values for $d \geq 3$ come from Watson's triple integrals (1939) and lattice Green's function calculations.</div>
+    </div>
+  </div>
+
+  <hr>
+  <h2>Historical Timeline</h2>
+  <table>
+    <tr><th>Year</th><th>Event</th></tr>
+    <tr><td>~1919</td><td>Pólya repeatedly encounters a student couple in the Stadtwald; becomes motivated to study the probability of random encounters</td></tr>
+    <tr><td><strong>1921</strong></td><td>Pólya publishes <em>"Über eine Aufgabe der Wahrscheinlichkeitsrechnung betreffend die Irrfahrt im Straßennetz"</em>, <em>Mathematische Annalen</em> 84: 149–160 — proving recurrence for $d=1,2$ and transience for $d \geq 3$</td></tr>
+    <tr><td>1939</td><td>G.N. Watson evaluates the triple integral, yielding the closed form $p_3 = \frac{\sqrt{6}}{96\pi^3}\,\Gamma(\tfrac{1}{4})^4 \approx 0.340537\ldots$</td></tr>
+    <tr><td>1944</td><td>Shizuo Kakutani extends to continuous Brownian motion; proves the Dirichlet problem can be solved by expected exit position of a Brownian path</td></tr>
+    <tr><td>1984</td><td>Doyle &amp; Snell publish <em>Random Walks and Electric Networks</em> — an elegant proof via resistor network effective resistance</td></tr>
+  </table>
+</div>
+
+<!-- ── S1: The Theorem ──────────────────────────────────────── -->
+<div id="s1" class="section">
+  <h1>📐 The Theorem</h1>
+  <hr>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('th','stmt')">Formal Statement</button>
+    <button class="tab-btn" onclick="tab('th','stirling')">Stirling's Proof</button>
+    <button class="tab-btn" onclick="tab('th','fourier')">Fourier Analysis</button>
+    <button class="tab-btn" onclick="tab('th','networks')">Electric Networks</button>
+  </div>
+
+  <!-- Tab: Formal Statement -->
+  <div id="th-stmt" class="tab-pane active">
+    <h2>Definitions</h2>
+    <p>Let $d \geq 1$. The <strong>simple symmetric random walk</strong> on $\mathbb{Z}^d$ is the stochastic process $(S_n)_{n \geq 0}$ defined by:
+    $$S_0 = \mathbf{0}, \qquad S_n = X_1 + X_2 + \cdots + X_n$$
+    where $X_1, X_2, \ldots$ are independent and identically distributed, each taking one of the $2d$ unit vectors $\{\pm e_1, \pm e_2, \ldots, \pm e_d\}$ with equal probability $\frac{1}{2d}$.</p>
+
+    <p>The <strong>$2n$-step return probability</strong> is $p_{2n} = P(S_{2n} = \mathbf{0})$. By parity, $p_{2n+1} = 0$ — the walker can only return to the origin in an even number of steps.</p>
+
+    <div class="info">
+      <strong>Recurrence Criterion.</strong> The walk is <em>recurrent</em> if and only if:
+      $$\sum_{n=0}^{\infty} p_{2n} = +\infty$$
+      This sum equals the expected total number of visits to $\mathbf{0}$. The walk is <em>transient</em> if and only if the sum is finite (in which case there is a positive probability of never returning).
+    </div>
+
+    <h3>Pólya's Theorem (precise statement)</h3>
+    <p>Define $q = P(\exists\, n \geq 1 : S_n = \mathbf{0})$, the probability of ever returning to the origin. Set $G(\mathbf{0}) = \sum_{n=0}^{\infty} p_{2n}$ (the Green's function at the origin). Then:</p>
+    $$q = \begin{cases} 1 & \text{if } d \leq 2 \quad \text{(recurrent)} \\[4pt] 1 - \dfrac{1}{G(\mathbf{0})} < 1 & \text{if } d \geq 3 \quad \text{(transient)} \end{cases}$$
+    <p>In the recurrent case $G(\mathbf{0}) = +\infty$, so $q = 1$. In the transient case $G(\mathbf{0}) < \infty$, giving a specific $q < 1$.</p>
+
+    <h3>Null Recurrence</h3>
+    <p>Both $d=1$ and $d=2$ are <strong>null recurrent</strong>: the walker returns with probability 1, but the <em>expected</em> return time $\mathbb{E}[T_0]$ is infinite. This is not a contradiction — it just means the walk takes arbitrarily long return trips with appreciable probability. The walk will come back; you just can't predict when.</p>
+
+    <table>
+      <tr><th>$d$</th><th>Type</th><th>$q = P(\text{return})$</th><th>$\mathbb{E}[T_0]$</th><th>Visits to origin</th></tr>
+      <tr><td>1</td><td style="color:#4a7c59;font-weight:600">Recurrent</td><td>1 (certain)</td><td>$\infty$</td><td>Infinitely often, a.s.</td></tr>
+      <tr><td>2</td><td style="color:#4a7c59;font-weight:600">Recurrent</td><td>1 (certain)</td><td>$\infty$</td><td>Infinitely often, a.s.</td></tr>
+      <tr><td>3</td><td style="color:#e76f51;font-weight:600">Transient</td><td>$\approx 0.3405$</td><td>$\infty$</td><td>Finitely many, a.s.</td></tr>
+      <tr><td>4</td><td style="color:#e76f51;font-weight:600">Transient</td><td>$\approx 0.1932$</td><td>$\infty$</td><td>Finitely many, a.s.</td></tr>
+      <tr><td>$d \geq 3$</td><td style="color:#e76f51;font-weight:600">Transient</td><td>$< 1$, decreasing</td><td>$\infty$</td><td>Finitely many, a.s.</td></tr>
+    </table>
+  </div>
+
+  <!-- Tab: Stirling's Proof -->
+  <div id="th-stirling" class="tab-pane">
+    <h2>Proof Sketch via Stirling's Formula</h2>
+    <p>Pólya's original approach: find an explicit formula for $p_{2n}$, apply Stirling's approximation $n! \approx \sqrt{2\pi n}\,(n/e)^n$, and test convergence of $\sum p_{2n}$.</p>
+
+    <h3>Dimension 1</h3>
+    <p>To return to the origin in $2n$ steps, the walk must take exactly $n$ steps in each direction. The number of such paths is $\binom{2n}{n}$, each with probability $(1/2)^{2n}$:
+    $$p_{2n}^{(1)} = \binom{2n}{n} \frac{1}{4^n}$$
+    By Stirling: $\binom{2n}{n}/4^n \sim \frac{1}{\sqrt{\pi n}}$. Then:
+    $$\sum_{n=1}^{\infty} p_{2n}^{(1)} \sim \sum_{n=1}^{\infty} \frac{1}{\sqrt{\pi n}} = +\infty \quad \Rightarrow \quad \textbf{recurrent}$$</p>
+
+    <h3>Dimension 2</h3>
+    <p>In 2D with steps $\{\pm e_1, \pm e_2\}$, the walk returns in $2n$ steps iff it takes $a$ steps in $+e_1$, $a$ in $-e_1$, $b$ in $+e_2$, $b$ in $-e_2$ for some $a + b = n$. Summing over $a = 0, \ldots, n$:
+    $$p_{2n}^{(2)} = \left[\binom{2n}{n}\frac{1}{4^n}\right]^2 \sim \frac{1}{\pi n}$$
+    Then $\sum p_{2n}^{(2)} \sim \sum \frac{1}{\pi n} = +\infty$ (harmonic series) $\Rightarrow$ <strong>recurrent</strong>. This is the borderline case: the sum diverges, but only logarithmically. 2D is <em>barely</em> recurrent.</p>
+
+    <h3>Dimension 3</h3>
+    <p>By a more involved combinatorial argument, one can show:
+    $$p_{2n}^{(3)} \sim \frac{C_3}{n^{3/2}}, \qquad C_3 = \left(\frac{3}{4\pi}\right)^{3/2}$$
+    Then $\sum p_{2n}^{(3)} \sim C_3 \sum n^{-3/2} < \infty$ (p-series, $p = 3/2 > 1$) $\Rightarrow$ <strong>transient</strong>.</p>
+
+    <div class="info">
+      <strong>General pattern.</strong> For dimension $d$, the Local Central Limit Theorem gives:
+      $$p_{2n}^{(d)} \sim \left(\frac{d}{4\pi n}\right)^{d/2}$$
+      The series $\sum n^{-d/2}$ converges if and only if $d/2 > 1$, i.e., $d \geq 3$. Pólya's threshold follows directly.
+    </div>
+
+    <details>
+      <summary>Why does $p_{2n} \sim (d/4\pi n)^{d/2}$?</summary>
+      <div class="det-body">
+        <p>After $2n$ steps, the walk's position $S_{2n}$ is approximately Gaussian by the Central Limit Theorem, with mean $\mathbf{0}$ and covariance matrix $\Sigma = \frac{2n}{d} I_d$ (variance $2n/d$ per coordinate). By the Local CLT, the probability of being at any specific lattice point $\mathbf{x}$ is approximately the Gaussian density at $\mathbf{x}$ times the lattice spacing volume (which is 1):</p>
+        $$p_{2n}(\mathbf{x}) \approx \frac{1}{(2\pi)^{d/2} \det(\Sigma)^{1/2}} \exp\!\left(-\tfrac{1}{2}\mathbf{x}^\top\Sigma^{-1}\mathbf{x}\right)$$
+        At $\mathbf{x} = \mathbf{0}$: $p_{2n}(\mathbf{0}) \approx \frac{1}{(2\pi \cdot 2n/d)^{d/2}} = \left(\frac{d}{4\pi n}\right)^{d/2}$, exactly the claimed asymptotic.
+      </div>
+    </details>
+  </div>
+
+  <!-- Tab: Fourier Analysis -->
+  <div id="th-fourier" class="tab-pane">
+    <h2>Proof via Fourier / Characteristic Functions</h2>
+    <p>A more elegant route uses the Fourier transform on the lattice $\mathbb{Z}^d$, connecting the recurrence criterion directly to a multidimensional integral.</p>
+
+    <h3>Step 1: The Characteristic Function</h3>
+    <p>The characteristic function of a single step $X$ is:
+    $$\varphi(\boldsymbol{\theta}) = \mathbb{E}[e^{i \boldsymbol{\theta} \cdot X}] = \frac{1}{d}\sum_{k=1}^{d} \cos(\theta_k), \qquad \boldsymbol{\theta} \in [-\pi, \pi]^d$$
+    Note $\varphi(\mathbf{0}) = 1$ and $|\varphi(\boldsymbol{\theta})| < 1$ for $\boldsymbol{\theta} \neq \mathbf{0}$.</p>
+
+    <h3>Step 2: Return Probabilities via Fourier Inversion</h3>
+    <p>Since $S_{2n} = X_1 + \cdots + X_{2n}$ and the $X_i$ are i.i.d., Fourier inversion on the torus $[-\pi,\pi]^d$ gives:
+    $$p_{2n} = P(S_{2n} = \mathbf{0}) = \frac{1}{(2\pi)^d}\int_{[-\pi,\pi]^d} \varphi(\boldsymbol{\theta})^{2n}\, d\boldsymbol{\theta}$$
+    Summing over all $n \geq 0$ and applying the geometric series ($|\varphi| \leq 1$ with equality only at $\mathbf{0}$):
+    $$G(\mathbf{0}) = \sum_{n=0}^{\infty} p_{2n} = \frac{1}{(2\pi)^d}\int_{[-\pi,\pi]^d} \frac{d\boldsymbol{\theta}}{1 - \varphi(\boldsymbol{\theta})}$$</p>
+
+    <h3>Step 3: The Critical Singularity</h3>
+    <p>The integrand diverges at $\boldsymbol{\theta} = \mathbf{0}$ since $\varphi(\mathbf{0}) = 1$. Near $\mathbf{0}$, Taylor expansion gives:
+    $$\varphi(\boldsymbol{\theta}) \approx 1 - \frac{|\boldsymbol{\theta}|^2}{2d} \implies \frac{1}{1 - \varphi(\boldsymbol{\theta})} \approx \frac{2d}{|\boldsymbol{\theta}|^2}$$
+    Switching to $d$-dimensional polar coordinates $(\theta = |\boldsymbol{\theta}|, \text{solid angle})$ with volume element $\sim \theta^{d-1} d\theta$, the integrand near $\mathbf{0}$ behaves as:
+    $$\frac{1}{\theta^2} \cdot \theta^{d-1} = \theta^{d-3}$$</p>
+
+    <div class="info">
+      $\int_0^{\epsilon} \theta^{d-3}\, d\theta$ converges $\iff d - 3 > -1 \iff d \geq 3$.
+      <ul style="margin-top:.4rem;margin-bottom:0">
+        <li>$d \leq 2$: integral diverges $\Rightarrow G(\mathbf{0}) = +\infty \Rightarrow$ <strong style="color:#4a7c59">recurrent</strong></li>
+        <li>$d \geq 3$: integral converges $\Rightarrow G(\mathbf{0}) < \infty \Rightarrow$ <strong style="color:#e76f51">transient</strong></li>
+      </ul>
+    </div>
+
+    <h3>Watson's Exact Closed Form ($d = 3$)</h3>
+    <p>For $d = 3$, G.N. Watson (1939) evaluated the Green's function using contour integration and the theory of elliptic integrals:
+    $$G(\mathbf{0}) = \frac{1}{(2\pi)^3}\int_{[-\pi,\pi]^3} \frac{d\theta_1\,d\theta_2\,d\theta_3}{1 - \frac{1}{3}(\cos\theta_1 + \cos\theta_2 + \cos\theta_3)} = \frac{\sqrt{6}}{96\pi^3}\,\Gamma\!\left(\tfrac{1}{4}\right)^{\!4} \approx 1.5164$$
+    The exact return probability is:
+    $$p_3 = 1 - \frac{1}{G(\mathbf{0})} = 1 - \frac{96\pi^3}{\sqrt{6}\,\Gamma(1/4)^4} \approx \mathbf{0.340537\ldots}$$
+    This is called <strong>Watson's constant</strong>. The appearance of $\Gamma(1/4)$ — related to the lemniscate constant and elliptic integrals — is remarkably deep for such a combinatorial question.</p>
+  </div>
+
+  <!-- Tab: Electric Networks -->
+  <div id="th-networks" class="tab-pane">
+    <h2>Proof via Electrical Resistance (Doyle &amp; Snell, 1984)</h2>
+    <p>The most intuitive proof identifies the infinite lattice $\mathbb{Z}^d$ with an electrical resistor network: each edge gets resistance 1 ohm. The key theorem:</p>
+
+    <div class="info">
+      <strong>Random Walk / Resistance Theorem.</strong>
+      A random walk starting at the origin is <strong>recurrent</strong> if and only if the effective resistance from the origin to $\infty$ in the resistor network is <strong>infinite</strong>.
+    </div>
+
+    <p>Intuition: if electricity flows freely to infinity (low resistance), so does the random walk (transient). If electricity is "stuck" (infinite resistance to infinity), the walk keeps returning.</p>
+
+    <h3>Why $d = 2$ is Recurrent</h3>
+    <p>The effective resistance from the origin to the boundary of a ball of radius $R$ in $\mathbb{Z}^2$ grows like $\log R$. As $R \to \infty$ this diverges — infinite resistance to infinity — so the walk is recurrent. Intuitively, each annular "shell" at radius $r$ has about $4r$ edges crossing it, contributing $1/(4r)$ to the total resistance:
+    $$R_{\text{eff}} \sim \sum_{r=1}^{R} \frac{1}{4r} \sim \frac{\log R}{4} \to \infty$$</p>
+
+    <h3>Why $d = 3$ is Transient</h3>
+    <p>In $\mathbb{Z}^3$, the boundary of a ball of radius $r$ has $\sim 4\pi r^2$ edges crossing it. The total resistance to infinity is bounded:
+    $$R_{\text{eff}} \leq \sum_{r=1}^{\infty} \frac{1}{C r^2} < \infty$$
+    By the Nash-Williams criterion, finite resistance to infinity implies transience. For $d \geq 3$ generally:
+    $$R_{\text{eff}} \leq \sum_{r=1}^{\infty} \frac{1}{C r^{d-1}} \quad \text{which converges iff } d - 1 > 1 \text{, i.e., } d \geq 3.$$</p>
+
+    <h3>Why This Proof Is Powerful</h3>
+    <p>Unlike the Fourier approach, the electrical proof extends naturally to <em>non-uniform</em> and <em>random</em> graphs — percolation clusters, random geometric graphs, trees, fractals. Rayleigh's monotonicity law (adding edges decreases resistance) lets you prove transience by exhibiting any spanning subgraph with finite resistance.</p>
+
+    <div class="success">The equivalence between random walk recurrence and electrical resistance is now a central tool in the study of random media, allowing probabilists to use classical circuit theory to determine whether random walks on disordered lattices escape to infinity.</div>
+  </div>
+</div>
+
+<!-- ── S2: Intuition ────────────────────────────────────────── -->
+<div id="s2" class="section">
+  <h1>💡 Intuition</h1>
+  <hr>
+
+  <div class="cols c11">
+    <div>
+      <h2>Why 2D is Special</h2>
+      <p>The honest answer: there is no single clean, non-mathematical reason why the critical dimension is exactly $d = 2$ rather than $d = 4$. The math decides. But several angles help build intuition:</p>
+      <ul>
+        <li><strong>1D:</strong> The walk on a line zigzags back and forth. To escape far from home, it <em>must</em> cross home first. The walk is "forced" to return.</li>
+        <li><strong>2D:</strong> The walk on a city grid can drift far, but the grid is "tight enough" that paths keep looping back. There's only so many ways to avoid the origin in a planar grid.</li>
+        <li><strong>3D:</strong> Three-dimensional space opens up vastly. The volume within radius $r$ grows as $r^3$, but the walk's diffusive spread grows only as $\sqrt{t}$. The walker can disappear into a region of space it will almost surely never visit twice.</li>
+      </ul>
+      <div class="warn">
+        <strong>The 2D case is borderline in the most precise sense:</strong> $p_{2n} \sim 1/(\pi n)$, and the sum $\sum 1/n$ is the harmonic series — the slowest-diverging series in mathematics. The 2D walk is recurrent, but just barely.
+      </div>
+    </div>
+    <div>
+      <h2>The $p$-Series Argument</h2>
+      <p>After $2n$ steps, the walker's position is spread over a ball of radius $\sim \sqrt{n}$ in $d$ dimensions. The probability of being at any single point (like the origin) is roughly:
+      $$p_{2n} \sim \frac{1}{(\sqrt{n})^d} = n^{-d/2}$$
+      Whether the walk is recurrent depends on whether this sum diverges:</p>
+      <table>
+        <tr><th>$d$</th><th>Asymptotic $p_{2n}$</th><th>$\sum p_{2n}$</th><th>Result</th></tr>
+        <tr><td>1</td><td>$\sim n^{-1/2}$</td><td>$\infty$ (p-series, $p < 1$)</td><td style="color:#4a7c59;font-weight:600">Recurrent</td></tr>
+        <tr><td>2</td><td>$\sim n^{-1}$</td><td>$\infty$ (harmonic)</td><td style="color:#4a7c59;font-weight:600">Recurrent</td></tr>
+        <tr><td>3</td><td>$\sim n^{-3/2}$</td><td>$&lt;\infty$ (p-series, $p > 1$)</td><td style="color:#e76f51;font-weight:600">Transient</td></tr>
+        <tr><td>$d$</td><td>$\sim n^{-d/2}$</td><td>Converges iff $d \geq 3$</td><td style="color:#e76f51;font-weight:600">Transient</td></tr>
+      </table>
+      <p>The threshold $d = 2$ is <em>exactly</em> where the p-series $\sum n^{-s}$ crosses from divergent ($s \leq 1$) to convergent ($s > 1$). Pólya's theorem is a probability theorem about a calculus fact.</p>
+    </div>
+  </div>
+
+  <hr>
+  <h2>Asymptotic Decay of Return Probabilities</h2>
+  <p>The chart shows the asymptotic approximation to $p_{2n}$ for each dimension on a <strong>log-log scale</strong>. Each dimension gives a straight line with slope $-d/2$. The series $\sum p_{2n}$ corresponds to the "area under" each curve — divergent for $d \leq 2$, convergent for $d \geq 3$.</p>
+  <div id="s2-chart" style="height:350px"></div>
+  <div class="caption">Slopes: $-\tfrac{1}{2}$ (d=1), $-1$ (d=2), $-\tfrac{3}{2}$ (d=3), $-2$ (d=4). A sum $\sum n^{-s}$ converges iff $s > 1$. Only $d \leq 2$ gives $s = d/2 \leq 1$, ensuring divergence (recurrence).</div>
+
+  <hr>
+  <h2>Two More Perspectives</h2>
+  <div class="cols c11">
+    <div>
+      <h3>The Potential Theory View</h3>
+      <p>A function $h: \mathbb{Z}^d \to \mathbb{R}$ is <strong>discrete harmonic</strong> at a point $x$ if $h(x)$ equals the average of its $2d$ neighbors:</p>
+      $$h(x) = \frac{1}{2d}\sum_{|e|=1} h(x + e)$$
+      <p>This is the discrete mean-value property. Recurrence and transience determine whether bounded harmonic functions must be constant:</p>
+      <ul>
+        <li>$d \leq 2$ (recurrent): every bounded harmonic function on $\mathbb{Z}^d$ is constant (discrete Liouville theorem).</li>
+        <li>$d \geq 3$ (transient): non-constant bounded harmonic functions exist — e.g., $h(x) = P_x(\text{walk escapes to } +\infty)$.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>The Martingale View</h3>
+      <p>If $f: \mathbb{Z}^d \to \mathbb{R}$ is discrete harmonic, then the process $(f(S_n))$ is a <strong>martingale</strong> — its expected future value equals its current value. This bridges probability and classical analysis.</p>
+      <p>Key consequences:
+      <ul>
+        <li><strong>$d=1$:</strong> The walk oscillates; strong law $S_n/n \to 0$ a.s.</li>
+        <li><strong>$d=2$:</strong> The walk returns infinitely often to every lattice point a.s., but wanders to $\infty$ in the Cesàro sense.</li>
+        <li><strong>$d \geq 3$:</strong> $|S_n| \to \infty$ a.s. — the walk escapes to infinity almost surely.</li>
+      </ul>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- ── S3: Visualizations ─────────────────────────────────────── -->
+<div id="s3" class="section">
+  <h1>🔬 Visualizations</h1>
+  <hr>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('v','walk2d')">2D Walk Trace</button>
+    <button class="tab-btn" onclick="tab('v','distcomp')">Distance Over Time</button>
+    <button class="tab-btn" onclick="tab('v','livesim')">Live Simulation</button>
+  </div>
+
+  <!-- Tab: 2D Walk -->
+  <div id="v-walk2d" class="tab-pane active">
+    <h2>A 2D Random Walk — Guaranteed to Return</h2>
+    <p>Trace a random walk on $\mathbb{Z}^2$ (four equally-likely directions: N, S, E, W). Red dots mark each return to the origin. By Pólya's theorem, the walk <em>will</em> return — and will continue returning infinitely often. But between returns, it may wander very far.</p>
+    <div class="ctrl">
+      <label>Steps:</label>
+      <input type="range" id="w2d-steps" min="200" max="10000" step="200" value="2000"
+        oninput="document.getElementById('w2d-steps-val').textContent=Number(this.value).toLocaleString();updateWalk2D()">
+      <span class="val" id="w2d-steps-val">2,000</span>
+      <label>Seed:</label>
+      <input type="number" id="w2d-seed" value="42" min="0" max="99999" style="width:72px"
+        oninput="updateWalk2D()">
+      <button class="btn btn-outline" onclick="document.getElementById('w2d-seed').value=Math.floor(Math.random()*99999);updateWalk2D()">New Walk</button>
+    </div>
+    <div id="walk2d-chart" style="height:430px"></div>
+    <div class="ctrl" style="margin-top:.2rem">
+      <span style="font-size:.84rem">Returns to origin: <strong id="w2d-ret-count" style="color:#e63946">—</strong></span>
+      <span style="font-size:.84rem;margin-left:1.2rem">Final position: <strong id="w2d-final-pos" style="color:#555">—</strong></span>
+    </div>
+    <div class="caption">Green star = origin (0,0). Red dots = returns to origin. Blue line = full path. Yellow square = final position. Adjust steps and seed to explore different walks.</div>
+  </div>
+
+  <!-- Tab: Distance Comparison -->
+  <div id="v-distcomp" class="tab-pane">
+    <h2>Distance from Origin: 1D vs 2D vs 3D</h2>
+    <p>All three walks spread diffusively — distance grows roughly as $\sqrt{t}$ on average. The key difference is what happens near zero: 1D and 2D walks <em>repeatedly crash back to the origin</em>, while the 3D walk tends to drift upward and almost never touches zero again.</p>
+    <div class="ctrl">
+      <label>Steps:</label>
+      <input type="range" id="dc-steps" min="500" max="5000" step="500" value="2000"
+        oninput="document.getElementById('dc-steps-val').textContent=Number(this.value).toLocaleString();updateDistComp()">
+      <span class="val" id="dc-steps-val">2,000</span>
+      <label>Seed:</label>
+      <input type="number" id="dc-seed" value="7" min="0" max="99999" style="width:72px"
+        oninput="updateDistComp()">
+      <button class="btn btn-outline" onclick="document.getElementById('dc-seed').value=Math.floor(Math.random()*99999);updateDistComp()">New Walks</button>
+    </div>
+    <div id="distcomp-chart" style="height:420px"></div>
+    <div class="caption">Teal = 1D $|x(t)|$, Blue = 2D $r(t) = \sqrt{x^2+y^2}$, Orange = 3D $r(t) = \sqrt{x^2+y^2+z^2}$. Gray dashed = $\sqrt{t}$ reference. The 1D and 2D walks repeatedly return to 0; the 3D walk escapes.</div>
+  </div>
+
+  <!-- Tab: Live Simulation -->
+  <div id="v-livesim" class="tab-pane">
+    <h2>Live Convergence to Theoretical $P(\text{return})$</h2>
+    <p>Run random walks one batch at a time and track the fraction that return to the origin (within the step limit). This empirical fraction converges to Pólya's theoretical value. For $d \leq 2$ it approaches 1.0; for $d \geq 3$ it approaches a number strictly less than 1.</p>
+    <div class="warn">⚠️ The empirical estimate is a <em>lower bound</em> on the true theoretical value: walks that have not returned yet (within maxSteps) are counted as non-returning. Increase max steps for a more accurate (but slower) estimate.</div>
+    <div class="ctrl">
+      <label>Dimension:</label>
+      <select id="sim-dim" onchange="resetSim()">
+        <option value="1">d = 1 (line) — Theory: 1.0000</option>
+        <option value="2">d = 2 (plane) — Theory: 1.0000</option>
+        <option value="3" selected>d = 3 (space) — Theory: 0.3405</option>
+        <option value="4">d = 4 — Theory: 0.1932</option>
+        <option value="5">d = 5 — Theory: 0.1352</option>
+        <option value="6">d = 6 — Theory: 0.1047</option>
+      </select>
+      <label>Max steps/walk:</label>
+      <select id="sim-maxsteps">
+        <option value="5000">5,000</option>
+        <option value="10000" selected>10,000</option>
+        <option value="50000">50,000 (slow)</option>
+      </select>
+    </div>
+    <div class="ctrl">
+      <button class="btn" onclick="startSim()">▶ Start</button>
+      <button class="btn btn-outline" onclick="pauseSim()">⏸ Pause</button>
+      <button class="btn btn-outline" onclick="resetSim()">↺ Reset</button>
+    </div>
+    <div id="sim-stats" class="sim-stats">Ready. Select dimension and click Start.</div>
+    <div id="livesim-chart" style="height:370px"></div>
+    <div class="caption">Red dashed = theoretical $P(\text{return})$. Green line = running empirical fraction. Converges toward theory as trial count grows. For d=1 and d=2 the target is 1.0 (the line goes all the way to the top).</div>
+  </div>
+</div>
+
+<!-- ── S4: Applications ────────────────────────────────────── -->
+<div id="s4" class="section">
+  <h1>🌐 Applications</h1>
+  <hr>
+  <p>Pólya's recurrence/transience dichotomy is not just a pure math curiosity. The distinction between "space is too small to escape from" ($d \leq 2$) and "space is too large to revisit" ($d \geq 3$) runs through modern machine learning and network science. Wherever a system must explore and revisit states — MCMC, RL, recommendation systems — the effective dimensionality determines whether naive random search works.</p>
+
+  <h2>PageRank — Random Surfer on the Web</h2>
+  <div class="cols c21">
+    <div>
+      <p>Google's PageRank models a "random surfer" who, at each step, follows a random outgoing hyperlink (with probability $1 - d$) or teleports to a uniformly random page (probability $d \approx 0.15$). The long-run fraction of time spent on each page is its PageRank score — the stationary distribution $\pi$ of this Markov chain.</p>
+      <p>PageRank works <em>because</em> random walks on finite graphs are always recurrent. The teleportation term (damping factor) ensures the walk is also <em>ergodic</em> (irreducible + aperiodic), guaranteeing a unique stationary distribution by the Perron-Frobenius theorem.</p>
+      <div class="info"><strong>Modern usage:</strong> Personalized PageRank (biasing the teleportation toward a seed set) powers Twitter/X's "Who to Follow" and Pinterest's "Related Pins" at billion-node scale. A 2025 paper in <em>Computational and Applied Mathematics</em> develops algebraic methods for fully personalized PPR.</div>
+    </div>
+    <div>
+      <div class="card">
+        <p><strong>PageRank transition matrix:</strong></p>
+        $$M = (1-d)\,A_{\text{norm}} + \frac{d}{N}\,\mathbf{1}\mathbf{1}^\top$$
+        <p style="margin-top:.6rem;margin-bottom:0">The rank-1 teleportation term $d/N \cdot \mathbf{1}\mathbf{1}^\top$ makes $M$ positive and irreducible. The unique stationary vector $\pi$ satisfies $\pi^\top M = \pi^\top$ and gives each page's importance score.</p>
+      </div>
+    </div>
+  </div>
+
+  <h2>Graph Neural Networks — Random Walk Positional Encodings</h2>
+  <p><strong>DeepWalk (2014)</strong> and <strong>node2vec (2016)</strong> generate random walk sequences on a graph, then apply Word2Vec: nodes that appear nearby in walk sequences get similar embeddings. This works because a walk confined within a dense community (recurrent-like behavior) naturally clusters those nodes together.</p>
+  <p><strong>node2vec</strong> adds two parameters: return parameter $p$ (BFS-like, captures local structure) and in-out parameter $q$ (DFS-like, captures global structure). Tuning $p$ and $q$ controls how "recurrent" the walk is within a neighborhood.</p>
+  <p><strong>Graph Transformers (GraphGPS, 2022)</strong> use <em>random walk positional encodings</em>: the $k$-step return probability $(A^k)_{vv}$ as a feature for node $v$. This directly measures how "trapped" a node is — hubs return quickly (large values), peripheral nodes almost never return (near-zero). This is Pólya's recurrence intuition encoded as a node feature.</p>
+
+  <h2>MCMC — The Curse of Transient Dimensions</h2>
+  <div class="cols c11">
+    <div>
+      <p>Random Walk Metropolis-Hastings proposes $x' = x + \varepsilon$, $\varepsilon \sim \mathcal{N}(0, \sigma^2 I_d)$, accepting with probability $\min(1, \pi(x')/\pi(x))$. In $d$ dimensions, the optimal step size is $\sigma \sim d^{-1/2}$. The resulting mixing time scales as $\mathcal{O}(d)$ — linear in dimension.</p>
+      <p>This is transience at work: a $d$-dimensional parameter space is a transient random walk environment. The chain almost never revisits any neighborhood it has already explored, requiring $\mathcal{O}(d)$ correlated steps to obtain one effectively independent sample.</p>
+    </div>
+    <div>
+      <p><strong>Hamiltonian Monte Carlo (HMC)</strong> escapes this curse by using gradient information and physics-based trajectories. Mixing time scales as $\mathcal{O}(d^{1/4})$:</p>
+      <table>
+        <tr><th>Method</th><th>Mixing time</th><th>$d = 1000$</th></tr>
+        <tr><td>Random Walk MH</td><td>$\mathcal{O}(d)$</td><td>$\sim$1000 steps</td></tr>
+        <tr><td>MALA (Langevin)</td><td>$\mathcal{O}(d^{1/3})$</td><td>$\sim$100 steps</td></tr>
+        <tr><td>HMC / NUTS</td><td>$\mathcal{O}(d^{1/4})$</td><td>$\sim$6 steps</td></tr>
+      </table>
+      <div class="success">For $d \geq 10$, replace random walk proposals with gradient-informed proposals (HMC, NUTS, MALA). Implemented in PyMC, NumPyro, TensorFlow Probability.</div>
+    </div>
+  </div>
+
+  <h2>Diffusion Models — Score-Based Generative Models</h2>
+  <p>The <strong>forward process</strong> in DDPMs (Ho et al., 2020) is a random walk in data space:
+  $$x_t = \sqrt{1-\beta_t}\, x_{t-1} + \sqrt{\beta_t}\,\varepsilon, \quad \varepsilon \sim \mathcal{N}(0, I), \quad t = 1, \ldots, T$$
+  Over $T$ steps, $x_T \approx \mathcal{N}(0, I)$. The continuous-time limit (Song et al., 2021 ICLR Outstanding Paper) is a forward SDE:
+  $$dx = f(x,t)\,dt + g(t)\,dW$$
+  whose density $p_t(x)$ satisfies the Fokker-Planck equation — a generalized heat equation. Brownian motion is the exact solution of $\partial p/\partial t = \frac{1}{2}\nabla^2 p$, so diffusion models are literally implementing the heat equation in reverse.</p>
+  <p>The connection to Pólya: image data spaces have $d \approx 200{,}000$ dimensions — deeply transient. The forward walk almost surely never revisits any past value, so the noise schedule must be carefully calibrated. Stable Diffusion, DALL-E, Sora, and AudioLDM all rely on this framework.</p>
+
+  <h2>Summary: Recurrence vs. Transience Across ML</h2>
+  <table>
+    <tr><th>Application</th><th>Effective $d$</th><th>Regime</th><th>Consequence</th></tr>
+    <tr><td>PageRank (web graph)</td><td>Finite graph</td><td style="color:#4a7c59">Recurrent</td><td>Stationary distribution exists; ergodic by design</td></tr>
+    <tr><td>RL on 2D grid world</td><td>2</td><td style="color:#4a7c59">Recurrent</td><td>$\varepsilon$-greedy exploration covers all states</td></tr>
+    <tr><td>Stock price (GBM)</td><td>1</td><td style="color:#4a7c59">Recurrent</td><td>Every price level revisited eventually (in theory)</td></tr>
+    <tr><td>Community detection (Infomap)</td><td>2–3 (planar)</td><td style="color:#4a7c59">Near-recurrent</td><td>Walks stay in communities; Infomap works well</td></tr>
+    <tr><td>Random Walk MH on posterior</td><td>$10^2$–$10^6$</td><td style="color:#e76f51">Transient</td><td>$\mathcal{O}(d)$ mixing; replace with HMC/NUTS</td></tr>
+    <tr><td>RL on Atari (pixels)</td><td>$\approx$28,000</td><td style="color:#e76f51">Transient</td><td>$\varepsilon$-greedy misses most states; need curiosity bonuses</td></tr>
+    <tr><td>Diffusion model (images)</td><td>$\approx$200,000</td><td style="color:#e76f51">Transient</td><td>Forward walk never revisits; noise schedule critical</td></tr>
+  </table>
+</div>
+
+<!-- ── S5: Sources ──────────────────────────────────────────── -->
+<div id="s5" class="section">
+  <h1>📚 Sources</h1>
+  <hr>
+
+  <h2>Primary Sources</h2>
+  <table>
+    <tr><th>Author</th><th>Year</th><th>Title</th><th>Notes</th></tr>
+    <tr><td>Pólya</td><td>1921</td><td><em>Über eine Aufgabe der Wahrscheinlichkeitsrechnung betreffend die Irrfahrt im Straßennetz</em></td><td><em>Mathematische Annalen</em> 84: 149–160. Original theorem.</td></tr>
+    <tr><td>Watson</td><td>1939</td><td>"Three Triple Integrals," <em>Quarterly J. Mathematics</em></td><td>Closed form $p_3 \approx 0.340537$ via $\Gamma(1/4)^4$</td></tr>
+    <tr><td>Kakutani</td><td>1944</td><td>"Two-Dimensional Brownian Motion and Harmonic Functions"</td><td>Continuous analogue; Dirichlet problem via Brownian exit</td></tr>
+    <tr><td>Doyle &amp; Snell</td><td>1984</td><td><em>Random Walks and Electric Networks</em></td><td>Electrical resistance proof; freely available online</td></tr>
+  </table>
+
+  <h2>Lecture Notes &amp; Expository Papers</h2>
+  <table>
+    <tr><th>Author / Institution</th><th>Resource</th></tr>
+    <tr><td>Jonathan Novak (MIT)</td><td><a href="https://math.mit.edu/classes/18.095/lect2/notes.pdf" target="_blank">Pólya's Random Walk Theorem (notes)</a></td></tr>
+    <tr><td>Shrirang Mare (Dartmouth)</td><td><a href="https://math.dartmouth.edu/~pw/math100w13/mare.pdf" target="_blank">Pólya's Recurrence Theorem</a></td></tr>
+    <tr><td>Tyler Zhu</td><td><a href="https://tylerzhu.com/assets/handouts/polya_rec.pdf" target="_blank">Pólya's Recurrence Theorem (handout)</a></td></tr>
+    <tr><td>Amulya Bhattaram</td><td><a href="https://simonrs.com/eulercircle/markovchains/amulya-polya.pdf" target="_blank">Proof via Electrical Networks</a></td></tr>
+    <tr><td>David Levin (Oregon)</td><td><a href="https://pages.uoregon.edu/dlevin/polya.pdf" target="_blank">Pólya's Theorem via Pólya's Urn</a></td></tr>
+    <tr><td>Pablo Lessa</td><td><a href="https://www.cmat.edu.uy/~lessa/resource/randomwalknotes.pdf" target="_blank">Recurrence vs. Transience: An Introduction</a></td></tr>
+  </table>
+
+  <h2>Reference</h2>
+  <table>
+    <tr><th>Topic</th><th>Resource</th></tr>
+    <tr><td>Pólya's random walk constants (all dimensions)</td><td><a href="https://mathworld.wolfram.com/PolyasRandomWalkConstants.html" target="_blank">Wolfram MathWorld</a></td></tr>
+    <tr><td>Watson's triple integrals (exact $p_3$)</td><td><a href="https://mathworld.wolfram.com/WatsonsTripleIntegrals.html" target="_blank">Wolfram MathWorld</a></td></tr>
+    <tr><td>The Stadtwald anecdote</td><td><a href="https://www.scientificamerican.com/article/this-mathematician-proved-the-random-walk-theorem-to-clear-his-name-as-a-lurker/" target="_blank">Scientific American — "This Mathematician Proved the Random Walk Theorem to Clear His Name"</a></td></tr>
+    <tr><td>Drunk man / drunk bird — modern extension</td><td><a href="https://tsourakakis.com/2025/05/31/a-drunk-man-will-find-his-way-home-but-a-drunk-bird-may-get-lost-forever/" target="_blank">Tsourakakis blog (2025)</a></td></tr>
+  </table>
+
+  <h2>Related Pages on This Site</h2>
+  <table>
+    <tr><th>Topic</th><th>Connection</th></tr>
+    <tr><td><a href="../../math/20260327_random_fourier_features/index.html">Random Fourier Features</a></td><td>Fourier analysis on $\mathbb{Z}^d$ — the same harmonic analysis tools used in Pólya's Fourier proof</td></tr>
+    <tr><td><a href="../../math/20260328_johnson_lindenstrauss_lemma/index.html">Johnson-Lindenstrauss Lemma</a></td><td>Why geometry changes dramatically as $d$ grows — same theme as recurrence/transience</td></tr>
+    <tr><td><a href="../../math/20260329_multi_armed_and_contextual_bandits/index.html">Multi-Armed Bandits</a></td><td>Exploration-exploitation trade-off — RL exploration is deeply related to random walk coverage</td></tr>
+  </table>
+</div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════════ -->
+<script>
+// ── Seeded PRNG (Mulberry32) ──────────────────────────────────────────────────
+function mkRng(seed) {
+  let s = seed | 0;
+  function rand() {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  return {
+    rand,
+    int: (n) => Math.floor(rand() * n),
+    arr: (n, f) => Array.from({length: n}, f),
+  };
+}
+
+// ── PLT configuration ─────────────────────────────────────────────────────────
+const PLT = {
+  rw: '#4a7c59', tr: '#e76f51', bl: '#457b9d',
+  layout(extra) {
+    return Object.assign({
+      margin: {l:52, r:22, t:42, b:50},
+      paper_bgcolor: 'white', plot_bgcolor: '#fafafa',
+      font: {family: '-apple-system, sans-serif', size: 12},
+    }, extra);
+  },
+  config: {responsive: true, displayModeBar: false},
+};
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+const initialized = new Set();
+
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.currentTarget.classList.add('active');
+  if (!initialized.has(id)) {
+    initialized.add(id);
+    initSection(id);
+  }
+  if (window.MathJax) MathJax.typesetPromise([document.getElementById(id)]);
+  if (window.innerWidth < 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  }
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+
+function tab(group, id) {
+  const bar = event.currentTarget.closest('.tab-bar');
+  bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(p => p.classList.remove('active'));
+  document.getElementById(`${group}-${id}`).classList.add('active');
+}
+
+function initSection(id) {
+  const fns = {s0: initS0, s2: initS2, s3: initS3};
+  if (fns[id]) fns[id]();
+}
+
+// ── Theoretical return probabilities ─────────────────────────────────────────
+const THEORY = {
+  1: 1.0, 2: 1.0,
+  3: 0.340537, 4: 0.193206, 5: 0.135178,
+  6: 0.104715, 7: 0.085084, 8: 0.072086,
+};
+
+// ── S0: Return probability bar chart ─────────────────────────────────────────
+function initS0() {
+  const dims   = [1,2,3,4,5,6,7,8];
+  const probs  = dims.map(d => THEORY[d]);
+  const colors = dims.map(d => d <= 2 ? PLT.rw : PLT.tr);
+  const labels = probs.map((p,i) => dims[i] <= 2 ? '1 (certain)' : p.toFixed(4));
+
+  Plotly.newPlot('s0-chart', [{
+    x: dims.map(d => `d = ${d}`),
+    y: probs,
+    type: 'bar',
+    marker: {color: colors, line: {color: '#fff', width: 1}},
+    text: labels,
+    textposition: 'outside',
+    textfont: {size: 11, color: '#333'},
+    hovertemplate: 'd = %{x}<br>P(return) = %{y:.4f}<extra></extra>',
+  }], PLT.layout({
+    shapes: [
+      {type:'line', xref:'paper', x0:0, x1:1, y0:1, y1:1,
+       line:{color:'#aaa', width:1, dash:'dot'}},
+      {type:'line', xref:'x', x0:1.5, x1:1.5, yref:'paper', y0:0, y1:1,
+       line:{color:'#c00', width:2, dash:'dash'}},
+    ],
+    annotations: [{
+      xref:'x', x:1.65, yref:'paper', y:0.88,
+      text:"Pólya's<br>threshold",
+      showarrow:true, ax:38, ay:-22,
+      font:{color:'#c00', size:11}, align:'left',
+    }],
+    xaxis: {title:'Dimension d', gridcolor:'#eee'},
+    yaxis: {title:'P(return to origin)', range:[0, 1.2], gridcolor:'#eee'},
+    title: {text:'Return probability collapses above d = 2', font:{size:13}},
+    height: 340,
+    showlegend: false,
+  }), PLT.config);
+}
+
+// ── S2: Asymptotic decay chart ────────────────────────────────────────────────
+function initS2() {
+  const ns  = Array.from({length:300}, (_, i) => i + 1);
+  const C3  = Math.pow(3/( 4*Math.PI), 1.5);
+  const C4  = Math.pow(4/(4*Math.PI), 2.0);
+
+  Plotly.newPlot('s2-chart', [
+    {x: ns, y: ns.map(n => 1/Math.sqrt(Math.PI * n)),
+     mode:'lines', name:'d=1:  ~ n^{−1/2}',
+     line:{color:'#2a9d8f', width:2.5}},
+    {x: ns, y: ns.map(n => 1/(Math.PI * n)),
+     mode:'lines', name:'d=2:  ~ n^{−1}',
+     line:{color: PLT.bl, width:2.5}},
+    {x: ns, y: ns.map(n => C3 / Math.pow(n, 1.5)),
+     mode:'lines', name:'d=3:  ~ n^{−3/2}',
+     line:{color: PLT.tr, width:2.5}},
+    {x: ns, y: ns.map(n => C4 / Math.pow(n, 2.0)),
+     mode:'lines', name:'d=4:  ~ n^{−2}',
+     line:{color:'#6a4c93', width:2.5}},
+  ], PLT.layout({
+    xaxis: {type:'log', title:'Step index n', gridcolor:'#eee'},
+    yaxis: {type:'log', title:'p₂ₙ (return probability at step 2n)', gridcolor:'#eee'},
+    title: {text:'Asymptotic decay of p₂ₙ on log-log scale — slope = −d/2', font:{size:12}},
+    legend: {x:0.54, y:0.98},
+    height: 350,
+  }), PLT.config);
+}
+
+// ── S3: Initialize all three visualizations ───────────────────────────────────
+function initS3() {
+  initWalk2D();
+  initDistComp();
+  initLiveSim();
+}
+
+// ── 2D Walk ───────────────────────────────────────────────────────────────────
+function gen2DWalk(steps, rng) {
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  let x = 0, y = 0;
+  const xs = [0], ys = [0];
+  const retX = [], retY = [];
+  for (let i = 0; i < steps; i++) {
+    const d = dirs[rng.int(4)];
+    x += d[0]; y += d[1];
+    xs.push(x); ys.push(y);
+    if (x === 0 && y === 0) { retX.push(0); retY.push(0); }
+  }
+  return {xs, ys, retX, retY, finalX: x, finalY: y};
+}
+
+function initWalk2D() { updateWalk2D(); }
+
+function updateWalk2D() {
+  const steps = +document.getElementById('w2d-steps').value;
+  const seed  = +document.getElementById('w2d-seed').value || 42;
+  const rng   = mkRng(seed);
+  const walk  = gen2DWalk(steps, rng);
+
+  document.getElementById('w2d-ret-count').textContent = walk.retX.length;
+  document.getElementById('w2d-final-pos').textContent = `(${walk.finalX}, ${walk.finalY})`;
+
+  Plotly.react('walk2d-chart', [
+    {x: walk.xs, y: walk.ys, mode:'lines',
+     line:{color: PLT.bl, width:0.9}, name:'Path', hoverinfo:'skip'},
+    {x: walk.retX, y: walk.retY, mode:'markers',
+     marker:{color:'#e63946', size:7, symbol:'circle', opacity:0.75},
+     name:`Returns (${walk.retX.length})`},
+    {x:[0], y:[0], mode:'markers',
+     marker:{color: PLT.rw, size:14, symbol:'star'}, name:'Origin'},
+    {x:[walk.finalX], y:[walk.finalY], mode:'markers',
+     marker:{color:'#ffc107', size:10, symbol:'square'}, name:'Final position'},
+  ], PLT.layout({
+    xaxis: {scaleanchor:'y', gridcolor:'#eee', title:'x'},
+    yaxis: {gridcolor:'#eee', title:'y'},
+    title: {text:`2D walk — ${steps.toLocaleString()} steps, ${walk.retX.length} return${walk.retX.length===1?'':'s'} to origin`, font:{size:12}},
+    legend: {x:0.01, y:0.99},
+    height: 430,
+  }), PLT.config);
+}
+
+// ── Distance comparison ───────────────────────────────────────────────────────
+function genDistance(dim, steps, rng) {
+  const pos = new Array(dim).fill(0);
+  const rs  = [0];
+  const nDirs = 2 * dim;
+  for (let i = 0; i < steps; i++) {
+    const dir  = rng.int(nDirs);
+    const axis = Math.floor(dir / 2);
+    pos[axis] += (dir % 2 === 0) ? 1 : -1;
+    let sq = 0;
+    for (let k = 0; k < dim; k++) sq += pos[k] * pos[k];
+    rs.push(Math.sqrt(sq));
+  }
+  return rs;
+}
+
+function initDistComp() { updateDistComp(); }
+
+function updateDistComp() {
+  const steps = +document.getElementById('dc-steps').value;
+  const seed  = +document.getElementById('dc-seed').value || 7;
+  const rng   = mkRng(seed);
+  const r1    = genDistance(1, steps, rng);
+  const r2    = genDistance(2, steps, rng);
+  const r3    = genDistance(3, steps, rng);
+  const ns    = Array.from({length: steps + 1}, (_, i) => i);
+  const sqN   = ns.map(n => Math.sqrt(n));
+
+  Plotly.react('distcomp-chart', [
+    {x:ns, y:r1, mode:'lines', name:'1D  |x(t)|',
+     line:{color:'#2a9d8f', width:1.6}},
+    {x:ns, y:r2, mode:'lines', name:'2D  r(t)',
+     line:{color: PLT.bl, width:1.6}},
+    {x:ns, y:r3, mode:'lines', name:'3D  r(t)',
+     line:{color: PLT.tr, width:1.6}},
+    {x:ns, y:sqN, mode:'lines', name:'√t  reference',
+     line:{color:'#bbb', width:1.4, dash:'dot'}},
+  ], PLT.layout({
+    xaxis: {title:'Step t', gridcolor:'#eee'},
+    yaxis: {title:'Distance from origin r(t)', gridcolor:'#eee'},
+    title: {text:'All walks grow ~√t on average — but 1D and 2D repeatedly return to 0', font:{size:12}},
+    legend: {x:0.01, y:0.99},
+    height: 420,
+  }), PLT.config);
+}
+
+// ── Live simulation ───────────────────────────────────────────────────────────
+let simInterval = null;
+let simTotal = 0, simReturned = 0;
+let simTrials = [], simFracs = [];
+
+function simLayout(dim) {
+  const th = THEORY[dim] || 0;
+  return PLT.layout({
+    shapes: [{
+      type:'line', xref:'paper', x0:0, x1:1,
+      y0:th, y1:th,
+      line:{color:'#e63946', width:2, dash:'dash'},
+    }],
+    annotations: [{
+      xref:'paper', x:0.97, y:th,
+      text:`Theory: ${th === 1 ? '1.0000' : th.toFixed(4)}`,
+      showarrow:false, xanchor:'right', yanchor:'bottom',
+      font:{color:'#e63946', size:11},
+    }],
+    xaxis: {title:'Trial number', gridcolor:'#eee'},
+    yaxis: {title:'Fraction returning to origin', range:[-0.03, 1.12], gridcolor:'#eee'},
+    height: 370,
+  });
+}
+
+function initLiveSim() {
+  const dim = +document.getElementById('sim-dim').value;
+  Plotly.newPlot('livesim-chart', [{
+    x:[], y:[], mode:'lines', name:'Empirical fraction',
+    line:{color: PLT.rw, width:2},
+  }], Object.assign(simLayout(dim), {
+    title:{text:`Dimension d=${dim} — click Start to run walks`, font:{size:12}},
+  }), PLT.config);
+}
+
+function runSingleWalk(dim, maxSteps) {
+  const nDirs = 2 * dim;
+  const pos   = new Array(dim).fill(0);
+  for (let s = 0; s < maxSteps; s++) {
+    const dir  = Math.floor(Math.random() * nDirs);
+    const axis = Math.floor(dir / 2);
+    pos[axis] += (dir % 2 === 0) ? 1 : -1;
+    let returned = true;
+    for (let k = 0; k < dim; k++) { if (pos[k] !== 0) { returned = false; break; } }
+    if (returned) return true;
+  }
+  return false;
+}
+
+function startSim() {
+  if (simInterval) return;
+  const dim      = +document.getElementById('sim-dim').value;
+  const maxSteps = +document.getElementById('sim-maxsteps').value;
+
+  simInterval = setInterval(() => {
+    for (let i = 0; i < 10; i++) {
+      if (runSingleWalk(dim, maxSteps)) simReturned++;
+      simTotal++;
+      simTrials.push(simTotal);
+      simFracs.push(simReturned / simTotal);
+    }
+    const N = simTrials.length;
+    const start = Math.max(0, N - 4000);
+    Plotly.react('livesim-chart', [{
+      x: simTrials.slice(start), y: simFracs.slice(start),
+      mode:'lines', name:'Empirical fraction',
+      line:{color: PLT.rw, width:2},
+    }], Object.assign(simLayout(dim), {
+      title:{text:`d=${dim}: ${simReturned.toLocaleString()}/${simTotal.toLocaleString()} returned  (${(100*simReturned/simTotal).toFixed(1)}%)`, font:{size:12}},
+    }), PLT.config);
+
+    const th = THEORY[dim];
+    document.getElementById('sim-stats').textContent =
+      `Trials: ${simTotal.toLocaleString()}  |  Returned: ${simReturned.toLocaleString()}  |  ` +
+      `Fraction: ${(simReturned/simTotal).toFixed(4)}  |  Theory: ${th === 1 ? '1.0000' : th.toFixed(4)}`;
+  }, 150);
+}
+
+function pauseSim() {
+  clearInterval(simInterval);
+  simInterval = null;
+}
+
+function resetSim() {
+  pauseSim();
+  simTotal = 0; simReturned = 0;
+  simTrials = []; simFracs = [];
+  initLiveSim();
+  document.getElementById('sim-stats').textContent = 'Ready. Select dimension and click Start.';
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  initialized.add('s0');
+  initS0();
+  if (window.MathJax) MathJax.typesetPromise();
+});
+</script>
+</body>
+</html>
