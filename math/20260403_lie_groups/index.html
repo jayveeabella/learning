@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lie Groups — Interactive Explainer</title>
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']] },
+  options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --lie:#c0395b;--lie2:#457b9d;--lie3:#2a9d8f;
+  --sw:240px;--sbg:#1a1a2e;--stext:#c8d0e7;
+  --bg:#f5f6fa;--card:#fff;--border:#dee2e6;
+  --r:6px;--text:#212529;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:15px;line-height:1.65}
+
+/* ── Sidebar ──────────────────────────────────────────────── */
+#sidebar{position:fixed;top:0;left:0;bottom:0;width:var(--sw);
+  background:var(--sbg);overflow-y:auto;z-index:100;padding:1.4rem 0}
+.sb-logo{padding:0 1.2rem 1rem;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:.5rem}
+.sb-logo h2{color:#fff;font-size:1rem;font-weight:700}
+.sb-logo p{color:var(--stext);font-size:.75rem;margin-top:.2rem}
+.home-btn{display:inline-block;margin-top:.6rem;font-size:.75rem;color:var(--stext);
+  text-decoration:none;opacity:.7;transition:opacity .15s}
+.home-btn:hover{opacity:1;color:#fff}
+.nav-btn{display:block;padding:.45rem 1.2rem;color:var(--stext);font-size:.82rem;
+  cursor:pointer;border-left:3px solid transparent;transition:all .15s;
+  background:none;border-top:none;border-right:none;border-bottom:none;
+  text-align:left;width:100%}
+.nav-btn:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-btn.active{border-left-color:var(--lie);color:#fff;background:rgba(192,57,91,.2)}
+
+/* ── Main ─────────────────────────────────────────────────── */
+#main{margin-left:var(--sw);padding:2rem 2.5rem 5rem;max-width:1150px;width:100%}
+.section{display:none}.section.active{display:block}
+
+h1{font-size:1.85rem;font-weight:700;color:#1a1a2e;margin-bottom:.3rem}
+h2{font-size:1.25rem;font-weight:600;color:#1a1a2e;margin:1.6rem 0 .5rem}
+h3{font-size:1rem;font-weight:600;color:#333;margin:1.1rem 0 .4rem}
+p{margin-bottom:.75rem}
+hr{border:none;border-top:1px solid var(--border);margin:1.4rem 0}
+a{color:var(--lie)}
+ul,ol{margin:.4rem 0 .75rem 1.5rem;line-height:2}
+
+/* ── Boxes ────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:1.1rem 1.4rem;margin:1rem 0}
+.info{background:#fce8ed;border-left:4px solid var(--lie);padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.success{background:#d4edda;border-left:4px solid #28a745;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+.warn{background:#fff8e1;border-left:4px solid #ffc107;padding:.85rem 1.1rem;border-radius:0 var(--r) var(--r) 0;margin:.9rem 0}
+
+/* ── Tables ───────────────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;margin:.9rem 0;font-size:.87rem}
+th{background:#f0f4f8;padding:.5rem .75rem;text-align:left;font-weight:600;border-bottom:2px solid var(--border)}
+td{padding:.45rem .75rem;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+
+/* ── Tabs ─────────────────────────────────────────────────── */
+.tab-bar{display:flex;border-bottom:2px solid var(--border);gap:0;margin-top:.5rem;flex-wrap:wrap}
+.tab-btn{padding:.45rem .95rem;border:none;background:none;cursor:pointer;
+  color:#666;font-size:.87rem;font-weight:500;border-bottom:2px solid transparent;
+  margin-bottom:-2px;transition:all .15s}
+.tab-btn:hover{color:var(--lie)}
+.tab-btn.active{color:var(--lie);border-bottom-color:var(--lie)}
+.tab-pane{display:none;padding-top:.9rem}.tab-pane.active{display:block}
+
+/* ── Sliders ──────────────────────────────────────────────── */
+.ctrl{display:flex;align-items:center;gap:.7rem;margin:.5rem 0;flex-wrap:wrap}
+.ctrl label{font-size:.84rem;font-weight:500;min-width:140px}
+.ctrl input[type=range]{width:180px;accent-color:var(--lie)}
+.val{font-size:.84rem;font-weight:600;color:var(--lie);min-width:50px}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.cols{display:grid;gap:1.4rem;margin:.8rem 0}
+.c12{grid-template-columns:1fr 2fr}
+.c21{grid-template-columns:2fr 1fr}
+.c11{grid-template-columns:1fr 1fr}
+.c23{grid-template-columns:2fr 3fr}
+.c13{grid-template-columns:1fr 3fr}
+
+/* ── Code ─────────────────────────────────────────────────── */
+pre{background:#1e2235;color:#abb2bf;padding:.9rem 1.1rem;border-radius:var(--r);
+  overflow-x:auto;font-size:.8rem;line-height:1.55;margin:.7rem 0;font-family:'Fira Code',Consolas,monospace}
+
+/* ── Details/Expander ─────────────────────────────────────── */
+details{border:1px solid var(--border);border-radius:var(--r);margin:.7rem 0}
+summary{padding:.55rem 1rem;cursor:pointer;font-weight:500;font-size:.88rem;
+  background:#f8f9fa;border-radius:var(--r);list-style:none;user-select:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:'▶ ';font-size:.68rem;color:#888}
+details[open] summary::before{content:'▼ '}
+details[open] summary{border-radius:var(--r) var(--r) 0 0}
+.det-body{padding:.9rem 1.1rem;border-top:1px solid var(--border)}
+
+/* ── Misc ─────────────────────────────────────────────────── */
+.caption{font-size:.81rem;color:#666;font-style:italic;margin-top:.35rem}
+.metric{display:inline-block;background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:.6rem 1rem;min-width:130px;margin:.25rem .35rem .25rem 0;vertical-align:top}
+.metric-label{font-size:.76rem;color:#666}
+.metric-value{font-size:1.1rem;font-weight:700;color:#1a1a2e;font-family:Consolas,monospace}
+
+/* ── Mobile ──────────────────────────────────────────────── */
+#menu-toggle{display:none;position:fixed;top:.7rem;right:.7rem;z-index:200;
+  background:var(--sbg);color:#fff;border:none;border-radius:6px;
+  padding:.5rem .7rem;cursor:pointer;font-size:1.15rem;line-height:1}
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
+@media(max-width:767px){
+  #menu-toggle{display:block}
+  #sidebar{transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.open{transform:translateX(0)}
+  #sidebar-overlay.open{display:block}
+  #main{margin-left:0;padding:3.5rem 1rem 4rem}
+  .cols.c12,.cols.c21,.cols.c11,.cols.c23,.cols.c13{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<button id="menu-toggle" aria-label="Toggle menu" onclick="toggleSidebar()">☰</button>
+<div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <h2>⭕ Lie Groups</h2>
+    <p>Symmetry, Circles &amp; Exponentials</p>
+    <a class="home-btn" href="../../index.html">← Home</a>
+  </div>
+  <button class="nav-btn active" onclick="nav('s0')">Overview</button>
+  <button class="nav-btn" onclick="nav('s1')">The Circle Group</button>
+  <button class="nav-btn" onclick="nav('s2')">The Lie Algebra</button>
+  <button class="nav-btn" onclick="nav('s3')">The Exponential Map</button>
+  <button class="nav-btn" onclick="nav('s4')">Visualizations</button>
+  <button class="nav-btn" onclick="nav('s5')">Beyond S¹</button>
+  <button class="nav-btn" onclick="nav('s6')">Applications</button>
+  <button class="nav-btn" onclick="nav('s7')">Sources</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     MAIN CONTENT
+═══════════════════════════════════════════════════════════════ -->
+<main id="main">
+
+<!-- ── S0: Overview ──────────────────────────────────────────── -->
+<div id="s0" class="section active">
+  <h1>Lie Groups</h1>
+  <p style="color:#555;font-size:1rem">Continuous symmetries, starting from the humble circle — Sophus Lie, 1873</p>
+  <hr>
+
+  <div class="cols c21">
+    <div>
+      <p>A <strong>Lie group</strong> (pronounced "Lee") is simultaneously a <em>group</em> — you can compose symmetries — and a <em>smooth manifold</em> — you can do calculus on it. The combination is astonishingly powerful: it means continuous symmetries have both algebraic structure and differential geometry at once.</p>
+
+      <p>The simplest non-trivial Lie group is the <strong>circle</strong> $S^1$. A point on the unit circle represents a rotation of the plane by some angle $\theta$. Two rotations compose by adding their angles. That's the whole group law. But because the circle is also a smooth 1-dimensional manifold, you can ask: what does a rotation look like when it is infinitesimally close to "no rotation at all"? Answering that question gives you the <strong>Lie algebra</strong> and the <strong>exponential map</strong>.</p>
+
+      <div class="info">
+        <strong>The central picture:</strong> Every Lie group $G$ has a <em>Lie algebra</em> $\mathfrak{g}$ — a flat, linear space living at the identity element, like a tangent plane to a curved surface. The <strong>exponential map</strong> $\exp: \mathfrak{g} \to G$ translates between this flat world and the curved world of the group. For the circle, $\exp(i\theta) = e^{i\theta} = \cos\theta + i\sin\theta$ — Euler's formula is Lie theory.
+      </div>
+
+      <p>Mastering the circle gives you a template that scales directly to the 3D rotation group $SO(3)$ used in robotics and graphics, to $SU(2)$ describing quantum spin, and to the gauge groups underlying all of particle physics.</p>
+    </div>
+
+    <div>
+      <h3>Historical milestones</h3>
+      <table>
+        <tr><th>Year</th><th>Event</th></tr>
+        <tr><td>1869</td><td>Sophus Lie meets Felix Klein in Berlin; begins geometry of transformations</td></tr>
+        <tr><td>1872</td><td>Klein's <em>Erlangen Program</em>: geometry = invariants of a symmetry group</td></tr>
+        <tr><td>1873–74</td><td>Lie begins developing continuous transformation groups</td></tr>
+        <tr><td>1888–93</td><td><em>Theorie der Transformationsgruppen</em> published in three volumes</td></tr>
+        <tr><td>1894</td><td>Élie Cartan classifies all simple Lie algebras over $\mathbb{C}$</td></tr>
+        <tr><td>1922</td><td>Hermann Weyl applies Lie theory to quantum mechanics</td></tr>
+        <tr><td>1954</td><td>Yang–Mills: gauge fields as connections on Lie group bundles</td></tr>
+        <tr><td>1970s</td><td>Standard Model: $U(1) \times SU(2) \times SU(3)$ governs all forces</td></tr>
+        <tr><td>2021+</td><td>Geometric deep learning: equivariant networks exploit Lie symmetries</td></tr>
+      </table>
+
+      <h3>The Lie group ladder (by dimension)</h3>
+      <table>
+        <tr><th>Group</th><th>Dim</th><th>Description</th></tr>
+        <tr><td>$U(1) \cong SO(2)$</td><td>1</td><td>Rotations of the plane — the circle</td></tr>
+        <tr><td>$SO(3)$</td><td>3</td><td>Rotations in 3D space</td></tr>
+        <tr><td>$SU(2)$</td><td>3</td><td>Universal cover of $SO(3)$; the 3-sphere $S^3$</td></tr>
+        <tr><td>$SE(3)$</td><td>6</td><td>Rigid body motions (rotation + translation)</td></tr>
+        <tr><td>$SU(3)$</td><td>8</td><td>Gauge group of the strong nuclear force</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div id="s0-chart" style="height:300px"></div>
+  <p class="caption">The circle group $U(1)$: every point $e^{i\theta}$ on the unit circle is a rotation by angle $\theta$. Eight special points are labelled. As $\theta$ increases from $0$ to $2\pi$, you traverse the entire group exactly once.</p>
+</div>
+
+<!-- ── S1: The Circle Group ───────────────────────────────────── -->
+<div id="s1" class="section">
+  <h1>⭕ The Circle Group</h1>
+  <hr>
+
+  <p>Before generalizing, let's spend quality time with the one example that makes everything concrete. The circle group appears in three equivalent guises:</p>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('circ','u1')">$U(1)$: unit complex numbers</button>
+    <button class="tab-btn" onclick="tab('circ','so2')">$SO(2)$: rotation matrices</button>
+    <button class="tab-btn" onclick="tab('circ','rmod')">$\mathbb{R}/2\pi\mathbb{Z}$: angles mod $2\pi$</button>
+  </div>
+
+  <div id="circ-u1" class="tab-pane active">
+    <p>$U(1)$ is the group of $1\times1$ complex unitary matrices — equivalently, complex numbers of magnitude 1:</p>
+    $$U(1) = \{ z \in \mathbb{C} : |z| = 1 \} = \{ e^{i\theta} : \theta \in \mathbb{R} \}$$
+    <p>The group operation is <strong>complex multiplication</strong>. Since $|e^{i\alpha}| = |e^{i\beta}| = 1$, their product also has magnitude 1:</p>
+    $$e^{i\alpha} \cdot e^{i\beta} = e^{i(\alpha+\beta)}$$
+    <p>Multiplication of unit complex numbers is exactly <strong>angle addition</strong>.</p>
+    <div class="info">The identity element is $1 = e^{i \cdot 0}$ (no rotation). The inverse of $e^{i\theta}$ is $e^{-i\theta} = \overline{e^{i\theta}}$ (the complex conjugate — a rotation backwards by $\theta$).</div>
+    <div class="success"><strong>Key fact:</strong> $U(1)$ is <em>abelian</em> — the group is commutative: $e^{i\alpha} e^{i\beta} = e^{i\beta} e^{i\alpha}$. Rotating by $\alpha$ then $\beta$ gives the same result as $\beta$ then $\alpha$. Most higher Lie groups (like $SO(3)$) are <em>non-abelian</em>.</div>
+  </div>
+
+  <div id="circ-so2" class="tab-pane">
+    <p>$SO(2)$ ("Special Orthogonal group in 2 dimensions") is the group of $2\times2$ rotation matrices:</p>
+    $$SO(2) = \left\{ R_\theta = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix} : \theta \in \mathbb{R} \right\}$$
+    <p>"Special" means $\det R_\theta = 1$ (not a reflection). "Orthogonal" means $R_\theta^T R_\theta = I$. The group operation is matrix multiplication, and one can verify directly:</p>
+    $$R_\alpha R_\beta = R_{\alpha+\beta}$$
+    <p>This is identical to the $U(1)$ law! The map $e^{i\theta} \mapsto R_\theta$ is a <strong>Lie group isomorphism</strong>: $U(1) \cong SO(2)$. They are the same abstract group wearing different coordinate systems.</p>
+    <div class="info">The Lie algebra description changes between the two: for $U(1)$ the Lie algebra is $i\mathbb{R}$ (imaginary numbers), while for $SO(2)$ the Lie algebra is $2\times2$ antisymmetric matrices $\bigl(\begin{smallmatrix}0&-v\\v&0\end{smallmatrix}\bigr)$. The isomorphism sends $iv \mapsto \bigl(\begin{smallmatrix}0&-v\\v&0\end{smallmatrix}\bigr)$.</div>
+  </div>
+
+  <div id="circ-rmod" class="tab-pane">
+    <p>The most elementary description: the circle group is just <strong>real numbers modulo $2\pi$</strong>:</p>
+    $$\mathbb{R} / 2\pi\mathbb{Z} = \{ \theta \in \mathbb{R} \} \big/ (\theta \sim \theta + 2\pi)$$
+    <p>The group operation is addition mod $2\pi$. This makes the structure transparent:</p>
+    <ul>
+      <li>It's obviously 1-dimensional (a real parameter $\theta$)</li>
+      <li>It's compact — $\theta$ lives in a bounded interval $[0, 2\pi)$</li>
+      <li>It wraps around — $0$ and $2\pi$ are the same point</li>
+    </ul>
+    <div class="warn">The circle is <em>not</em> simply connected: a loop that goes all the way around cannot be contracted to a point. Its fundamental group is $\pi_1(S^1) = \mathbb{Z}$ (the winding number). This topological fact underlies why the exponential map $\mathbb{R} \to S^1$ is many-to-one.</div>
+  </div>
+
+  <h2>Checking the group axioms</h2>
+  <table>
+    <tr><th>Axiom</th><th>Requirement</th><th>For $U(1) = \{e^{i\theta}\}$</th></tr>
+    <tr><td><strong>Closure</strong></td><td>$g \cdot h \in G$</td><td>$|e^{i\alpha} \cdot e^{i\beta}| = |e^{i\alpha}||e^{i\beta}| = 1\cdot1 = 1$ ✓</td></tr>
+    <tr><td><strong>Associativity</strong></td><td>$(g \cdot h) \cdot k = g \cdot (h \cdot k)$</td><td>Complex multiplication is associative ✓</td></tr>
+    <tr><td><strong>Identity</strong></td><td>$\exists\, e: e \cdot g = g \cdot e = g$</td><td>$1 \cdot e^{i\theta} = e^{i\theta}$, and $|1|=1$ so $1 \in U(1)$ ✓</td></tr>
+    <tr><td><strong>Inverses</strong></td><td>$\exists\, g^{-1}: g \cdot g^{-1} = e$</td><td>$e^{i\theta} \cdot e^{-i\theta} = e^0 = 1$, and $|e^{-i\theta}|=1$ ✓</td></tr>
+    <tr><td><strong>Smoothness</strong></td><td>Multiplication and inversion are $C^\infty$</td><td>$(z,w) \mapsto zw$ and $z \mapsto \bar{z}$ are polynomial — smooth ✓</td></tr>
+  </table>
+
+  <h2>Why $S^1$ is the perfect starting point</h2>
+  <p>Every 1-dimensional connected Lie group is isomorphic to either $\mathbb{R}$ (the real line under addition, non-compact) or $S^1$ (the circle, compact). The circle is the simplest <em>compact</em> Lie group. Compact Lie groups have beautiful properties: every element is in the image of the exponential map, the group has finite volume, and its representation theory (generalised Fourier analysis) is especially clean. Moreover:</p>
+  <ul>
+    <li>Every compact abelian Lie group is a <strong>product of circles</strong> (a torus $T^n = S^1 \times \cdots \times S^1$)</li>
+    <li>The characters (1D representations) of $U(1)$ are precisely $e^{in\theta}$, $n \in \mathbb{Z}$ — the Fourier basis</li>
+    <li>$U(1)$ is the gauge group of electromagnetism; understanding it is prerequisite to all gauge theory</li>
+  </ul>
+</div>
+
+<!-- ── S2: The Lie Algebra ─────────────────────────────────────── -->
+<div id="s2" class="section">
+  <h1>📐 The Lie Algebra</h1>
+  <hr>
+
+  <p>A Lie group is a <em>curved</em> space — the circle bends back on itself. But at any single point, it looks flat: zoom in far enough and any curve looks like a straight line. The <strong>Lie algebra</strong> $\mathfrak{g}$ captures this flat, linear picture at the special point — the identity — and packages it as a vector space.</p>
+
+  <h2>Tangent space at the identity</h2>
+  <p>Take any smooth curve $\gamma: \mathbb{R} \to G$ passing through the identity at $t = 0$: $\gamma(0) = e$. Its derivative $\gamma'(0)$ is a tangent vector at $e$. Collecting all such derivatives gives the Lie algebra:</p>
+  $$\mathfrak{g} = T_e G = \bigl\{ \gamma'(0) \,:\, \gamma \text{ smooth}, \gamma(0) = e \bigr\}$$
+
+  <h2>The Lie algebra of $U(1)$: why imaginary?</h2>
+  <p>For a curve $\gamma(t) \in U(1)$, the constraint $|\gamma(t)|^2 = 1$ must hold for all $t$. Differentiate both sides at $t=0$ (using $|\gamma|^2 = \overline{\gamma}\,\gamma$):</p>
+  $$\frac{d}{dt}\bigl[\overline{\gamma(t)}\,\gamma(t)\bigr]_{t=0} = 0
+  \implies \overline{\gamma'(0)}\cdot 1 + 1 \cdot \gamma'(0) = 0
+  \implies \gamma'(0) + \overline{\gamma'(0)} = 0
+  \implies 2\,\text{Re}(\gamma'(0)) = 0$$
+  <p>The tangent vector <em>must be purely imaginary</em>. Therefore:</p>
+  $$\mathfrak{u}(1) = T_1\,U(1) = i\mathbb{R} = \{iv : v \in \mathbb{R}\}$$
+
+  <div class="info">The Lie algebra $\mathfrak{u}(1) \cong \mathbb{R}$ is <strong>1-dimensional</strong> — just a line. This makes sense: the circle is a 1-dimensional manifold, so its tangent space at any point is 1-dimensional too. Concretely, the tangent line at $1 = (1,0) \in S^1$ points straight up and down — in the purely imaginary direction.</div>
+
+  <div class="cols c11">
+    <div>
+      <h3>Geometric picture</h3>
+      <p>Draw the unit circle. The identity is at $(1, 0)$. The tangent line there runs vertically — in the direction of the imaginary axis. Every tangent vector at the identity is a multiple of $i$: it is a purely imaginary number $iv$.</p>
+      <p>A small element $iv \in \mathfrak{u}(1)$ represents an <em>infinitesimal rotation</em> by angle $v$. The exponential map turns this infinitesimal rotation into a finite one: $\exp(iv) = e^{iv}$ is the point on the circle at angle $v$.</p>
+      <p>For small $v$: $e^{iv} \approx 1 + iv$ (first-order Taylor expansion), so the point on the circle is approximately the point on the tangent line. This is the sense in which the Lie algebra is a linear <em>approximation</em> to the group.</p>
+    </div>
+    <div>
+      <h3>The Lie bracket</h3>
+      <p>The Lie algebra has an additional operation called the <strong>Lie bracket</strong> $[X, Y]$, which encodes how "infinitesimal symmetries fail to commute." For any Lie group, the bracket of two tangent vectors $X, Y \in \mathfrak{g}$ measures the infinitesimal non-commutativity:</p>
+      $$[X, Y] = XY - YX \quad \text{(for matrix groups)}$$
+      <p>For $U(1)$, since the group is abelian ($e^{i\alpha}e^{i\beta} = e^{i\beta}e^{i\alpha}$), the bracket is identically zero:</p>
+      $$[iv_1, iv_2] = (iv_1)(iv_2) - (iv_2)(iv_1) = 0$$
+      <p>A zero bracket is the algebraic signature of commutativity. For $SO(3)$, the bracket $[L_x, L_y] = L_z$ gives the cross product — rotations around different axes don't commute.</p>
+    </div>
+  </div>
+
+  <div id="s2-chart" style="height:400px;margin-top:1.2rem"></div>
+
+  <div class="ctrl" style="margin-top:.6rem">
+    <label>Tangent vector magnitude $v$</label>
+    <input type="range" id="s2-v" min="-3.14" max="3.14" step="0.02" value="0.9" oninput="updateAlgebra()">
+    <span class="val" id="s2-v-val">0.90</span>
+    <span style="font-size:.82rem;color:#666">rad</span>
+  </div>
+  <p class="caption">The unit circle with its Lie algebra $\mathfrak{u}(1) = i\mathbb{R}$ (dashed vertical line) at the identity $1$. The teal arrow is the tangent vector $iv$ in the Lie algebra. The rose dot is $e^{iv}$ — the exponential of that tangent vector — on the circle. For small $v$, the pink cross (linear approximation $1+iv$) stays close to the circle.</p>
+
+  <details>
+    <summary>Lie algebra of $SO(2)$: antisymmetric matrices</summary>
+    <div class="det-body">
+      <p>For $SO(2)$, a curve through the identity satisfies $R(t)^T R(t) = I$. Differentiating at $t=0$: $R'(0)^T + R'(0) = 0$, so $R'(0)$ is antisymmetric. The Lie algebra is:</p>
+      $$\mathfrak{so}(2) = \left\{ \begin{pmatrix} 0 & -v \\ v & 0 \end{pmatrix} : v \in \mathbb{R} \right\}$$
+      <p>The isomorphism $U(1) \cong SO(2)$ sends $iv \mapsto \bigl(\begin{smallmatrix}0&-v\\v&0\end{smallmatrix}\bigr)$ at the Lie algebra level. Both are 1-dimensional with trivial bracket.</p>
+    </div>
+  </details>
+</div>
+
+<!-- ── S3: The Exponential Map ─────────────────────────────────── -->
+<div id="s3" class="section">
+  <h1>🌀 The Exponential Map</h1>
+  <hr>
+
+  <p>The <strong>exponential map</strong> $\exp: \mathfrak{g} \to G$ is the bridge between the flat Lie algebra and the curved Lie group. For $U(1)$, it is the complex exponential:</p>
+  $$\exp(iv) = e^{iv} = \cos v + i\sin v$$
+  <p>But its meaning runs deeper than a formula: it is the solution to a differential equation, and geometrically it <em>wraps</em> the real line around the circle.</p>
+
+  <h2>The ODE definition: flowing along a one-parameter subgroup</h2>
+  <p>Given a tangent vector $X \in \mathfrak{g}$ at the identity, there is a unique smooth curve $\gamma: \mathbb{R} \to G$ satisfying:</p>
+  $$\gamma'(t) = X \cdot \gamma(t), \qquad \gamma(0) = e$$
+  <p>This curve $\gamma$ is a <strong>one-parameter subgroup</strong>: it satisfies $\gamma(s+t) = \gamma(s)\cdot\gamma(t)$ — it is a group homomorphism from $(\mathbb{R}, +)$ to $(G, \cdot)$. The exponential map sends $X$ to the group element you reach after unit time:</p>
+  $$\exp(X) = \gamma(1)$$
+
+  <div class="cols c11">
+    <div>
+      <h3>For $U(1)$: wrapping the real line</h3>
+      <p>With $X = iv$, the ODE reads $\gamma'(t) = iv \cdot \gamma(t)$, $\gamma(0) = 1$. The solution is $\gamma(t) = e^{ivt}$. As $t$ increases:</p>
+      <ul>
+        <li>$t=0$: at the identity $1$</li>
+        <li>$t=1$: at $e^{iv}$ — the exponential map's output</li>
+        <li>$t=2\pi/v$: back at $1$ — one full revolution</li>
+        <li>$t \to \infty$: the point winds around the circle forever</li>
+      </ul>
+      <p>The infinite flat real line (the Lie algebra $i\mathbb{R}$) wraps around the compact circle infinitely many times. The kernel is $\{2\pi i n : n \in \mathbb{Z}\}$ — values of $iv$ for which $e^{iv} = 1$.</p>
+    </div>
+    <div>
+      <h3>Euler's formula as Lie theory</h3>
+      <p>The most beautiful equation in mathematics is an instance of the exponential map for $U(1)$:</p>
+      $$e^{i\pi} + 1 = 0$$
+      <p>Read it as: start at the identity $1 \in U(1)$; flow in the direction $i \in \mathfrak{u}(1)$ for time $\pi$; you arrive at $-1$ (a half-rotation). The five constants aren't mystically related — they are simply the natural landmarks of the wrapping map:</p>
+      <ul>
+        <li>$e$: the base of the exponential (the fundamental constant of the exp map)</li>
+        <li>$i$: the generator of $\mathfrak{u}(1)$, the unit tangent at identity</li>
+        <li>$\pi$: the parameter for a half-turn rotation</li>
+        <li>$1$: the identity element of $U(1)$</li>
+        <li>$0$: makes $e^{i\pi} = -1$ look like an additive equation</li>
+      </ul>
+    </div>
+  </div>
+
+  <h2>Key properties</h2>
+  <table>
+    <tr><th>Property</th><th>Formula</th><th>Meaning</th></tr>
+    <tr><td>Identity</td><td>$\exp(0) = e$</td><td>Zero tangent vector → identity element (no rotation)</td></tr>
+    <tr><td>Inverse</td><td>$\exp(-X) = \exp(X)^{-1}$</td><td>Negate the tangent vector → reverse the rotation</td></tr>
+    <tr><td>One-parameter</td><td>$\exp(sX)\exp(tX) = \exp((s+t)X)$</td><td>Flowing for time $s$ then $t$ = flowing for time $s+t$</td></tr>
+    <tr><td>Surjective</td><td>Every $g \in G$ equals $\exp(X)$ for some $X$</td><td>Every rotation reachable from the identity (for compact $G$)</td></tr>
+    <tr><td>Local inverse</td><td>$\exp$ is invertible near $0$</td><td>The <em>logarithm</em> $\log: G \to \mathfrak{g}$ exists near identity</td></tr>
+  </table>
+
+  <h2>Baker–Campbell–Hausdorff: the abelian shortcut</h2>
+  <p>For non-abelian groups, $\exp(X)\exp(Y) \neq \exp(X+Y)$ in general. The correction is given by the <strong>Baker–Campbell–Hausdorff (BCH) formula</strong>:</p>
+  $$\exp(X)\exp(Y) = \exp\!\Bigl(X + Y + \tfrac{1}{2}[X,Y] + \tfrac{1}{12}[X,[X,Y]] - \tfrac{1}{12}[Y,[X,Y]] + \cdots\Bigr)$$
+  <p>Every correction term involves Lie brackets. For $U(1)$, all brackets vanish, so:</p>
+  $$\exp(iv_1)\exp(iv_2) = \exp(i(v_1+v_2)) \qquad \text{(since } [iv_1, iv_2] = 0\text{)}$$
+  <p>This is just angle addition again — $U(1)$ is so simple that BCH collapses to ordinary addition. For $SO(3)$, the non-zero brackets give a genuinely complex formula for composing rotations around different axes.</p>
+
+  <div id="s3-chart" style="height:420px;margin-top:1.2rem"></div>
+
+  <div class="ctrl" style="margin-top:.6rem">
+    <label>Angle $\theta$ (radians)</label>
+    <input type="range" id="s3-theta" min="0" max="6.283" step="0.02" value="1.0" oninput="updateEuler()">
+    <span class="val" id="s3-theta-val">1.00</span>
+  </div>
+  <p class="caption">Left: the complex plane, showing $e^{i\theta}$ on the unit circle. The dashed lines project to its real part ($\cos\theta$) and imaginary part ($\sin\theta$). Right: both components plotted as functions of $\theta$. The vertical marker shows the current angle.</p>
+</div>
+
+<!-- ── S4: Visualizations ──────────────────────────────────────── -->
+<div id="s4" class="section">
+  <h1>🎛 Visualizations</h1>
+  <hr>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('viz','group')">Group Operation</button>
+    <button class="tab-btn" onclick="tab('viz','wrap')">Exponential Wrapping</button>
+    <button class="tab-btn" onclick="tab('viz','flat')">Algebra vs Group</button>
+  </div>
+
+  <!-- V1: Group operation -->
+  <div id="viz-group" class="tab-pane active">
+    <h2>Multiplication = Angle Addition</h2>
+    <p>Choose two points on the circle ($\theta_1$ and $\theta_2$). Their product lands at $\theta_1 + \theta_2 \pmod{2\pi}$. This is the entire group law of $U(1)$.</p>
+    <div class="cols c12">
+      <div>
+        <div class="ctrl"><label>$\theta_1$ (rad)</label><input type="range" id="v1-t1" min="0" max="6.28" step="0.05" value="0.8" oninput="updateGroupViz()"><span class="val" id="v1-t1-val">0.80</span></div>
+        <div class="ctrl"><label>$\theta_2$ (rad)</label><input type="range" id="v1-t2" min="0" max="6.28" step="0.05" value="1.4" oninput="updateGroupViz()"><span class="val" id="v1-t2-val">1.40</span></div>
+        <div class="card" style="margin-top:1rem">
+          <div class="metric">
+            <div class="metric-label">$e^{i\theta_1}$</div>
+            <div class="metric-value" id="v1-p1">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">$e^{i\theta_2}$</div>
+            <div class="metric-value" id="v1-p2">—</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Product $e^{i(\theta_1+\theta_2)}$</div>
+            <div class="metric-value" id="v1-prod">—</div>
+          </div>
+          <div style="margin-top:.6rem;font-size:.82rem;color:#555">
+            The product is also on the unit circle — closure holds. Try setting $\theta_1=\pi$ to see how multiplying by $-1$ flips the sign.
+          </div>
+        </div>
+      </div>
+      <div id="v1-chart" style="height:440px"></div>
+    </div>
+  </div>
+
+  <!-- V2: Exponential wrapping -->
+  <div id="viz-wrap" class="tab-pane">
+    <h2>The Real Line Wraps Around the Circle</h2>
+    <p>The exponential map $t \mapsto e^{it}$ takes the entire real line and wraps it onto $U(1)$. Every interval of length $2\pi$ on the line maps to one complete revolution on the circle. Move the slider to trace the path — notice how the point returns to $(1,0)$ every time $t$ crosses a multiple of $2\pi$.</p>
+    <div id="v2-chart" style="height:420px"></div>
+    <div class="ctrl" style="margin-top:.6rem">
+      <label>Parameter $t$</label>
+      <input type="range" id="v2-t" min="0" max="18.85" step="0.08" value="0" oninput="updateWrap()">
+      <span class="val" id="v2-t-val">0.00</span>
+      <span style="font-size:.82rem;color:#666;margin-left:.4rem">= <span id="v2-turns">0.00</span> × 2π</span>
+    </div>
+    <p class="caption">Left: the unit circle with the traced path in rose. Right: the real line from $0$ to $6\pi$, with the shaded region showing how far we've traveled. The circle resets every $2\pi$ — that's the kernel $\ker(\exp) = 2\pi\mathbb{Z}$.</p>
+  </div>
+
+  <!-- V3: Algebra vs Group -->
+  <div id="viz-flat" class="tab-pane">
+    <h2>Flat Lie Algebra vs Curved Lie Group</h2>
+    <p>The Lie algebra $\mathfrak{u}(1) = i\mathbb{R}$ is a line — flat and infinite. The Lie group $U(1)$ is a circle — curved and compact. The exponential map curls the infinite line into the finite circle. Matching colors show corresponding points: $v$ on the line maps to $e^{iv}$ on the circle.</p>
+    <div id="v3-chart" style="height:400px"></div>
+    <p class="caption">The same color appears at $v$ on the algebra (left) and at $e^{iv}$ on the group (right). Multiple algebra points map to the same group point: e.g., $v=0$ and $v=2\pi$ (both dark) both land at $(1,0)$. The algebra is infinite; the group wraps back on itself.</p>
+  </div>
+</div>
+
+<!-- ── S5: Beyond S¹ ──────────────────────────────────────────── -->
+<div id="s5" class="section">
+  <h1>🌐 Beyond S¹</h1>
+  <hr>
+
+  <p>The circle is just the first rung. The same three ideas — (1) group structure, (2) Lie algebra as tangent space at identity, (3) exponential map — work for all Lie groups. Here we peek at the next examples, which arise from rotating 3-dimensional space.</p>
+
+  <h2>$SO(3)$: Rotations in 3D</h2>
+  <div class="cols c21">
+    <div>
+      <p>$SO(3)$ is the group of $3\times3$ real rotation matrices — all rotations of 3D space about the origin, with no reflections. It has dimension 3 (one angle for each axis $x, y, z$).</p>
+      <p>Its Lie algebra is:</p>
+      $$\mathfrak{so}(3) = \left\{ \Omega \in \mathbb{R}^{3\times3} : \Omega^T = -\Omega \right\}$$
+      <p>Antisymmetric $3\times3$ matrices have 3 free parameters. A natural basis:</p>
+      $$L_x = \begin{pmatrix}0&0&0\\0&0&{-1}\\0&1&0\end{pmatrix},\quad
+        L_y = \begin{pmatrix}0&0&1\\0&0&0\\{-1}&0&0\end{pmatrix},\quad
+        L_z = \begin{pmatrix}0&{-1}&0\\1&0&0\\0&0&0\end{pmatrix}$$
+      <p>The Lie brackets are $[L_x, L_y] = L_z$, $[L_y, L_z] = L_x$, $[L_z, L_x] = L_y$ — the <strong>cross product</strong> on $\mathbb{R}^3$. This is where non-commutativity enters: rotations around different axes don't commute.</p>
+      <p>The exponential map gives the <strong>Rodrigues rotation formula</strong>: for axis $\hat{n}$ and angle $\alpha$,</p>
+      $$\exp(\alpha\,\hat{n}\cdot\mathbf{L}) = I + \sin\alpha\,(\hat{n}\cdot\mathbf{L}) + (1-\cos\alpha)\,(\hat{n}\cdot\mathbf{L})^2$$
+      <p>This converts an unconstrained vector in $\mathbb{R}^3$ (axis-angle) into a valid rotation matrix — the key tool in every robotics and graphics engine.</p>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Key differences from $U(1)$</h3>
+        <table>
+          <tr><th></th><th>$U(1)$</th><th>$SO(3)$</th></tr>
+          <tr><td>Dimension</td><td>1</td><td>3</td></tr>
+          <tr><td>Abelian?</td><td>Yes</td><td>No</td></tr>
+          <tr><td>Lie bracket</td><td>$[X,Y]=0$</td><td>Cross product</td></tr>
+          <tr><td>Simply connected?</td><td>No</td><td>No</td></tr>
+          <tr><td>$\pi_1(G)$</td><td>$\mathbb{Z}$</td><td>$\mathbb{Z}/2\mathbb{Z}$</td></tr>
+          <tr><td>Universal cover</td><td>$\mathbb{R}$</td><td>$SU(2)$</td></tr>
+          <tr><td>BCH simplifies?</td><td>Yes ($\exp(X+Y)$)</td><td>No (non-trivial)</td></tr>
+        </table>
+      </div>
+      <div class="warn" style="margin-top:1rem">$SO(3)$ is <em>not simply connected</em>: a path that rotates $4\pi$ (two full turns) is contractible, but a path that rotates $2\pi$ is not. You can physically demonstrate this with the "belt trick" or Dirac's scissors — a $4\pi$ twist can be untwisted without moving the endpoints, but a $2\pi$ twist cannot.</div>
+    </div>
+  </div>
+
+  <h2>$SU(2)$: The Double Cover of $SO(3)$</h2>
+  <p>$SU(2)$ is the group of $2\times2$ complex matrices $U$ with $U^\dagger U = I$ and $\det U = 1$:</p>
+  $$SU(2) = \left\{ \begin{pmatrix} \alpha & -\bar\beta \\ \beta & \bar\alpha \end{pmatrix} : |\alpha|^2 + |\beta|^2 = 1 \right\}$$
+  <p>As a manifold, $SU(2) \cong S^3$ (the 3-sphere in $\mathbb{R}^4$). There is a <strong>2-to-1 surjective homomorphism</strong> $\pi: SU(2) \to SO(3)$: both $U$ and $-U$ give the same rotation. $SU(2)$ is the <em>universal cover</em> of $SO(3)$.</p>
+
+  <div class="info">$SU(2) \cong$ unit quaternions. The quaternion $q = a + b\mathbf{i} + c\mathbf{j} + d\mathbf{k}$ with $|q|=1$ acts on $\mathbb{R}^3$ by conjugation $\mathbf{v} \mapsto q\mathbf{v}q^{-1}$. Since both $q$ and $-q$ give the same rotation, quaternions are the double cover. This is why quantum spin-$\frac{1}{2}$ particles (electrons, quarks) require a $4\pi$ rotation — not $2\pi$ — to return to their original quantum state. The effect has been physically measured in neutron interferometry experiments.</div>
+
+  <h2>The Lie group menagerie</h2>
+  <table>
+    <tr><th>Group</th><th>Manifold</th><th>Dim</th><th>Simply connected?</th><th>Key application</th></tr>
+    <tr><td>$U(1)$</td><td>$S^1$</td><td>1</td><td>No ($\pi_1 = \mathbb{Z}$)</td><td>Electromagnetism, Fourier analysis</td></tr>
+    <tr><td>$SO(2)$</td><td>$S^1$</td><td>1</td><td>No</td><td>2D rotations</td></tr>
+    <tr><td>$SO(3)$</td><td>$\mathbb{RP}^3$</td><td>3</td><td>No ($\pi_1 = \mathbb{Z}/2$)</td><td>3D rotations; robotics, graphics</td></tr>
+    <tr><td>$SU(2)$</td><td>$S^3$</td><td>3</td><td>Yes</td><td>Quantum spin; quaternions</td></tr>
+    <tr><td>$SE(3)$</td><td>$SO(3) \ltimes \mathbb{R}^3$</td><td>6</td><td>No</td><td>Robot pose (SLAM, kinematics)</td></tr>
+    <tr><td>$SU(3)$</td><td>8-manifold</td><td>8</td><td>Yes</td><td>Strong nuclear force (QCD)</td></tr>
+  </table>
+
+  <div class="success">A deep theorem (Cartan, 1894): every <em>simple</em> Lie algebra over $\mathbb{C}$ is one of four infinite families ($A_n, B_n, C_n, D_n$, corresponding to $SU, SO_\text{odd}, Sp, SO_\text{even}$) or five exceptional cases ($G_2, F_4, E_6, E_7, E_8$). The circle's Lie algebra $\mathfrak{u}(1)$ is abelian and not simple — but it is the seed from which all of this classification grows.</div>
+</div>
+
+<!-- ── S6: Applications ────────────────────────────────────────── -->
+<div id="s6" class="section">
+  <h1>🔬 Applications</h1>
+  <hr>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="tab('app','physics')">Physics</button>
+    <button class="tab-btn" onclick="tab('app','fourier')">Signal Processing</button>
+    <button class="tab-btn" onclick="tab('app','ml')">Machine Learning</button>
+    <button class="tab-btn" onclick="tab('app','robots')">Robotics</button>
+  </div>
+
+  <!-- Physics -->
+  <div id="app-physics" class="tab-pane active">
+    <h3>$U(1)$ gauge theory = Electromagnetism</h3>
+    <p>In quantum mechanics, the wavefunction $\psi(x)$ has a global phase freedom: $\psi \to e^{i\alpha}\psi$ doesn't change any observable. But demanding this symmetry hold <em>locally</em> — allowing $\alpha$ to depend on position: $\psi(x) \to e^{i\alpha(x)}\psi(x)$ — forces the introduction of a compensating gauge field $A_\mu$. This compensating field <em>is</em> the electromagnetic potential. Maxwell's equations are the statement that $U(1)$ gauge symmetry is local.</p>
+    <p>The gauge boson (the photon) is the quantum of the $U(1)$ gauge field. Its masslessness follows from the gauge symmetry. Electromagnetism is Lie theory.</p>
+
+    <h3>The Standard Model of particle physics</h3>
+    <p>The entire Standard Model is a gauge theory with gauge group:</p>
+    $$G_\text{SM} = U(1)_Y \times SU(2)_L \times SU(3)_c$$
+    <table>
+      <tr><th>Factor</th><th>Force</th><th>Gauge bosons</th><th>Algebra dim</th></tr>
+      <tr><td>$U(1)_Y$</td><td>Weak hypercharge → electromagnetism</td><td>Photon ($\gamma$), $Z^0$</td><td>1</td></tr>
+      <tr><td>$SU(2)_L$</td><td>Weak force</td><td>$W^+, W^-, Z^0$</td><td>3</td></tr>
+      <tr><td>$SU(3)_c$</td><td>Strong force (QCD)</td><td>8 gluons</td><td>8</td></tr>
+    </table>
+    <p>The number of gauge bosons equals the dimension of the corresponding Lie algebra. The circle $U(1)$ — one dimension, one photon — is the simplest building block of the most experimentally successful theory in history.</p>
+
+    <h3>Spinors and the double cover</h3>
+    <p>Because the covering map $SU(2) \to SO(3)$ is 2-to-1, a physical rotation by $2\pi$ takes an electron's state to its negative: $\psi \to -\psi$. This has been directly measured: neutrons travelling through a magnetic field (a $2\pi$ rotation) acquire a phase of $-1$, confirmed by neutron interferometry (Werner et al., 1975). The $U(1)$ phase structure in quantum mechanics and the $SU(2)$ spinor structure are both manifestations of Lie theory.</p>
+  </div>
+
+  <!-- Signal Processing -->
+  <div id="app-fourier" class="tab-pane">
+    <h3>Fourier analysis = representation theory of $U(1)$</h3>
+    <p>A <strong>representation</strong> of a group $G$ is a smooth homomorphism $\rho: G \to GL(V)$ for some vector space $V$. For $U(1)$, the 1-dimensional complex representations are exactly the <em>characters</em>:</p>
+    $$\chi_n: U(1) \to \mathbb{C}^*, \quad e^{i\theta} \mapsto e^{in\theta}, \quad n \in \mathbb{Z}$$
+    <p>The Fourier series of a function $f: S^1 \to \mathbb{C}$ decomposes it into these characters:</p>
+    $$f(\theta) = \sum_{n=-\infty}^{\infty} \hat{f}(n)\, e^{in\theta}, \qquad \hat{f}(n) = \frac{1}{2\pi}\int_0^{2\pi} f(\theta)\,e^{-in\theta}\,d\theta$$
+    <p>The orthogonality of the Fourier modes $\langle e^{im\theta}, e^{in\theta}\rangle = \delta_{mn}$ is the <strong>Peter–Weyl theorem</strong> for $U(1)$: the characters of distinct irreducible representations are orthogonal in $L^2(G)$.</p>
+
+    <table>
+      <tr><th>Group</th><th>Representations / Basis</th><th>Transform</th></tr>
+      <tr><td>$U(1) = S^1$</td><td>$e^{in\theta}$, $n \in \mathbb{Z}$</td><td>Fourier series</td></tr>
+      <tr><td>$\mathbb{R}$</td><td>$e^{i\xi x}$, $\xi \in \mathbb{R}$</td><td>Fourier transform</td></tr>
+      <tr><td>$\mathbb{Z}/N\mathbb{Z}$</td><td>$e^{2\pi ink/N}$</td><td>DFT / FFT</td></tr>
+      <tr><td>$SO(3)$</td><td>Wigner $D$-matrices</td><td>Spherical harmonics $Y_\ell^m$</td></tr>
+    </table>
+
+    <div class="info">Spherical harmonics $Y_\ell^m(\theta,\phi)$ — used in quantum chemistry, computer graphics (lightmaps), and climate modelling — are the analogues of Fourier modes for $SO(3)$: they are the characters of its irreducible representations. Their orthogonality is Peter–Weyl for $SO(3)$. Fourier analysis on the circle is simply the simplest instance of this deep theorem.</div>
+  </div>
+
+  <!-- Machine Learning -->
+  <div id="app-ml" class="tab-pane">
+    <h3>Geometric Deep Learning</h3>
+    <p>Bronstein et al. (2021) unified CNNs, GNNs, Transformers, and graph networks under one principle: <em>build networks equivariant to the symmetry group of the data domain</em>. A layer $\Phi$ is $G$-equivariant if:</p>
+    $$\Phi(\rho(g) \cdot x) = \rho'(g) \cdot \Phi(x) \quad \text{for all } g \in G$$
+    <table>
+      <tr><th>Architecture</th><th>Symmetry group</th><th>Equivariance</th></tr>
+      <tr><td>Standard CNN</td><td>$\mathbb{Z}^2$ (translations)</td><td>Translation equivariance</td></tr>
+      <tr><td>Group Conv. CNN (Cohen &amp; Welling, 2016)</td><td>$p4, p4m$ (discrete rotations)</td><td>Discrete rotation + translation</td></tr>
+      <tr><td>E(n)-equivariant GNN (Satorras et al., 2021)</td><td>$E(n)$ (Euclidean group)</td><td>3D rotation, reflection, translation</td></tr>
+      <tr><td>Equiformer (Liao &amp; Smidt, 2022)</td><td>$SO(3)$</td><td>3D rotation via spherical harmonics</td></tr>
+      <tr><td>AlphaFold2 structure module</td><td>$SE(3)$</td><td>Rigid body frames; rotation + translation</td></tr>
+    </table>
+
+    <h3>Why equivariance matters in practice</h3>
+    <p>If a molecule is rotated by $R \in SO(3)$, its predicted energy should not change (invariance), and predicted forces should rotate accordingly (equivariance). Without building in this symmetry, a network must learn it from data — requiring vastly more examples. AlphaFold2 uses $SE(3)$-equivariant Invariant Point Attention; each amino acid residue is a rigid body frame, and equivariance guarantees consistent predictions regardless of the global orientation of the input protein.</p>
+
+    <h3>Optimisation on Lie groups</h3>
+    <p>When network weights live on a Lie group (e.g., orientations in $SO(3)$), the exponential map is the tool for gradient descent. A gradient step in the flat Lie algebra is mapped back to the curved group via $\exp$: if the current weight is $g \in G$ and the gradient descent direction is $\nabla \in \mathfrak{g}$, the update is $g \leftarrow g \cdot \exp(-\eta\nabla)$. Riemannian batch normalisation (Zhu et al., ICLR 2024) applies this idea to normalise group-valued features layer by layer.</p>
+  </div>
+
+  <!-- Robotics -->
+  <div id="app-robots" class="tab-pane">
+    <h3>Rigid Body Motion: $SE(3)$</h3>
+    <p>A robot's pose (position + orientation) in 3D space is an element of the <strong>Special Euclidean group</strong>:</p>
+    $$SE(3) = SO(3) \ltimes \mathbb{R}^3 = \left\{ T = \begin{pmatrix} R & \mathbf{t} \\ \mathbf{0}^T & 1 \end{pmatrix} : R \in SO(3),\; \mathbf{t} \in \mathbb{R}^3 \right\}$$
+    <p>Group multiplication is pose composition; the inverse is the reverse motion. The Lie algebra $\mathfrak{se}(3)$ is 6-dimensional: angular velocity (3 components) + linear velocity (3 components) = a <em>screw</em>.</p>
+
+    <h3>Why not just use Euler angles?</h3>
+    <p>Euler angles (three nested angles $\phi, \theta, \psi$) suffer from <strong>gimbal lock</strong>: at certain configurations, two axes align and you lose a degree of freedom — the Jacobian becomes singular. Rotation matrices have 6 redundant constraints. The Lie algebra approach avoids both problems: the axis-angle representation $\boldsymbol{\omega} \in \mathbb{R}^3 \cong \mathfrak{so}(3)$ has no singularities, and $\exp$ always produces a valid rotation.</p>
+
+    <table>
+      <tr><th>Application</th><th>How Lie theory is used</th></tr>
+      <tr><td>SLAM (ORB-SLAM3, GTSAM)</td><td>Poses as $SE(3)$ nodes; Lie algebra updates avoid manifold constraints</td></tr>
+      <tr><td>Visual odometry</td><td>Camera motion estimated as $SE(3)$ element; integration uses $\exp$</td></tr>
+      <tr><td>Bundle adjustment</td><td>Gauss-Newton on $SE(3)$: linearise in algebra, solve, apply with $\exp$</td></tr>
+      <tr><td>Robot arm kinematics</td><td>Product of Exponentials formula (Murray, Li, Sastry 1994)</td></tr>
+      <tr><td>IMU integration</td><td>Invariant EKF: error defined as $T^{-1}\hat{T} \in SE(3)$, updates via $\exp$</td></tr>
+    </table>
+
+    <div class="info">The <strong>Product of Exponentials</strong> formula is the Lie-theoretic replacement for Denavit–Hartenberg parameters. For a robot arm with $n$ joints, the forward kinematics is: $T_\text{end}(\boldsymbol\theta) = e^{\hat{\xi}_1\theta_1} \cdots e^{\hat{\xi}_n\theta_n} \cdot T_0$ where each $\hat{\xi}_k \in \mathfrak{se}(3)$ is the joint's screw axis. Changing any one joint angle $\theta_k$ simply changes one exponential — clean and compositional.</div>
+  </div>
+</div>
+
+<!-- ── S7: Sources ─────────────────────────────────────────────── -->
+<div id="s7" class="section">
+  <h1>📚 Sources &amp; Further Reading</h1>
+  <hr>
+
+  <h2>Foundational texts</h2>
+  <table>
+    <tr><th>Resource</th><th>Level</th><th>Why read it</th></tr>
+    <tr><td>Stillwell, J. (2008). <em>Naive Lie Theory</em>. Springer.</td><td>Beginner</td><td>Genuinely accessible; focuses on classical matrix groups with minimal prerequisites</td></tr>
+    <tr><td>Hall, B. (2015). <em>Lie Groups, Lie Algebras, and Representations</em>. Springer.</td><td>Intermediate</td><td>Best modern textbook; starts with matrix groups, builds to full theory</td></tr>
+    <tr><td>Tao, T. (2011). <em>254A, Notes 1: Lie groups, Lie algebras, and the BCH formula</em>. terrytao.wordpress.com.</td><td>Intermediate</td><td>Authoritative blog notes with deep intuition; freely available</td></tr>
+    <tr><td>Bump, D. (2004). <em>Lie Groups</em>. Springer.</td><td>Graduate</td><td>Connections to representation theory, harmonic analysis, and number theory</td></tr>
+    <tr><td>Lie, S. &amp; Engel, F. (1888–93). <em>Theorie der Transformationsgruppen</em>. Three volumes.</td><td>Original</td><td>The source — Lie's complete classification of continuous transformation groups</td></tr>
+  </table>
+
+  <h2>For physics and applications</h2>
+  <table>
+    <tr><th>Resource</th><th>Topic</th></tr>
+    <tr><td>Georgi, H. (1999). <em>Lie Algebras in Particle Physics</em>. Westview.</td><td>Standard Model via representation theory</td></tr>
+    <tr><td>Murray, Li &amp; Sastry (1994). <em>A Mathematical Introduction to Robotic Manipulation</em>. CRC Press.</td><td>$SE(3)$ in robotics; Product of Exponentials; free PDF online</td></tr>
+    <tr><td>Eade, E. (2017). <em>Lie Groups for 2D and 3D Transformations</em>. ethaneade.com.</td><td>Practical guide to $SO(3), SE(3)$ for robotics/SLAM; concise and free</td></tr>
+    <tr><td>Frankel, T. (2011). <em>The Geometry of Physics</em>. Cambridge.</td><td>Differential geometry and Lie groups for physicists</td></tr>
+  </table>
+
+  <h2>For machine learning and geometric deep learning</h2>
+  <table>
+    <tr><th>Paper</th><th>Key contribution</th></tr>
+    <tr><td>Bronstein et al. (2021). "Geometric Deep Learning." <em>arXiv:2104.13478</em>.</td><td>Unified equivariance framework; the geometric deep learning blueprint</td></tr>
+    <tr><td>Cohen &amp; Welling (2016). "Group Equivariant CNNs." ICML.</td><td>First group-equivariant convolutional network</td></tr>
+    <tr><td>Satorras, Hoogeboom &amp; Welling (2021). "E(n) Equivariant GNNs." ICML. <em>arXiv:2102.09844</em>.</td><td>Lightweight $E(n)$-equivariant networks; state-of-the-art on molecular benchmarks</td></tr>
+    <tr><td>Zhu et al. (2024). "Riemannian Batch Normalisation." ICLR. <em>arXiv:2403.11261</em>.</td><td>Batch norm for Lie group-valued features via exp/log maps</td></tr>
+    <tr><td>Zhou et al. (2019). "On the Continuity of Rotation Representations in Neural Networks." CVPR.</td><td>Proves $SO(3)$ requires $\geq 5$D continuous representation; introduces 6D rotation rep</td></tr>
+  </table>
+
+  <h2>Online resources</h2>
+  <table>
+    <tr><th>Resource</th><th>Description</th></tr>
+    <tr><td><a href="https://www.3blue1brown.com/lessons/eulers-formula-via-group-theory">3Blue1Brown — Euler's Formula via Group Theory</a></td><td>Animated introduction; the "wrapping cylinder" metaphor for $U(1)$</td></tr>
+    <tr><td><a href="https://betterexplained.com/articles/intuitive-understanding-of-eulers-formula/">BetterExplained — Intuitive Understanding of Euler's Formula</a></td><td>Accessible geometric walkthrough of $e^{i\theta}$</td></tr>
+    <tr><td><a href="https://ncatlab.org/nlab/show/Lie+group">nLab — Lie group</a></td><td>Formal categorical treatment; useful for precise definitions</td></tr>
+  </table>
+
+  <h2>Related explainers on this site</h2>
+  <table>
+    <tr><th>Topic</th><th>Connection to Lie groups</th></tr>
+    <tr><td><a href="../20260327_random_fourier_features/index.html">Random Fourier Features</a></td><td>RFF approximates kernels via Bochner's theorem — harmonic analysis on $(\mathbb{R}^d, +)$, a non-compact Lie group</td></tr>
+    <tr><td><a href="../20260328_johnson_lindenstrauss_lemma/index.html">Johnson–Lindenstrauss Lemma</a></td><td>Random projections use orthogonal matrices — elements of $O(n)$, another Lie group</td></tr>
+  </table>
+</div>
+
+</main>
+
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════════ -->
+<script>
+// ── Seeded PRNG (mulberry32) ───────────────────────────────────────────────
+function mkRng(seed) {
+  let s = seed | 0;
+  function rand() {
+    s = (s + 0x6D2B79F5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  return {
+    rand,
+    randn() {
+      const u1 = rand() + 1e-10, u2 = rand();
+      return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+    },
+    arr(n, fn) { return Array.from({length: n}, fn); },
+  };
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────
+function linspace(a, b, n) {
+  return Array.from({length: n}, (_, i) => a + (b - a) * i / (n - 1));
+}
+
+const PLT = {
+  lie:  '#c0395b',
+  blue: '#457b9d',
+  teal: '#2a9d8f',
+  layout(extra) {
+    return Object.assign({
+      margin: {l:50, r:20, t:40, b:50},
+      paper_bgcolor: 'white', plot_bgcolor: '#fafafa',
+      font: {family: '-apple-system, sans-serif', size: 12},
+    }, extra);
+  },
+  config: {responsive: true, displayModeBar: false},
+};
+
+// ── Navigation ────────────────────────────────────────────────────────────
+const initialized = new Set();
+
+function nav(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  if (!initialized.has(id)) {
+    initialized.add(id);
+    initSection(id);
+  }
+  if (window.MathJax) MathJax.typesetPromise([document.getElementById(id)]);
+  if (window.innerWidth < 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  }
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-overlay').classList.toggle('open');
+}
+
+function tab(group, id) {
+  const bar = event.currentTarget.closest('.tab-bar');
+  bar.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.querySelectorAll(`[id^="${group}-"]`).forEach(p => p.classList.remove('active'));
+  document.getElementById(`${group}-${id}`).classList.add('active');
+}
+
+function initSection(id) {
+  const fns = { s0: initOverview, s2: initAlgebra, s3: initEulerSection, s4: initVizAll };
+  if (fns[id]) fns[id]();
+}
+
+// ── S0: Overview circle ───────────────────────────────────────────────────
+function initOverview() {
+  const t = linspace(0, 2 * Math.PI, 300);
+
+  const labelAngles = [0, Math.PI/4, Math.PI/2, 3*Math.PI/4,
+                       Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4];
+  const labelText = ['1', 'e^{iπ/4}', 'i', 'e^{i3π/4}',
+                     '−1', 'e^{i5π/4}', '−i', 'e^{i7π/4}'];
+  const labelPos  = ['middle right','top right','top center','top left',
+                     'middle left','bottom left','bottom center','bottom right'];
+
+  const arcT = linspace(0, Math.PI / 3, 40);
+
+  Plotly.newPlot('s0-chart', [
+    {x: t.map(a => Math.cos(a)), y: t.map(a => Math.sin(a)),
+     mode:'lines', line:{color:'#ccc', width:2}, showlegend:false},
+    {x:[-1.5,1.5], y:[0,0], mode:'lines', line:{color:'#eee',width:1}, showlegend:false},
+    {x:[0,0], y:[-1.5,1.5], mode:'lines', line:{color:'#eee',width:1}, showlegend:false},
+    // labelled points
+    {x: labelAngles.map(a => Math.cos(a)),
+     y: labelAngles.map(a => Math.sin(a)),
+     mode:'markers+text', text: labelText, textposition: labelPos,
+     marker:{color: PLT.lie, size:9}, showlegend:false},
+    // angle arc
+    {x: arcT.map(a => 0.42*Math.cos(a)), y: arcT.map(a => 0.42*Math.sin(a)),
+     mode:'lines', line:{color: PLT.blue, width:2, dash:'dot'}, showlegend:false},
+    {x:[0.35], y:[0.12], mode:'text', text:['θ'],
+     textfont:{color: PLT.blue, size:14}, showlegend:false},
+    // radial line to example point
+    {x:[0, Math.cos(Math.PI/3)], y:[0, Math.sin(Math.PI/3)],
+     mode:'lines', line:{color: PLT.lie, width:1.5}, showlegend:false},
+  ], PLT.layout({
+    xaxis:{range:[-1.65,1.95], scaleanchor:'y', constrain:'domain',
+           showgrid:false, zeroline:false, title:'Re(z)'},
+    yaxis:{range:[-1.45,1.45], showgrid:false, zeroline:false, title:'Im(z)'},
+    title:{text:'U(1): each point e^{iθ} on the unit circle is a rotation by θ', font:{size:13}},
+    height:300, showlegend:false,
+  }), PLT.config);
+}
+
+// ── S2: Tangent space / Lie algebra ───────────────────────────────────────
+function initAlgebra() { updateAlgebra(); }
+
+function updateAlgebra() {
+  const v = parseFloat(document.getElementById('s2-v').value);
+  document.getElementById('s2-v-val').textContent = v.toFixed(2);
+
+  const t = linspace(0, 2 * Math.PI, 300);
+  const expRe = Math.cos(v), expIm = Math.sin(v);
+  const arcT  = linspace(0, v, Math.max(3, Math.abs(v / 0.03) | 0));
+
+  Plotly.react('s2-chart', [
+    // unit circle
+    {x: t.map(a => Math.cos(a)), y: t.map(a => Math.sin(a)),
+     mode:'lines', line:{color:'#ccc',width:2}, showlegend:false},
+    // axes
+    {x:[-1.6,1.6], y:[0,0], mode:'lines', line:{color:'#eee',width:1}, showlegend:false},
+    {x:[0,0], y:[-1.6,1.6], mode:'lines', line:{color:'#eee',width:1}, showlegend:false},
+    // tangent line at identity (dashed vertical)
+    {x:[1,1], y:[-1.6,1.6], mode:'lines',
+     line:{color: PLT.blue, width:2, dash:'dash'}, name:'Lie algebra 𝔲(1) = iℝ'},
+    // tangent vector arrow: from identity (1,0) to (1, v)
+    {x:[1,1], y:[0, v], mode:'lines',
+     line:{color: PLT.teal, width:3}, showlegend:false},
+    {x:[1], y:[v], mode:'markers',
+     marker:{color: PLT.teal, size:10, symbol:'arrow-up'}, name:`Tangent vector iv, v=${v.toFixed(2)}`},
+    // identity
+    {x:[1], y:[0], mode:'markers+text', text:['1'], textposition:'bottom right',
+     marker:{color:'#28a745', size:11, symbol:'diamond'}, name:'Identity e'},
+    // exp(iv) on the circle
+    {x:[expRe], y:[expIm], mode:'markers+text', text:['  e^{iv}'], textposition:'middle right',
+     marker:{color: PLT.lie, size:13}, name:'exp(iv)'},
+    // radial line to exp(iv)
+    {x:[0, expRe], y:[0, expIm], mode:'lines',
+     line:{color: PLT.lie, width:1.5}, showlegend:false},
+    // arc showing angle v
+    ...(Math.abs(v) > 0.05 ? [{
+      x: arcT.map(a => 0.65 * Math.cos(a)),
+      y: arcT.map(a => 0.65 * Math.sin(a)),
+      mode:'lines', line:{color: PLT.lie, width:2, dash:'dot'}, showlegend:false,
+    }] : []),
+    // first-order approximation 1 + iv (only for |v| < 1.8)
+    ...(Math.abs(v) < 1.8 ? [{
+      x:[1], y:[v], mode:'markers',
+      marker:{color:'#e76f51', size:9, symbol:'x'},
+      name:'1 + iv (linear approx)',
+    }] : []),
+  ], PLT.layout({
+    xaxis:{range:[-1.7, 1.9], scaleanchor:'y', constrain:'domain',
+           showgrid:false, zeroline:false, title:'Re'},
+    yaxis:{range:[-1.7, 1.7], showgrid:false, zeroline:false, title:'Im'},
+    title:{text:`Tangent vector iv (v = ${v.toFixed(2)}) → rotation by ${v.toFixed(2)} rad = ${(v*180/Math.PI).toFixed(1)}°`,
+           font:{size:12}},
+    legend:{x:0, y:-0.12, orientation:'h', font:{size:10}},
+    height:400,
+  }), PLT.config);
+}
+
+// ── S3: Euler's formula ───────────────────────────────────────────────────
+function initEulerSection() { updateEuler(); }
+
+function updateEuler() {
+  const theta = parseFloat(document.getElementById('s3-theta').value);
+  document.getElementById('s3-theta-val').textContent = theta.toFixed(2);
+
+  const cosv = Math.cos(theta), sinv = Math.sin(theta);
+  const t  = linspace(0, 2 * Math.PI, 300);
+  const ts = linspace(0, 2 * Math.PI, 300);
+  const arcT = linspace(0, theta, Math.max(3, (theta / 0.04) | 0));
+
+  Plotly.react('s3-chart', [
+    // ── LEFT: unit circle ───────────────────────────────────────
+    {x: t.map(a=>Math.cos(a)), y: t.map(a=>Math.sin(a)),
+     mode:'lines', line:{color:'#ccc',width:1.5}, xaxis:'x1',yaxis:'y1', showlegend:false},
+    {x:[-1.4,1.4],y:[0,0],mode:'lines',line:{color:'#eee',width:1},xaxis:'x1',yaxis:'y1',showlegend:false},
+    {x:[0,0],y:[-1.4,1.4],mode:'lines',line:{color:'#eee',width:1},xaxis:'x1',yaxis:'y1',showlegend:false},
+    // radial line
+    {x:[0,cosv], y:[0,sinv], mode:'lines',
+     line:{color: PLT.lie, width:2}, xaxis:'x1',yaxis:'y1', showlegend:false},
+    // cos projection (horizontal dashed)
+    {x:[0,cosv], y:[sinv,sinv], mode:'lines',
+     line:{color: PLT.blue, width:1.5, dash:'dot'}, xaxis:'x1',yaxis:'y1', name:'cos θ'},
+    // sin projection (vertical dashed)
+    {x:[cosv,cosv], y:[0,sinv], mode:'lines',
+     line:{color: PLT.teal, width:1.5, dash:'dot'}, xaxis:'x1',yaxis:'y1', name:'sin θ'},
+    // the point e^{iθ}
+    {x:[cosv], y:[sinv], mode:'markers+text', text:['  e^{iθ}'], textposition:'middle right',
+     marker:{color: PLT.lie, size:12}, xaxis:'x1',yaxis:'y1', showlegend:false},
+    // angle arc
+    ...(theta > 0.04 ? [{
+      x: arcT.map(a => 0.4*Math.cos(a)), y: arcT.map(a => 0.4*Math.sin(a)),
+      mode:'lines', line:{color: PLT.lie, width:2},
+      xaxis:'x1', yaxis:'y1', showlegend:false,
+    }] : []),
+    {x:[0.32], y:[0.08], mode:'text', text:['θ'],
+     textfont:{color: PLT.lie, size:13}, xaxis:'x1',yaxis:'y1', showlegend:false},
+
+    // ── RIGHT: cos and sin curves ────────────────────────────────
+    {x: ts, y: ts.map(a => Math.cos(a)), mode:'lines',
+     line:{color: PLT.blue, width:2.5}, xaxis:'x2',yaxis:'y2', name:'cos θ'},
+    {x: ts, y: ts.map(a => Math.sin(a)), mode:'lines',
+     line:{color: PLT.teal, width:2.5, dash:'dash'}, xaxis:'x2',yaxis:'y2', name:'sin θ'},
+    // vertical cursor at current theta
+    {x:[theta,theta], y:[-1.15,1.15], mode:'lines',
+     line:{color: PLT.lie, width:1.5, dash:'dot'}, xaxis:'x2',yaxis:'y2', showlegend:false},
+    // current value markers
+    {x:[theta], y:[cosv], mode:'markers',
+     marker:{color: PLT.blue, size:10}, xaxis:'x2',yaxis:'y2', showlegend:false},
+    {x:[theta], y:[sinv], mode:'markers',
+     marker:{color: PLT.teal, size:10}, xaxis:'x2',yaxis:'y2', showlegend:false},
+  ], PLT.layout({
+    grid:{rows:1, columns:2, pattern:'independent'},
+    xaxis: {range:[-1.55,1.75], scaleanchor:'y', constrain:'domain',
+            showgrid:false, zeroline:false, title:'Re', domain:[0,0.44]},
+    yaxis: {range:[-1.4,1.4], showgrid:false, zeroline:false, title:'Im'},
+    xaxis2:{range:[-0.1,6.4], title:'θ (radians)',
+            tickvals:[0,Math.PI/2,Math.PI,3*Math.PI/2,2*Math.PI],
+            ticktext:['0','π/2','π','3π/2','2π'],
+            domain:[0.54,1], gridcolor:'#eee'},
+    yaxis2:{range:[-1.25,1.25], title:'value', gridcolor:'#eee'},
+    title:{text:`e^{iθ} = ${cosv.toFixed(3)} + ${sinv.toFixed(3)}i  (θ = ${theta.toFixed(2)} rad = ${(theta*180/Math.PI).toFixed(1)}°)`,
+           font:{size:12}},
+    legend:{x:0.52, y:1.02, orientation:'h', font:{size:11}},
+    height:420,
+  }), PLT.config);
+}
+
+// ── S4: All three visualization tabs ─────────────────────────────────────
+function initVizAll() {
+  updateGroupViz();
+  updateWrap();
+  initFlatVsGroup();
+}
+
+function updateGroupViz() {
+  const theta1   = parseFloat(document.getElementById('v1-t1').value);
+  const theta2   = parseFloat(document.getElementById('v1-t2').value);
+  const product  = theta1 + theta2;
+  const prodMod  = ((product % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+
+  document.getElementById('v1-t1-val').textContent  = theta1.toFixed(2);
+  document.getElementById('v1-t2-val').textContent  = theta2.toFixed(2);
+
+  const fmtC = (re, im) => {
+    const rs = Math.abs(re) < 1e-4 ? '0.000' : re.toFixed(3);
+    const is = Math.abs(im) < 1e-4 ? '0.000' : Math.abs(im).toFixed(3);
+    return `${rs} ${im >= 0 ? '+' : '−'} ${is}i`;
+  };
+  document.getElementById('v1-p1').textContent   = fmtC(Math.cos(theta1), Math.sin(theta1));
+  document.getElementById('v1-p2').textContent   = fmtC(Math.cos(theta2), Math.sin(theta2));
+  document.getElementById('v1-prod').textContent = fmtC(Math.cos(product), Math.sin(product));
+
+  const t   = linspace(0, 2*Math.PI, 300);
+  const arc1 = linspace(0, theta1, 60);
+  const arc2 = linspace(theta1, product, 60);
+
+  Plotly.react('v1-chart', [
+    {x:t.map(a=>Math.cos(a)), y:t.map(a=>Math.sin(a)),
+     mode:'lines', line:{color:'#ddd',width:1.8}, showlegend:false},
+    {x:[-1.55,1.55],y:[0,0],mode:'lines',line:{color:'#eee',width:1},showlegend:false},
+    {x:[0,0],y:[-1.55,1.55],mode:'lines',line:{color:'#eee',width:1},showlegend:false},
+    // radii
+    {x:[0,Math.cos(theta1)], y:[0,Math.sin(theta1)],
+     mode:'lines', line:{color: PLT.blue, width:2}, showlegend:false},
+    {x:[0,Math.cos(theta2)], y:[0,Math.sin(theta2)],
+     mode:'lines', line:{color: PLT.teal, width:2}, showlegend:false},
+    {x:[0,Math.cos(product)], y:[0,Math.sin(product)],
+     mode:'lines', line:{color: PLT.lie, width:2.5}, showlegend:false},
+    // arc for θ₁
+    {x:arc1.map(a=>0.55*Math.cos(a)), y:arc1.map(a=>0.55*Math.sin(a)),
+     mode:'lines', line:{color: PLT.blue, width:2, dash:'dot'}, name:'θ₁'},
+    // arc for θ₂ (from θ₁ to θ₁+θ₂)
+    {x:arc2.map(a=>0.72*Math.cos(a)), y:arc2.map(a=>0.72*Math.sin(a)),
+     mode:'lines', line:{color: PLT.teal, width:2, dash:'dot'}, name:'θ₂ (added on)'},
+    // points
+    {x:[Math.cos(theta1)], y:[Math.sin(theta1)],
+     mode:'markers+text', text:['  e^{iθ₁}'], textposition:'middle right',
+     marker:{color: PLT.blue, size:12}, name:'e^{iθ₁}'},
+    {x:[Math.cos(theta2)], y:[Math.sin(theta2)],
+     mode:'markers+text', text:['  e^{iθ₂}'], textposition:'middle right',
+     marker:{color: PLT.teal, size:12}, name:'e^{iθ₂}'},
+    {x:[Math.cos(product)], y:[Math.sin(product)],
+     mode:'markers+text', text:['  e^{i(θ₁+θ₂)}'], textposition:'middle right',
+     marker:{color: PLT.lie, size:14, symbol:'star'}, name:'Product'},
+    {x:[1], y:[0], mode:'markers+text', text:['1 '], textposition:'middle right',
+     marker:{color:'#28a745', size:10, symbol:'diamond'}, name:'Identity'},
+  ], PLT.layout({
+    xaxis:{range:[-1.65,1.85], scaleanchor:'y', constrain:'domain',
+           title:'Re', showgrid:false, zeroline:false},
+    yaxis:{range:[-1.55,1.55], title:'Im', showgrid:false, zeroline:false},
+    title:{text:`θ₁=${theta1.toFixed(2)} + θ₂=${theta2.toFixed(2)} = ${product.toFixed(2)} rad ≡ ${prodMod.toFixed(2)} mod 2π`,
+           font:{size:12}},
+    legend:{x:0, y:-0.12, orientation:'h', font:{size:10}},
+    height:440,
+  }), PLT.config);
+}
+
+function updateWrap() {
+  const tVal = parseFloat(document.getElementById('v2-t').value);
+  document.getElementById('v2-t-val').textContent = tVal.toFixed(2);
+  document.getElementById('v2-turns').textContent = (tVal / (2*Math.PI)).toFixed(2);
+
+  const circT = linspace(0, 2*Math.PI, 300);
+  const nPath = Math.max(3, (tVal / 0.04) | 0);
+  const pathT = linspace(0, tVal, nPath);
+  const ex = Math.cos(tVal), ey = Math.sin(tVal);
+  const maxT = 6 * Math.PI;
+
+  Plotly.react('v2-chart', [
+    // ── LEFT: circle ──────────────────────────────────────────
+    {x:circT.map(a=>Math.cos(a)), y:circT.map(a=>Math.sin(a)),
+     mode:'lines', line:{color:'#ddd',width:1.8}, xaxis:'x1',yaxis:'y1', showlegend:false},
+    {x:[-1.5,1.5],y:[0,0],mode:'lines',line:{color:'#eee',width:1},xaxis:'x1',yaxis:'y1',showlegend:false},
+    {x:[0,0],y:[-1.5,1.5],mode:'lines',line:{color:'#eee',width:1},xaxis:'x1',yaxis:'y1',showlegend:false},
+    // traced path on circle
+    {x: pathT.map(a => Math.cos(a)), y: pathT.map(a => Math.sin(a)),
+     mode:'lines', line:{color: PLT.lie, width:3},
+     xaxis:'x1',yaxis:'y1', name:'Path of e^{it}'},
+    // start (identity)
+    {x:[1], y:[0], mode:'markers',
+     marker:{color:'#28a745', size:10, symbol:'diamond'},
+     xaxis:'x1',yaxis:'y1', name:'Start t=0'},
+    // current point
+    {x:[ex], y:[ey], mode:'markers+text', text:['  e^{it}'], textposition:'middle right',
+     marker:{color: PLT.lie, size:14},
+     xaxis:'x1',yaxis:'y1', showlegend:false},
+
+    // ── RIGHT: real line ───────────────────────────────────────
+    {x:[-0.3, maxT+0.3], y:[0,0], mode:'lines',
+     line:{color:'#ccc',width:2}, xaxis:'x2',yaxis:'y2', showlegend:false},
+    // tick marks at multiples of 2π
+    ...[0,1,2,3].map(k => ({
+      x:[2*Math.PI*k, 2*Math.PI*k], y:[-0.3,0.3], mode:'lines',
+      line:{color:'#bbb',width:1.5}, xaxis:'x2',yaxis:'y2', showlegend:false,
+    })),
+    // shaded traveled region
+    {x:[0, Math.min(tVal, maxT), Math.min(tVal, maxT), 0],
+     y:[-0.18,-0.18,0.18,0.18], fill:'toself',
+     fillcolor:'rgba(192,57,91,0.15)', line:{width:0},
+     xaxis:'x2',yaxis:'y2', showlegend:false, mode:'lines'},
+    // current point on real line
+    {x:[tVal], y:[0], mode:'markers+text',
+     text:[`  t=${tVal.toFixed(2)}`], textposition:'top right',
+     marker:{color: PLT.lie, size:13},
+     xaxis:'x2',yaxis:'y2', name:`t = ${tVal.toFixed(2)}`},
+  ], PLT.layout({
+    grid:{rows:1, columns:2, pattern:'independent'},
+    xaxis: {range:[-1.6,1.8], scaleanchor:'y', constrain:'domain',
+            showgrid:false, zeroline:false, title:'Re', domain:[0,0.44]},
+    yaxis: {range:[-1.5,1.5], showgrid:false, zeroline:false, title:'Im'},
+    xaxis2:{range:[-0.4, maxT+0.4], title:'t (real line)',
+            tickvals:[0, Math.PI, 2*Math.PI, 3*Math.PI, 4*Math.PI, 5*Math.PI, 6*Math.PI],
+            ticktext:['0','π','2π','3π','4π','5π','6π'],
+            domain:[0.54,1], gridcolor:'#eee'},
+    yaxis2:{range:[-0.55,0.55], showticklabels:false, zeroline:false},
+    title:{text:`exp maps t=${tVal.toFixed(2)} on ℝ → e^{it} on U(1)   (kernel: t = 0, 2π, 4π, 6π, … all land at 1)`,
+           font:{size:11}},
+    legend:{x:0, y:-0.12, orientation:'h', font:{size:10}},
+    height:420,
+  }), PLT.config);
+}
+
+function initFlatVsGroup() {
+  const rng     = mkRng(42);
+  const lineV   = linspace(-4.5, 4.5, 300);
+  const circT   = linspace(0, 2*Math.PI, 300);
+
+  // sample points with distinct colors spanning the range
+  const sampleV = linspace(-4.3, 4.3, 18);
+  const sampleColors = sampleV.map((v, i) => {
+    const h = (i / sampleV.length) * 300 + 20;
+    return `hsl(${h|0},75%,48%)`;
+  });
+
+  const traces = [
+    // left: Lie algebra (real line)
+    {x:lineV, y:lineV.map(()=>0), mode:'lines',
+     line:{color:'#ddd',width:2}, xaxis:'x1',yaxis:'y1', showlegend:false},
+    // right: Lie group (unit circle)
+    {x:circT.map(a=>Math.cos(a)), y:circT.map(a=>Math.sin(a)),
+     mode:'lines', line:{color:'#ddd',width:2}, xaxis:'x2',yaxis:'y2', showlegend:false},
+    {x:[-1.6,1.6],y:[0,0],mode:'lines',line:{color:'#eee',width:1},xaxis:'x2',yaxis:'y2',showlegend:false},
+    {x:[0,0],y:[-1.6,1.6],mode:'lines',line:{color:'#eee',width:1},xaxis:'x2',yaxis:'y2',showlegend:false},
+  ];
+
+  // color-matched dots
+  sampleV.forEach((v, i) => {
+    const col = sampleColors[i];
+    traces.push({
+      x:[v], y:[0], mode:'markers',
+      marker:{color:col, size:11, line:{color:'white',width:1}},
+      xaxis:'x1', yaxis:'y1', showlegend:false,
+    });
+    traces.push({
+      x:[Math.cos(v)], y:[Math.sin(v)], mode:'markers',
+      marker:{color:col, size:11, line:{color:'white',width:1}},
+      xaxis:'x2', yaxis:'y2', showlegend:false,
+    });
+  });
+
+  // labels
+  traces.push({x:[0],y:[0.45],mode:'text',text:['𝔲(1) = iℝ   (Lie algebra — flat, infinite)'],
+    textfont:{size:11,color:'#555'},xaxis:'x1',yaxis:'y1',showlegend:false});
+  traces.push({x:[0],y:[1.5],mode:'text',text:['U(1)   (Lie group — circle, compact)'],
+    textfont:{size:11,color:'#555'},xaxis:'x2',yaxis:'y2',showlegend:false});
+
+  // tick labels on algebra axis at 0, ±π, ±2π
+  [[-2*Math.PI,'−2π'],[-Math.PI,'−π'],[0,'0'],[Math.PI,'π'],[2*Math.PI,'2π']]
+    .forEach(([xv, label]) => {
+      traces.push({x:[xv],y:[-0.33],mode:'text',text:[label],
+        textfont:{size:10,color:'#888'},xaxis:'x1',yaxis:'y1',showlegend:false});
+    });
+
+  Plotly.newPlot('v3-chart', traces, PLT.layout({
+    grid:{rows:1, columns:2, pattern:'independent'},
+    xaxis: {range:[-5,5], showgrid:false, zeroline:false,
+            showticklabels:false, title:'v  (tangent vector magnitude)', domain:[0,0.44]},
+    yaxis: {range:[-0.65,0.75], showticklabels:false, zeroline:false},
+    xaxis2:{range:[-1.7,1.7], scaleanchor:'y2', constrain:'domain2',
+            showgrid:false, zeroline:false, title:'Re', domain:[0.54,1]},
+    yaxis2:{range:[-1.65,1.65], showgrid:false, zeroline:false, title:'Im'},
+    title:{text:'exp(iv): matching colors — same v on the line and e^{iv} on the circle. Multiple v values share the same circle point.',
+           font:{size:11}},
+    showlegend:false, height:400,
+  }), PLT.config);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  initialized.add('s0');
+  initOverview();
+  if (window.MathJax) MathJax.typesetPromise();
+});
+</script>
+</body>
+</html>
